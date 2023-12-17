@@ -1,94 +1,126 @@
-from sbox_model import *
-class CIPHER_MODEL(object):
-    def __init__(self, sbox_list, block_size, sbox_size, number_of_rounds, number_of_sbox, trail):
-        self._sbox_cnf = sbox_propagation_to_cnf(sbox_list, sbox_size, sbox_size)
-        self._sbox_size = sbox_size
-        self._block_size = block_size
-        self._rounds = number_of_rounds
-        self._number_of_sbox = number_of_sbox
-        self._trail = trail #list of binary strings of size 2*rounds, two trails for each sbox layer
-        self._complete_cnf = CNF()
-        #variables_X0 [sbox] variables_Y0 [Linear part] variables_Y0 [key_add variables_K0] variables_X1 ....
-        self._variable_counter = 0
-        self._variables_X = self.gen_variables(self._rounds+1)
-        self._variables_Y = self.gen_variables(self._rounds)
-        self._variables_K = self.key_schedule()
-        print("Total Variables = ", self._variable_counter)
-        # self.print_variables()
-        # self.gen_cnf()
-    def gen_variables(self, r):
-        X = []
-        for r in range(r):
-            x = []
-            for i in range(self._block_size):
-                self._variable_counter += 1
-                x.append(self._variable_counter)
-            X.append(x)
-        return X
-    def P(self, array_in):
-        array = [0 for i in range(0,64)]
-        for i in range(0,64):
-            array[((i >> 4) << 2) + (((3*((i & 0xf)>>2) + (i & 3)) & 3) << 4) + (i & 3)] = array_in[i]
-        return array
-    def print_one_layer_variables(self, L, name = ""):
-        for i in L:
-            print(name+str(i), end = " ")
-        print("\n")
-    def key_schedule(self):
-        MK = self.gen_variables(2)
-        keyWords = [MK[0][16*i:16*(i+1)] for i in range(4)]
-        keyWords += [MK[1][16*i:16*(i+1)] for i in range(4)]
+from model_util import *
+from util import IndexSet
+import numpy as np
+P64 = np.array((0, 17, 34, 51, 48, 1, 18, 35, 32, 49, 2, 19, 16, 33, 50, 3,
+                4, 21, 38, 55, 52, 5, 22, 39, 36, 53, 6, 23, 20, 37, 54, 7,
+                8, 25, 42, 59, 56, 9, 26, 43, 40, 57, 10, 27, 24, 41, 58, 11,
+                12, 29, 46, 63, 60, 13, 30, 47, 44, 61, 14, 31, 28, 45, 62, 15))
+class CIPHER_MODEL(IndexSet):
+    def __init__(self, sboxList, blockSize, sboxSize, nRound, nSbox, trail):
+        super().__init__()
+        self._sbox = sboxList
+        self._sboxSize = sboxSize
+        self._blockSize = blockSize
+        self._nRound = nRound
+        self._nSbox = nSbox
+        self._trail = trail #two trails for each sbox layer
+        #generate Variables
+        self.add_index_array('_sboxIn', (self._nRound+1, self._nSbox, self._sboxSize))
+        self.add_index_array('_sboxOut', (self._nRound, self._nSbox, self._sboxSize))
+        self._rk = self.keySchedule()
+        # print(self._rk)
+        # test permutation
+        # temp = self.applyPerm(self._sboxIn[0])
+        # print(self._sboxIn[0])
+        # print(temp)
+        self._completeCnf = self.genCnf()
+        # print(self._completeCnf)
+    def applyPerm(self, array):
+        arrayFlat = array.flatten()
+        arrayPermuted = arrayFlat[P64]
+        arrayOut = arrayPermuted.reshape(16, 4)
+        return arrayOut
+    def keySchedule(self):
+        self.add_index_array('MK', (1, self._nSbox*2, self._sboxSize))
+        keyWords = self.MK.flatten()
+        keyWords = keyWords.reshape(8, 16)
+        # print(f'{keyWords=}')
         RK = []
-        for r in range(self._rounds):
-            rk = keyWords[0][:] + keyWords[1][:]
-            keyWords[0] = keyWords[0][12:] + keyWords[0][:12]
-            keyWords[1] = keyWords[1][2:] + keyWords[1][:2]
+        for r in range(self._nRound):
+            rk = np.empty(len(keyWords[0]) + len(keyWords[1]), dtype=keyWords.dtype)
+            rk[0::2] = keyWords[0]
+            rk[1::2] = keyWords[1]
+            # print(f'{rk=}')
+            # print(f'{keyWords[0]=}')
+            # print(f'{keyWords[1]=}')
+            keyWords[0] = np.roll(keyWords[0], -12)
+            keyWords[1] = np.roll(keyWords[1], -2)
+            # print(f'{keyWords[0]=}')
+            # print(f'{keyWords[1]=}')
             #rotatate the words by 2
-            keyWords = keyWords[2:] + keyWords[:2]
+            # print(f'{keyWords=}')
+            keyWords = np.roll(keyWords, -2, axis=0)
+            # print(f'{keyWords=}')
+            rk = rk.reshape(16, 2)
             RK.append(rk)
         return RK
-    def print_variables(self):
-        for r in range(self._rounds):
-            print(r, ":", end = " ")
-            self.print_one_layer_variables(self._variables_X[r])
-            print("-----------------------S---------------------------")
-            self.print_one_layer_variables(self._variables_Y[r])
-            print("-----------------------L--------------------------")
-            self.print_one_layer_variables(self._variables_Y[r])
-            print("-----------------------add K ---------------------")
-        self.print_one_layer_variables(self._variables_X[self._rounds])
-    # def add_key(self, Y, X, K):
-    #     return = CNF()
-    # def gen_cnf(self):
-    #     if self._rounds == 1:
-    #         for s in range(self._number_of_sbox):
-    #             variables = []
-				# for i in range(self._sbox_size):
-    #                 variables.append( self._variables_X[0][self._sbox_size*s)+i]
-    #             for i in range(self._sbox_size):
-    #                 variables.append( self._variables_Y[0][self._sbox_size*s)+i]
-    #             self._complete_cnf += sbox_model(self._sbox_cnf, variables)
-		# else:
-			# for s in range(self._number_of_sbox):
-    #                 variables = []
-    #                 for i in range(self._sbox_size):
-    #                     variables.append(self._variables_X[0][self._sbox_size*s)+i]
-    #                 for i in range(self._sbox_size):
-    #                     variables.append(self._variables_Y[0][self._sbox_size*s)+i]
-    #                 self._complete_cnf += sbox_model(self._sbox_cnf, variables)
-			# for r in range(1, self._rounds):
-    #             if(r != self._rounds):
-    #                 yy = self.P(self._variables_Y[r-1])
-    #             else:
-    #                 yy = self._variables_Y[r-1][:]
-    #             self._complete_cnf += self.add_key(yy, self._variables_X[r], self._variables_K[r])
-				# for s in range(self._number_of_sbox):
-    #                 variables = []
-    #                 for i in range(self._sbox_size):
-    #                     variables.append(X[r][self._sbox_size*s)+i]
-    #                 for i in range(self._sbox_size):
-    #                     variables.append(Y[r][self._sbox_size*s)+i]
-    #                 self._complete_cnf += sbox_model(self._sbox_cnf, variables)
+    def addKey(self, Y, X, K):
+        """
+        Y = addKey(X, K)
+        """
+        CC = CNF()
+        for s in range(self._nSbox):
+            #Key bits are added in the bit position 0 and 1 of each sbox
+            var = [0]
+            var.append(Y[s][0])
+            var.append(K[s][0])
+            var.append(X[s][0])
+            CC1 = xorModel(var)
+            CC += CC1
+            var = [0]
+            var.append(Y[s][1])
+            var.append(K[s][1])
+            var.append(X[s][1])
+            CC1 = xorModel(var)
+            CC += CC1
+            var = [0]
+            var.append(Y[s][2])
+            var.append(X[s][2])
+            CC1 = eqModel(var)
+            CC += CC1
+            var = [0]
+            var.append(Y[s][3])
+            var.append(X[s][3])
+            CC1 = eqModel(var)
+            CC += CC1
+        return CC
+    def sboxLayer(self, X, Y, inDiff, outDiff):
+        """
+        Y = S(X)
+        """
+        CC = CNF()
+        for s in range(self._nSbox):
+            var = [0]
+            var += list(X[s])
+            var += list(Y[s])
+            # print(f'{var = }')
+            CC1 = sboxModel(self._sbox, self._sboxSize, self._sboxSize,\
+                    inDiff[s], outDiff[s], var)
+            CC += CC1
+        return CC
+    def genCnf(self):
+        cnf = CNF()
+        for r in range(0, self._nRound):
+            #Sbox Layer
+            cnf += self.sboxLayer(self._sboxIn[r], self._sboxOut[r],\
+                    self._trail[2*r], self._trail[(2*r)+1])
+            #Permutation Layer: no permutation for last round
+            if(r != (self._nRound - 1)):
+                permOut = self.applyPerm(self._sboxOut[r])
+            else:
+                permOut = self._sboxOut[r]
+            cnf += self.addKey(permOut, self._sboxIn[r+1], self._rk[r])
+        return cnf
 if __name__ == "__main__":
-    sbox_list = [0xc, 0x5, 0x6, 0xb, 0x9, 0x0, 0xa, 0xd, 0x3, 0xe, 0xf, 0x8, 0x4, 0x7, 0x1, 0x2]
-    gift = CIPHER_MODEL(sbox_list, 64, 4, 2, 16, [])
+    cipherName = "GIFT64"
+    sbox_list = [0x1, 0xa, 0x4, 0xc, 0x6, 0xf, 0x3, 0x9, 0x2, 0xd, 0xb, 0x7, 0x5, 0x0, 0x8, 0xe]
+    trail = [
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xC,0x6,0x0],
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x4,0x2,0x0],
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x6],
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x2],
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x2,0x0,0x0,0x0,0x0],
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x6,0x0,0x0,0x0,0x0],
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x4,0x0,0x0,0x0,0x2,0x0,0x0,0x0,0x0,0x0],
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x7,0x0,0x0,0x0,0x5,0x0,0x0,0x0,0x0,0x0]]
+    gift = CIPHER_MODEL(cipherName, sbox_list, 64, 4, 1, 16, trail)
