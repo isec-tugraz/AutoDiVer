@@ -1,23 +1,22 @@
 import os
 import sys
 import subprocess
-sys.path.append('./trails/')
 from gift64 import *
 from trails import *
 def checkenviroment():
     """
     Basic checks if the enviroment is set up correctly
     """
-    if not os.path.exists("./model/"):
-        os.makedirs("./model/")
-    if not os.path.exists("./sol/"):
-        os.makedirs("./sol/")
+    if not os.path.exists("../model/"):
+        os.makedirs("../model/")
+    if not os.path.exists("../sol/"):
+        os.makedirs("../sol/")
     # if not os.path.exists(PATH_APPROXMC):
     #     print("WARNING: Could not find APPROXMC binary, please check")
     return
 class SOLVE_MODEL(CIPHER_MODEL):
     def __init__(self, cipherName, sboxList, blockSize, sboxSize, nRound, nSbox):
-        self._trailFileName = "./trails/{}_{}.txt".format(cipherName,str(nRound))
+        self._trailFileName = "../trails/{}_{}.txt".format(cipherName,str(nRound))
         trail = []
         with open(self._trailFileName, 'r') as file:
             for line in file:
@@ -28,8 +27,8 @@ class SOLVE_MODEL(CIPHER_MODEL):
         super().__init__(sboxList, blockSize, sboxSize, nRound, nSbox,trail)
         checkenviroment()
         self._cipherName = cipherName
-        self._modelFileName = "./model/{}_{}.cnf".format(cipherName,str(self._nRound))
-        self._solFileName = "./sol/_{}_{}.sol".format(cipherName,str(self._nRound))
+        self._modelFileName = "../model/{}_{}.cnf".format(cipherName,str(self._nRound))
+        self._solFileName = "../sol/_{}_{}.sol".format(cipherName,str(self._nRound))
         self._modelFile = open(self._modelFileName, "w")
         self._modelFile.write(str(self._completeCnf))
         self._modelFile.close()

@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../')
 from model_util import *
 from util import IndexSet
 import numpy as np
