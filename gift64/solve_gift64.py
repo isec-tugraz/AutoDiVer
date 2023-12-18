@@ -28,17 +28,28 @@ class SOLVE_MODEL(CIPHER_MODEL):
         checkenviroment()
         self._cipherName = cipherName
         self._modelFileName = "../model/{}_{}.cnf".format(cipherName,str(self._nRound))
-        self._solFileName = "../sol/_{}_{}.sol".format(cipherName,str(self._nRound))
+        self._solFileName = "../sol/{}_{}.sol".format(cipherName,str(self._nRound))
         self._modelFile = open(self._modelFileName, "w")
         self._modelFile.write(str(self._completeCnf))
         self._modelFile.close()
-        self._solFile = open(self._solFileName, "w")
-        self._solFile.close()
         self.solve()
     def solve(self):
         parameters = ["approxmc", self._modelFileName]
         R = subprocess.run(parameters, capture_output=True)
-        print(R.stdout.decode())
+        R = R.stdout.decode()
+        R = R.splitlines()
+        isSatisfiable = R[len(R) - 2][2:]
+        if isSatisfiable == "SATISFIABLE":
+            nSolutions = R[len(R) - 3][34:]
+            print(isSatisfiable)
+            print(nSolutions)
+            self._solFile = open(self._solFileName, "w")
+            self._solFile.write(isSatisfiable)
+            self._solFile.write("\n")
+            self._solFile.write(nSolutions)
+            self._solFile.close()
+        else:
+            print(isSatisfiable)
 if __name__ == "__main__":
     cipherName = "gift64"
     sbox_list = [0x1, 0xa, 0x4, 0xc, 0x6, 0xf, 0x3, 0x9, 0x2, 0xd, 0xb, 0x7, 0x5, 0x0, 0x8, 0xe]
