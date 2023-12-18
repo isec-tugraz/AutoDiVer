@@ -14,7 +14,7 @@ def checkenviroment():
     # if not os.path.exists(PATH_APPROXMC):
     #     print("WARNING: Could not find APPROXMC binary, please check")
     return
-class SOLVE_MODEL(CIPHER_MODEL):
+class solveModel(cipherModel):
     def __init__(self, cipherName, sboxList, blockSize, sboxSize, nRound, nSbox):
         self._trailFileName = "../trails/{}_{}.txt".format(cipherName,str(nRound))
         trail = []
@@ -55,6 +55,6 @@ if __name__ == "__main__":
     sboxList = [0x1, 0xa, 0x4, 0xc, 0x6, 0xf, 0x3, 0x9, 0x2, 0xd, 0xb, 0x7, 0x5, 0x0, 0x8, 0xe]
     blockSize = 64
     sboxSize  =  4
-    rounds    =  7
+    rounds    =  4
     nrofSbox  = 16
-    gift = SOLVE_MODEL(cipherName, sboxList, blockSize, sboxSize, rounds, nrofSbox)
+    gift = solveModel(cipherName, sboxList, blockSize, sboxSize, rounds, nrofSbox)
