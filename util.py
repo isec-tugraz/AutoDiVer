@@ -28,7 +28,7 @@ class IndexSet:
         res = [None] * np.prod(index_array.shape, dtype=int)
         for i, needle in enumerate(index_array.flatten()):
             if needle == self.numvars:
-                res[i] == "1"
+                res[i] = "1"
                 continue
             for k, v in variables.items():
                 start, stop = v.flatten()[[0, -1]]

@@ -3,23 +3,29 @@ sys.path.append('../')
 from model_util import *
 from util import IndexSet
 import numpy as np
+import numpy.typing as npt
+from typing import Any
 P64 = np.array((0, 17, 34, 51, 48, 1, 18, 35, 32, 49, 2, 19, 16, 33, 50, 3,
                 4, 21, 38, 55, 52, 5, 22, 39, 36, 53, 6, 23, 20, 37, 54, 7,
                 8, 25, 42, 59, 56, 9, 26, 43, 40, 57, 10, 27, 24, 41, 58, 11,
                 12, 29, 46, 63, 60, 13, 30, 47, 44, 61, 14, 31, 28, 45, 62, 15))
 class CIPHER_MODEL(IndexSet):
-    def __init__(self, sboxList, blockSize, sboxSize, nRound, nSbox, trail):
+    _sboxIn: np.ndarray[Any, np.dtype[np.int32]]
+    _sboxOut: np.ndarray[Any, np.dtype[np.int32]]
+    MK: np.ndarray[Any, np.dtype[np.int32]]
+    def __init__(self, sboxList: npt.ArrayLike, blockSize: int, sboxSize: int, nRound: int, nSbox: int, trail: npt.ArrayLike):
         super().__init__()
-        self._sbox = sboxList
+        self._sbox = np.array(sboxList)
         self._sboxSize = sboxSize
         self._blockSize = blockSize
         self._nRound = nRound
         self._nSbox = nSbox
-        self._trail = trail #two trails for each sbox layer
+        self._trail = np.array(trail) #shape = (2 * numrounds, nSbox) -> two elements in axis 0 per s-box layer
         #generate Variables
         self.add_index_array('_sboxIn', (self._nRound+1, self._nSbox, self._sboxSize))
         self.add_index_array('_sboxOut', (self._nRound, self._nSbox, self._sboxSize))
-        self._rk = self.keySchedule()
+        self.add_index_array('MK', (1, self._nSbox*2, self._sboxSize))
+        self._rk = self._keySchedule()
         # print(self._rk)
         # test permutation
         # temp = self.applyPerm(self._sboxIn[0])
@@ -27,13 +33,12 @@ class CIPHER_MODEL(IndexSet):
         # print(temp)
         self._completeCnf = self.genCnf()
         # print(self._completeCnf)
-    def applyPerm(self, array):
+    def applyPerm(self, array: np.ndarray):
         arrayFlat = array.flatten()
         arrayPermuted = arrayFlat[P64]
         arrayOut = arrayPermuted.reshape(16, 4)
         return arrayOut
-    def keySchedule(self):
-        self.add_index_array('MK', (1, self._nSbox*2, self._sboxSize))
+    def _keySchedule(self):
         keyWords = self.MK.flatten()
         keyWords = keyWords.reshape(8, 16)
         # print(f'{keyWords=}')
@@ -116,7 +121,7 @@ class CIPHER_MODEL(IndexSet):
 if __name__ == "__main__":
     cipherName = "GIFT64"
     sbox_list = [0x1, 0xa, 0x4, 0xc, 0x6, 0xf, 0x3, 0x9, 0x2, 0xd, 0xb, 0x7, 0x5, 0x0, 0x8, 0xe]
-    trail = [
+    trail = np.array([
         [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0xC,0x6,0x0],
         [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x4,0x2,0x0],
         [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x6],
@@ -124,5 +129,5 @@ if __name__ == "__main__":
         [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x2,0x0,0x0,0x0,0x0],
         [0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x6,0x0,0x0,0x0,0x0],
         [0x0,0x0,0x0,0x0,0x0,0x0,0x4,0x0,0x0,0x0,0x2,0x0,0x0,0x0,0x0,0x0],
-        [0x0,0x0,0x0,0x0,0x0,0x0,0x7,0x0,0x0,0x0,0x5,0x0,0x0,0x0,0x0,0x0]]
-    gift = CIPHER_MODEL(cipherName, sbox_list, 64, 4, 1, 16, trail)
+        [0x0,0x0,0x0,0x0,0x0,0x0,0x7,0x0,0x0,0x0,0x5,0x0,0x0,0x0,0x0,0x0]])
+    gift = CIPHER_MODEL(sbox_list, 64, 4, 1, 16, trail)
