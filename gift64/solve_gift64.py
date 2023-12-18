@@ -38,7 +38,7 @@ class SOLVE_MODEL(CIPHER_MODEL):
     def solve(self):
         parameters = ["approxmc", self._modelFileName]
         R = subprocess.run(parameters, capture_output=True)
-        print(R)
+        print(R.stdout.decode())
 if __name__ == "__main__":
     cipherName = "gift64"
     sbox_list = [0x1, 0xa, 0x4, 0xc, 0x6, 0xf, 0x3, 0x9, 0x2, 0xd, 0xb, 0x7, 0x5, 0x0, 0x8, 0xe]
