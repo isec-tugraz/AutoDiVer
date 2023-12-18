@@ -20,7 +20,7 @@ class solveModel(cipherModel):
         trail = []
         with open(self._trailFileName, 'r') as file:
             for line in file:
-                hex_values = line.strip().split(',')
+                hex_values = list(line)[:nSbox]
                 decimal_values = [int(hex_value, 16) for hex_value in hex_values]
                 trail.append(decimal_values)
                 # print(decimal_values)
