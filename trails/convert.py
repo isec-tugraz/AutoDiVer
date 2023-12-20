@@ -65,7 +65,6 @@ if __name__ == '__main__':
             ints = [int(x, 16) for x in line.split(',')][::-1]
             res.append(ints)
     res = np.array(res, dtype=np.uint8)
-    assert len(res) % 2 == 0
     sbox_in = res[:-1]
     sbox_out = inverse_bit_perm(res[1:])
     assert sbox_in.shape == sbox_out.shape
