@@ -20,36 +20,24 @@ class SolveModel(CipherModel):
         trail = []
         with open(self._trailFileName, 'r') as file:
             for line in file:
+                line = line.strip()
+                if not line:
+                    continue
                 hex_values = list(line)[:nSbox]
                 decimal_values = [int(hex_value, 16) for hex_value in hex_values]
                 trail.append(decimal_values)
                 # print(decimal_values)
-        super().__init__(sboxList, blockSize, sboxSize, nRound, nSbox,trail)
+        sbox_in = trail[::2]
+        sbox_out = trail[1::2]
+        super().__init__(sboxList, blockSize, sboxSize, nRound, nSbox, sbox_in, sbox_out)
         checkenviroment()
         self._cipherName = cipherName
         self._modelFileName = "../model/{}_{}.cnf".format(cipherName,str(self._nRound))
         self._solFileName = "../sol/{}_{}.sol".format(cipherName,str(self._nRound))
         self._modelFile = open(self._modelFileName, "w")
-        self._modelFile.write(str(self._completeCnf))
+        self._modelFile.write(str(self.cnf))
         self._modelFile.close()
         self.solve()
-    def solve(self):
-        parameters = ["approxmc", self._modelFileName]
-        R = subprocess.run(parameters, capture_output=True)
-        R = R.stdout.decode()
-        R = R.splitlines()
-        isSatisfiable = R[len(R) - 2][2:]
-        if isSatisfiable == "SATISFIABLE":
-            nSolutions = R[len(R) - 3][34:]
-            print(isSatisfiable)
-            print(nSolutions)
-            self._solFile = open(self._solFileName, "w")
-            self._solFile.write(isSatisfiable)
-            self._solFile.write("\n")
-            self._solFile.write(nSolutions)
-            self._solFile.close()
-        else:
-            print(isSatisfiable)
 if __name__ == "__main__":
     cipherName = "gift64"
     sboxList = [0x1, 0xa, 0x4, 0xc, 0x6, 0xf, 0x3, 0x9, 0x2, 0xd, 0xb, 0x7, 0x5, 0x0, 0x8, 0xe]
