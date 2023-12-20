@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 model the solutions of a differential characteristic for GIFT64 and count them.
 """
@@ -13,6 +13,7 @@ from pyapproxmc import Counter
 sys.path.append('../')
 from model_util import *
 from util import IndexSet
+from gift_util import bit_perm
 P64 = np.array((0, 17, 34, 51, 48, 1, 18, 35, 32, 49, 2, 19, 16, 33, 50, 3,
                 4, 21, 38, 55, 52, 5, 22, 39, 36, 53, 6, 23, 20, 37, 54, 7,
                 8, 25, 42, 59, 56, 9, 26, 43, 40, 57, 10, 27, 24, 41, 58, 11,
@@ -49,6 +50,12 @@ class CipherModel(IndexSet):
         self.trail_sbox_out = np.array(sbox_out)
         if self.trail_sbox_in.shape != self.trail_sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
+        for i in range(1, nRound):
+            lin_input = self.trail_sbox_out[i - 1]
+            lin_output = self.trail_sbox_in[i]
+            permuted = bit_perm(lin_input)
+            if not np.all(permuted == lin_output):
+                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
         #generate Variables
         self.add_index_array('_sboxIn', (self._nRound+1, self._nSbox, self._sboxSize))
         self.add_index_array('_sboxOut', (self._nRound, self._nSbox, self._sboxSize))
@@ -167,7 +174,7 @@ if __name__ == "__main__":
             if not line:
                 continue
             assert len(line) == 16
-            line_deltas = [int(l, 16) for l in line]
+            line_deltas = [int(l, 16) for l in line[::-1]]
             trail.append(line_deltas)
     trail = np.array(trail)
     if len(trail) % 2 != 0:
