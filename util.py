@@ -1,19 +1,22 @@
 from __future__ import annotations
-from dataclasses import dataclass
 import numpy as np
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from typing import *
+from typing import Any, Literal
+class Model:
+    def __init__(self, index_set: IndexSet, raw_model: np.ndarray[Any, np.dtype[np.uint8]], *, bitorder: Literal['big', 'little']='little'):
+        for fieldname in index_set._fieldnames:
+            index_array = getattr(index_set, fieldname)
+            model = np.packbits(raw_model[index_array], axis=-1, bitorder=bitorder)[..., 0]
+            setattr(self, fieldname, model)
 class IndexSet:
     numvars: int
     def __init__(self):
         self.numvars = 0
         self._fieldnames = set()
-    def add_index_array(self, name: str, shape: Tuple[int, ...]):
-        length = np.prod(shape, dtype=np.int32)
+    def add_index_array(self, name: str, shape: tuple[int, ...]):
+        length: int = np.prod(shape, dtype=np.int32) # type: ignore
         res = np.arange(self.numvars + 1, self.numvars + 1 + length, dtype=np.int32)
         res = res.reshape(shape)
-        res.flags.writeable = 0
+        res.flags.writeable = False
         self.numvars += length
         self._fieldnames.add(name)
         setattr(self, name, res)
@@ -41,6 +44,8 @@ class IndexSet:
             else:
                 assert False, f"index {needle} not found?"
         return np.array(res, dtype=object).reshape(index_array.shape)
+    def get_model(self, model: np.ndarray[Any, np.dtype[np.uint8]], *, bitorder: Literal['big', 'little']='little') -> Model:
+        return Model(self, model, bitorder=bitorder)
     def __repr__(self):
         res = f"{self.__class__.__name__}(\n"
         for fieldname in self._fieldnames:

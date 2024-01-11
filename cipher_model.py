@@ -9,7 +9,7 @@ import numpy.typing as npt
 from sat_toolkit.formula import CNF, Truthtable
 from pyapproxmc import Counter
 from pycryptosat import Solver
-from util import IndexSet
+from util import IndexSet, Model
 from typing import Any
 class DifferentialCharacteristic():
     num_rounds: int
@@ -68,11 +68,20 @@ class SboxCipher(IndexSet):
         is_sat, model = solver.solve()
         if not is_sat:
             raise ValueError('cnf is UNSAT')
+        return list(model)
+    def solve(self) -> Model:
+        raw_model = self._solve()
+        raw_model[0] = False
+        raw_model = np.array(raw_model, dtype=np.uint8)
+        model = self.get_model(raw_model)
         return model
-    def count(self):
+    def count_solutions(self):
         counter = Counter()
         counter.add_clauses(self.cnf)
         mantissa, exponent = counter.count()
+        return mantissa, exponent
+    def count_probability(self):
+        mantissa, exponent = self.count_solutions()
         print(f'{mantissa} * 2**{exponent} solutions')
         log2_prob = (log2(mantissa) + exponent) - (self.block_size + self.key_size)
         print(f'probability : 2**{log2_prob:.2f}')
