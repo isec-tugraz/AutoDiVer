@@ -5,15 +5,12 @@ model the solutions of a differential characteristic for GIFT64 and count them.
 from __future__ import annotations
 import sys
 import argparse
-from math import log2
 import numpy as np
-import numpy.typing as npt
 from typing import Any
-from pyapproxmc import Counter
+from sat_toolkit.formula import CNF
 sys.path.append('../')
-from model_util import *
-from util import IndexSet
 from gift_util import bit_perm
+from cipher_model import SboxCipher, DifferentialCharacteristic
 P64 = np.array((0, 17, 34, 51, 48, 1, 18, 35, 32, 49, 2, 19, 16, 33, 50, 3,
                 4, 21, 38, 55, 52, 5, 22, 39, 36, 53, 6, 23, 20, 37, 54, 7,
                 8, 25, 42, 59, 56, 9, 26, 43, 40, 57, 10, 27, 24, 41, 58, 11,
@@ -35,50 +32,45 @@ ddt = np.array([[16,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]
                 [ 0,  4,  0,  0,  4,  0,  0,  0,  2,  2,  0,  0,  2,  2,  0,  0],
                 [ 0,  2,  2,  0,  4,  0,  0,  0,  0,  2,  0,  2,  0,  0,  2,  2]],
                dtype=np.uint8)
-class CipherModel(IndexSet):
-    _sboxIn: np.ndarray[Any, np.dtype[np.int32]]
-    _sboxOut: np.ndarray[Any, np.dtype[np.int32]]
-    MK: np.ndarray[Any, np.dtype[np.int32]]
-    def __init__(self, sboxList: npt.ArrayLike, blockSize: int, sboxSize: int, nRound: int, nSbox: int, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike):
-        super().__init__()
-        self._sbox = np.array(sboxList)
-        self._sboxSize = sboxSize
-        self._blockSize = blockSize
-        self._nRound = nRound
-        self._nSbox = nSbox
+class Gift64(SboxCipher):
+    cipher_name = "GIFT64"
+    sbox = np.array([int(x, 16) for x in "1a4c6f392db7508e"], dtype=np.uint8)
+    block_size = 64
+    key_size = 128
+    sbox_bits = 4
+    sbox_count = 16
+    key: np.ndarray[Any, np.dtype[np.int32]]
+    def __init__(self, char: DifferentialCharacteristic):
+        super().__init__(char)
         self.trail_sbox_in = np.array(sbox_in)
         self.trail_sbox_out = np.array(sbox_out)
+        assert self.trail_sbox_in.shape == self.trail_sbox_out.shape
+        self.num_rounds = len(self.trail_sbox_in)
         if self.trail_sbox_in.shape != self.trail_sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
-        for i in range(1, nRound):
+        for i in range(1, self.num_rounds):
             lin_input = self.trail_sbox_out[i - 1]
             lin_output = self.trail_sbox_in[i]
             permuted = bit_perm(lin_input)
             if not np.all(permuted == lin_output):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
         #generate Variables
-        self.add_index_array('_sboxIn', (self._nRound+1, self._nSbox, self._sboxSize))
-        self.add_index_array('_sboxOut', (self._nRound, self._nSbox, self._sboxSize))
-        self.add_index_array('MK', (1, self._nSbox*2, self._sboxSize))
-        self._rk = self._keySchedule()
-        # print(self._rk)
-        # test permutation
-        # temp = self.applyPerm(self._sboxIn[0])
-        # print(self._sboxIn[0])
-        # print(temp)
-        self.cnf = self.genCnf()
-        # print(self._completeCnf)
+        self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
+        self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
+        self.add_index_array('key', (1, self.sbox_count*2, self.sbox_bits))
+        self._model_sboxes()
+        self._model_key_schedule()
+        self._model_linear_layer()
     def applyPerm(self, array: np.ndarray):
         arrayFlat = array.flatten()
         arrayPermuted = arrayFlat[P64]
         arrayOut = arrayPermuted.reshape(16, 4)
         return arrayOut
-    def _keySchedule(self):
-        keyWords = self.MK.flatten()
-        keyWords = keyWords.reshape(8, 16)
+    def _model_key_schedule(self):
+        keyWords = self.key.copy().reshape(8, 16)
         # print(f'{keyWords=}')
         RK = []
-        for r in range(self._nRound):
+        for _ in range(self.num_rounds):
             rk = np.empty(len(keyWords[0]) + len(keyWords[1]), dtype=keyWords.dtype)
             rk[0::2] = keyWords[0]
             rk[1::2] = keyWords[1]
@@ -95,73 +87,25 @@ class CipherModel(IndexSet):
             # print(f'{keyWords=}')
             rk = rk.reshape(16, 2)
             RK.append(rk)
-        return RK
-    def addKey(self, Y, X, K):
+        self._round_keys = np.array(RK)
+    def _addKey(self, Y, X, K):
         """
         Y = addKey(X, K)
         """
-        CC = CNF()
-        for s in range(self._nSbox):
-            #Key bits are added in the bit position 0 and 1 of each sbox
-            var = [0]
-            var.append(Y[s][0])
-            var.append(K[s][0])
-            var.append(X[s][0])
-            CC1 = xorModel(var)
-            CC += CC1
-            var = [0]
-            var.append(Y[s][1])
-            var.append(K[s][1])
-            var.append(X[s][1])
-            CC1 = xorModel(var)
-            CC += CC1
-            var = [0]
-            var.append(Y[s][2])
-            var.append(X[s][2])
-            CC1 = eqModel(var)
-            CC += CC1
-            var = [0]
-            var.append(Y[s][3])
-            var.append(X[s][3])
-            CC1 = eqModel(var)
-            CC += CC1
-        return CC
-    def sboxLayer(self, X, Y, inDiff, outDiff):
-        """
-        Y = S(X)
-        """
-        CC = CNF()
-        for s in range(self._nSbox):
-            var = [0]
-            var += list(X[s])
-            var += list(Y[s])
-            # print(f'{var = }')
-            CC1 = sboxModel(self._sbox, self._sboxSize, self._sboxSize,\
-                    inDiff[s], outDiff[s], var)
-            CC += CC1
-        return CC
-    def genCnf(self):
+        key_xor_cnf = CNF()
+        key_xor_cnf += CNF.create_all_equal(X[:, 2:].flatten(), Y[:, 2:].flatten())
+        key_xor_cnf += CNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten(), K.flatten())
+        return key_xor_cnf
+    def _model_linear_layer(self):
         cnf = CNF()
-        for r in range(0, self._nRound):
-            #Sbox Layer
-            cnf += self.sboxLayer(self._sboxIn[r], self._sboxOut[r],\
-                    self.trail_sbox_in[r], self.trail_sbox_out[r])
+        for r in range(self.num_rounds):
             #Permutation Layer: no permutation for last round
-            if(r != (self._nRound - 1)):
-                permOut = self.applyPerm(self._sboxOut[r])
+            if r != self.num_rounds - 1:
+                permOut = self.applyPerm(self.sbox_out[r])
             else:
-                permOut = self._sboxOut[r]
-            cnf += self.addKey(permOut, self._sboxIn[r+1], self._rk[r])
-        return cnf
-    def solve(self):
-        counter = Counter()
-        # for clause in self.cnf:
-            # counter.add_clause(clause)
-        counter.add_clauses(list(self.cnf))
-        mantissa, exponent = counter.count()
-        print(f'{mantissa} * 2**{exponent} solutions')
-        log2_prob = (log2(mantissa) + exponent) - (128 + 64)
-        print(f'probability : 2**{log2_prob:.2f}')
+                permOut = self.sbox_in[r]
+            cnf += self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r])
+        self.cnf += cnf
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('trail', help='Text file containing the sbox input and output differences.\n'\
@@ -184,7 +128,9 @@ if __name__ == "__main__":
     sbox_list = [int(x, 16) for x in '1a4c6f392db7508e']
     sbox_in = trail[0::2]
     sbox_out = trail[1::2]
-    ddt_prob = np.log2(ddt[sbox_in, sbox_out] / 16).sum()
+    char = DifferentialCharacteristic(sbox_in, sbox_out)
+    ddt_prob = char.log2_ddt_probability(ddt)
     print(f"ddt probability: 2**{ddt_prob:.1f}")
-    gift = CipherModel(sbox_list, 64, 4, rounds, 16, sbox_in, sbox_out)
-    gift.solve()
+    gift = Gift64(char)
+    print('constructed model')
+    gift.count()
