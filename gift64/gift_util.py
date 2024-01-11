@@ -29,32 +29,26 @@ GIFT_RC = bytearray.fromhex(
     "18302102050b172e1c383123060d1b362d1a34291224"
     "081122040913260c1932250a152a14281020"
 )
-def unpack_bits(arr: np.ndarray, bitorder: Literal['big', 'little'] = 'little'):
+def unpack_bits(arr: np.ndarray):
     arr = np.array(arr, dtype=np.uint8)
-    bits = np.unpackbits(arr, axis=-1, bitorder=bitorder)
-    if bitorder == 'big':
-        bit_offsets = [4, 5, 6, 7]
-    else:
-        bit_offsets = [0, 1, 2, 3]
+    bits = np.unpackbits(arr, axis=-1, bitorder='little')
+    bit_offsets = [0, 1, 2, 3]
     selector = np.stack([np.arange(16) * 8 + o for o in bit_offsets]).T.flatten()
     bits = bits[..., selector]
     return bits
-def pack_bits(bits: np.ndarray, bitorder: Literal['big', 'little'] = 'little'):
-    if bitorder == 'big':
-        bit_offsets = [4, 5, 6, 7]
-    else:
-        bit_offsets = [0, 1, 2, 3]
+def pack_bits(bits: np.ndarray):
+    bit_offsets = [0, 1, 2, 3]
     selector = np.stack([np.arange(16) * 8 + o for o in bit_offsets]).T.flatten()
     padded_bits = np.zeros((len(bits), 128), dtype=np.uint8)
     padded_bits[..., selector] = bits
-    return np.packbits(padded_bits, axis=1, bitorder=bitorder)
+    return np.packbits(padded_bits, axis=1, bitorder='little')
 def inverse_bit_perm(arr):
-    bits = unpack_bits(arr, 'little')
+    bits = unpack_bits(arr)
     ip = bits[..., IP64]
-    res = pack_bits(ip, 'little')
+    res = pack_bits(ip)
     return res
 def bit_perm(arr):
-    bits = unpack_bits(arr, 'little')
+    bits = unpack_bits(arr)
     pemuted = bits[..., P64]
-    res = pack_bits(pemuted, 'little')
+    res = pack_bits(pemuted)
     return res
