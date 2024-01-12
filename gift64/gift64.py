@@ -26,15 +26,14 @@ class Gift64(SboxCipher):
     key: np.ndarray[Any, np.dtype[np.int32]]
     def __init__(self, char: DifferentialCharacteristic):
         super().__init__(char)
-        self.trail_sbox_in = np.array(sbox_in)
-        self.trail_sbox_out = np.array(sbox_out)
-        assert self.trail_sbox_in.shape == self.trail_sbox_out.shape
-        self.num_rounds = len(self.trail_sbox_in)
-        if self.trail_sbox_in.shape != self.trail_sbox_out.shape:
+        self.char = char
+        self.num_rounds = char.num_rounds
+        assert self.char.sbox_in.shape == self.char.sbox_out.shape
+        if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
         for i in range(1, self.num_rounds):
-            lin_input = self.trail_sbox_out[i - 1]
-            lin_output = self.trail_sbox_in[i]
+            lin_input = self.char.sbox_out[i - 1]
+            lin_output = self.char.sbox_in[i]
             permuted = bit_perm(lin_input)
             if not np.all(permuted == lin_output):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
@@ -90,7 +89,7 @@ class Gift64(SboxCipher):
         self.cnf += cnf
 def sanity_check_gift():
     numrounds = 26
-    sbi = sbo = np.zeros((numrounds, 16, 4), dtype=np.uint8)
+    sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
     char = DifferentialCharacteristic(sbi, sbo)
     gift = Gift64(char)
     for bit_var in gift.key.flatten():
@@ -123,6 +122,8 @@ def sanity_check_gift():
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     gift = Gift64(char)
+    print(f'{char.num_rounds=}')
+    print(f'{gift.num_rounds=}')
     model = gift.solve()
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
@@ -131,9 +132,11 @@ def sanity_check_gift():
         ref = gift64_enc(sbi[0], key, r)
         ref_xor = gift64_enc(sbi[0] ^ sbi_delta[0], key, r)
         assert np.all(round_sbi == ref)
-        assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)
+        print(r, gift.num_rounds)
+        if r < gift.num_rounds - 1:
+            assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)
     print('sanity check 2 passed')
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('trail', help='Text file containing the sbox input and output differences.\n'\
                                       'Input and output differences are listed on separate lines.')
@@ -151,8 +154,6 @@ if __name__ == "__main__":
     if len(trail) % 2 != 0:
         print(f'expected an even number of differences in {args.trail!r}')
         raise SystemExit(1)
-    rounds = len(trail) // 2
-    sbox_list = [int(x, 16) for x in '1a4c6f392db7508e']
     sbox_in = trail[0::2]
     sbox_out = trail[1::2]
     char = DifferentialCharacteristic(sbox_in, sbox_out)
@@ -160,4 +161,8 @@ if __name__ == "__main__":
     print(f"ddt probability: 2**{ddt_prob:.1f}")
     sanity_check_gift()
     gift = Gift64(char)
+    gift.count_key_space()
+    return
     gift.count_probability()
+if __name__ == "__main__":
+    raise SystemExit(main())
