@@ -107,7 +107,32 @@ def sanity_check_gift():
         assert np.all(round_sbi == ref)
     mantissa, exponent = gift.count_solutions()
     assert mantissa * 2**exponent == 1
-    print("sanity check passed")
+    print("sanity check 1 passed")
+    char = (
+        ("0000000c00000006", "0000000200000002"),
+        ("0000000002020000", "0000000005050000"),
+        ("0000005000000050", "0000002000000020"),
+        ("0000000000000202", "0000000000000505"),
+        ("0000000500000005", "0000000200000002"),
+        ("0000000002020000", "0000000005050000"),
+        ("0000005000000050", "0000002000000020"),
+        ("0000000000000202", "0000000000000505"),
+        ("0000000500000005", "0000000f0000000f"),
+    )
+    sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
+    sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    gift = Gift64(char)
+    model = gift.solve()
+    key = model.key # type: ignore
+    sbi = model.sbox_in # type: ignore
+    sbo = model.sbox_out # type: ignore
+    for r, round_sbi in enumerate(sbi):
+        ref = gift64_enc(sbi[0], key, r)
+        ref_xor = gift64_enc(sbi[0] ^ sbi_delta[0], key, r)
+        assert np.all(round_sbi == ref)
+        assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)
+    print('sanity check 2 passed')
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('trail', help='Text file containing the sbox input and output differences.\n'\
