@@ -104,7 +104,7 @@ def sanity_check_gift():
     for r, round_sbi in enumerate(sbi):
         ref = gift64_enc(sbi[0], key, r)
         assert np.all(round_sbi == ref)
-    mantissa, exponent = gift.count_solutions()
+    mantissa, exponent = gift._count_solutions(verbosity=0)
     assert mantissa * 2**exponent == 1
     print("sanity check 1 passed")
     char = (
@@ -122,8 +122,6 @@ def sanity_check_gift():
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     gift = Gift64(char)
-    print(f'{char.num_rounds=}')
-    print(f'{gift.num_rounds=}')
     model = gift.solve()
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
@@ -132,7 +130,6 @@ def sanity_check_gift():
         ref = gift64_enc(sbi[0], key, r)
         ref_xor = gift64_enc(sbi[0] ^ sbi_delta[0], key, r)
         assert np.all(round_sbi == ref)
-        print(r, gift.num_rounds)
         if r < gift.num_rounds - 1:
             assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)
     print('sanity check 2 passed')
@@ -161,8 +158,10 @@ def main():
     print(f"ddt probability: 2**{ddt_prob:.1f}")
     sanity_check_gift()
     gift = Gift64(char)
-    gift.count_key_space()
-    return
-    gift.count_probability()
+    # gift.count_key_space()
+    for _ in range(10):
+        gift.count_probability_for_random_key(verbosity=0)
+    gift.count_probability(verbosity=0)
+    from IPython import embed; embed()
 if __name__ == "__main__":
     raise SystemExit(main())

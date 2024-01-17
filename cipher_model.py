@@ -4,6 +4,10 @@ Cipher model base classes
 from __future__ import annotations
 from util import IndexSet
 from math import log2
+import copy
+import os
+import time
+import sys
 import numpy as np
 import numpy.typing as npt
 from sat_toolkit.formula import CNF, Truthtable
@@ -33,6 +37,7 @@ class SboxCipher(IndexSet):
     num_rounds: int
     sbox_in: np.ndarray[Any, np.dtype[np.int32]]
     sbox_out: np.ndarray[Any, np.dtype[np.int32]]
+    key: np.ndarray[Any, np.dtype[np.int32]]
     cnf: CNF
     def __init__(self, char: DifferentialCharacteristic):
         super().__init__()
@@ -75,14 +80,56 @@ class SboxCipher(IndexSet):
         raw_model = np.array(raw_model, dtype=np.uint8)
         model = self.get_model(raw_model)
         return model
-    def count_solutions(self):
-        counter = Counter()
-        counter.add_clauses(self.cnf)
+    def _count_solutions(self, verbosity=2, cnf=None):
+        counter = Counter(verbosity=verbosity, epsilon=0.99, delta=0.01)
+        counter.add_clauses(cnf or self.cnf)
+        start = time.process_time_ns()
         mantissa, exponent = counter.count()
+        stop = time.process_time_ns()
+        if verbosity >= 1:
+            print(f'counting took {(stop-start)/1e9:.2f} seconds')
         return mantissa, exponent
-    def count_probability(self):
-        mantissa, exponent = self.count_solutions()
-        print(f'{mantissa} * 2**{exponent} solutions')
+    def count_probability_for_random_key(self, verbosity=2):
+        assert self.key_size % 8 == 0
+        key_bits = np.unpackbits(np.array(bytearray(os.urandom(self.key_size // 8))))
+        key_bits = key_bits.reshape(self.key.shape)
+        if self.key.shape[-1] == 4:
+            key_nibbles = np.packbits(key_bits, axis=-1, bitorder='little')[..., 0]
+            key_str = ''.join(f'{x:01x}' for x in key_nibbles)
+        elif self.key.shape[-1] == 8:
+            key_bytes = np.packbits(key_bits, axis=-1, bitorder='little')[..., 0]
+            key_str = ''.join(f'{x:02x}' for x in key_bytes)
+        else:
+            raise ValueError('key must be composed of bytes or nibbles')
+        sys.stdout.flush()
+        cnf = copy.copy(self.cnf)
+        cnf += CNF.create_xor(self.key.flatten(), rhs=key_bits.flatten())
+        if verbosity == 0:
+            print(f'key: {key_str}', end=' ', flush=True)
+        mantissa, exponent = self._count_solutions(verbosity=verbosity, cnf=cnf)
+        if verbosity > 0:
+            print(f'key: {key_str}', end=' ', flush=True)
+        if mantissa > 0:
+            log2_prob = (log2(mantissa) + exponent) - self.block_size
+            print(f'probability: 2^{log2_prob:.2f}')
+        else:
+            print('probability: 0')
+            return float('-inf')
+        return key_bits, log2_prob
+    def count_probability(self, verbosity=2):
+        mantissa, exponent = self._count_solutions(verbosity=verbosity)
+        print(f'{mantissa} * 2^{exponent} = 2^{log2(mantissa * 2**exponent):.1f} solutions')
         log2_prob = (log2(mantissa) + exponent) - (self.block_size + self.key_size)
-        print(f'probability : 2**{log2_prob:.2f}')
+        print(f'probability : 2^{log2_prob:.2f}')
         return log2_prob
+    def count_key_space(self, verbosity=2):
+        """
+        Use model counting to count the number of keys for which the
+        characteristic is not impossible.
+        """
+        counter = Counter(verbosity=verbosity, epsilon=0.99)
+        counter.add_clauses(self.cnf)
+        mantissa, exponent = counter.count(self.key.flatten().tolist())
+        num_keys = mantissa * 2**exponent
+        log_num_keys = log2(num_keys)
+        print(f'key space: 2^{log_num_keys:.2f}')
