@@ -104,7 +104,7 @@ def sanity_check_gift():
     for r, round_sbi in enumerate(sbi):
         ref = gift64_enc(sbi[0], key, r)
         assert np.all(round_sbi == ref)
-    mantissa, exponent = gift._count_solutions(verbosity=0)
+    mantissa, exponent = gift._count_solutions(0.2, 0.8, verbosity=0)
     assert mantissa * 2**exponent == 1
     print("sanity check 1 passed")
     char = (
@@ -137,6 +137,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('trail', help='Text file containing the sbox input and output differences.\n'\
                                       'Input and output differences are listed on separate lines.')
+    parser.add_argument('--epsilon', type=float, default=0.8)
+    parser.add_argument('--delta', type=float, default=0.2)
+    parser.add_argument('--cnf', type=str, help="file to save CNF in DIMACS format")
     args = parser.parse_args()
     trail = []
     with open(args.trail, 'r') as f:
@@ -158,10 +161,14 @@ def main():
     print(f"ddt probability: 2**{ddt_prob:.1f}")
     sanity_check_gift()
     gift = Gift64(char)
+    if args.cnf:
+        with open(args.cnf, 'w') as f:
+            f.write(gift.cnf.to_dimacs())
+        print(f"wrote cnf to {args.cnf}")
     # gift.count_key_space()
-    for _ in range(10):
-        gift.count_probability_for_random_key(verbosity=0)
-    gift.count_probability(verbosity=0)
-    from IPython import embed; embed()
+    # for _ in range(10):
+    #     gift.count_probability_for_random_key(verbosity=0)
+    gift.count_probability(args.epsilon, args.delta, verbosity=2)
+    # from IPython import embed; embed()
 if __name__ == "__main__":
     raise SystemExit(main())
