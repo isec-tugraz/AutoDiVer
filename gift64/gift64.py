@@ -145,7 +145,7 @@ def main():
     with open(args.trail, 'r') as f:
         for line in f:
             line = line.strip()
-            if not line:
+            if not line or line.startswith('#'):
                 continue
             assert len(line) == 16
             line_deltas = [int(l, 16) for l in line[::-1]]
