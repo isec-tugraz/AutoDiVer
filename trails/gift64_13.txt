@@ -1,3 +1,7 @@
+# Improved Attacks on GIFT-64
+# Ling Sun, Wei Wang, and Meiqin Wang
+# https://eprint.iacr.org/2021/1179.pdf
+# Table 8 "First Dominating Trail"
 000000c000000060
 0000002000000020
 0000000000000202

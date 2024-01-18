@@ -1,3 +1,7 @@
+# Improved Differential Attacks on GIFT-64
+# Huaifeng Chen, Rui Zong, and Xiaoyang Dong
+# https://doi.org/10.1007/978-3-030-41579-2_26
+# Table 3 "12-round differential characteristic of GIFT-64"
 0000000600000006
 0000000200000002
 0000000002020000
