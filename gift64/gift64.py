@@ -6,19 +6,15 @@ from __future__ import annotations
 import sys
 import argparse
 from copy import copy
-from random import randint
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import CNF
-sys.path.append('../')
-from gift_util import bit_perm, P64, DDT as GIFT_DDT, GIFT_RC, pack_bits, unpack_bits
+from gift64.gift_util import bit_perm, P64, DDT as GIFT_DDT, GIFT_RC, pack_bits, unpack_bits
 from cipher_model import SboxCipher, DifferentialCharacteristic
-from pyximport import install
-install()
-from gift_cipher import gift64_enc
 class Gift64(SboxCipher):
     cipher_name = "GIFT64"
     sbox = np.array([int(x, 16) for x in "1a4c6f392db7508e"], dtype=np.uint8)
+    ddt  = GIFT_DDT
     block_size = 64
     key_size = 128
     sbox_bits = 4
@@ -87,52 +83,6 @@ class Gift64(SboxCipher):
             permOut = self.applyPerm(self.sbox_out[r])
             self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r], GIFT_RC[r])
         self.cnf += cnf
-def sanity_check_gift():
-    numrounds = 26
-    sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi, sbo)
-    gift = Gift64(char)
-    for bit_var in gift.key.flatten():
-        gift.cnf.append([bit_var * (-1)**randint(0,1)])
-    for bit_var in gift.sbox_in[0].flatten():
-        gift.cnf.append([bit_var * (-1)**randint(0,1)])
-    model = gift.solve()
-    key = model.key # type: ignore
-    sbi = model.sbox_in # type: ignore
-    sbo = model.sbox_out # type: ignore
-    assert np.all(gift.sbox[sbi[:gift.num_rounds]] == sbo)
-    for r, round_sbi in enumerate(sbi):
-        ref = gift64_enc(sbi[0], key, r)
-        assert np.all(round_sbi == ref)
-    mantissa, exponent = gift._count_solutions(0.2, 0.8, verbosity=0)
-    assert mantissa * 2**exponent == 1
-    print("sanity check 1 passed")
-    char = (
-        ("0000000c00000006", "0000000200000002"),
-        ("0000000002020000", "0000000005050000"),
-        ("0000005000000050", "0000002000000020"),
-        ("0000000000000202", "0000000000000505"),
-        ("0000000500000005", "0000000200000002"),
-        ("0000000002020000", "0000000005050000"),
-        ("0000005000000050", "0000002000000020"),
-        ("0000000000000202", "0000000000000505"),
-        ("0000000500000005", "0000000f0000000f"),
-    )
-    sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
-    sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
-    gift = Gift64(char)
-    model = gift.solve()
-    key = model.key # type: ignore
-    sbi = model.sbox_in # type: ignore
-    sbo = model.sbox_out # type: ignore
-    for r, round_sbi in enumerate(sbi):
-        ref = gift64_enc(sbi[0], key, r)
-        ref_xor = gift64_enc(sbi[0] ^ sbi_delta[0], key, r)
-        assert np.all(round_sbi == ref)
-        if r < gift.num_rounds - 1:
-            assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)
-    print('sanity check 2 passed')
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('trail', help='Text file containing the sbox input and output differences.\n'\
@@ -165,10 +115,10 @@ def main():
         with open(args.cnf, 'w') as f:
             f.write(gift.cnf.to_dimacs())
         print(f"wrote cnf to {args.cnf}")
-    # gift.count_key_space()
+    gift.count_key_space(args.epsilon, args.delta, verbosity=0)
     # for _ in range(10):
     #     gift.count_probability_for_random_key(verbosity=0)
-    gift.count_probability(args.epsilon, args.delta, verbosity=2)
+    # gift.count_probability(args.epsilon, args.delta, verbosity=2)
     # from IPython import embed; embed()
 if __name__ == "__main__":
     raise SystemExit(main())

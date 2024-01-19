@@ -31,6 +31,7 @@ class DifferentialCharacteristic():
 class SboxCipher(IndexSet):
     cipher_name: str
     sbox: np.ndarray[Any, np.dtype[np.uint8]]
+    ddt: np.ndarray[Any, np.dtype[np.uint8]]
     block_size: int
     key_size: int
     sbox_bits: int
