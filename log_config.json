@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "disable_existing_loggers": false,
+  "formatters": {
+    "short_formatter": {
+      "format": "%(levelname)s %(message)s",
+      "datefmt": "%Y-%m-%d %H:%M:%S"
+    },
+    "detailed_formatter": {
+      "format": "[%(asctime)s] %(levelname)s %(name)s [%(filename)s:%(lineno)s] %(message)s",
+      "datefmt": "%Y-%m-%d %H:%M:%S"
+    },
+    "json_formatter": {
+      "()": "mylogger.JsonLogFormatter",
+      "fmt_keys": {
+        "level": "levelname",
+        "message": "message",
+        "timestamp": "timestamp",
+        "logger": "name",
+        "module": "module",
+        "function": "funcName" ,
+        "line": "lineno",
+        "thread_name": "threadName"
+      }
+    }
+  },
+  "handlers": {
+    "file": {
+      "level": "DEBUG",
+      "class": "logging.FileHandler",
+      "filename": "log.txt",
+      "formatter": "json_formatter"
+    },
+    "console": {
+      "level": "INFO",
+      "class": "logging.StreamHandler",
+      "formatter": "short_formatter"
+    }
+  },
+  "loggers": {
+    "root": {
+      "handlers": [
+        "file",
+        "console"
+      ],
+      "level": "DEBUG"
+    },
+    "asyncio": {
+      "level": "WARNING"
+    }
+  }
+}
