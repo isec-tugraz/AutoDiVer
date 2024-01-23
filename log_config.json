@@ -19,8 +19,7 @@
         "logger": "name",
         "module": "module",
         "function": "funcName" ,
-        "line": "lineno",
-        "thread_name": "threadName"
+        "line": "lineno"
       }
     }
   },
@@ -28,7 +27,7 @@
     "file": {
       "level": "DEBUG",
       "class": "logging.FileHandler",
-      "filename": "log.txt",
+      "filename": "log.jsonl",
       "formatter": "json_formatter"
     },
     "console": {

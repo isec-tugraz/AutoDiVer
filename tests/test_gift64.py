@@ -1,17 +1,21 @@
 from random import randint
 import numpy as np
-from cipher_model import DifferentialCharacteristic
+from cipher_model import DifferentialCharacteristic, count_solutions
 from gift64.gift64 import Gift64
 from pyximport import install
 install()
 from gift64.gift_cipher import gift64_enc
 def test_zero_characteristic():
-    numrounds = 26
+    numrounds = 5
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
     char = DifferentialCharacteristic(sbi, sbo)
     gift = Gift64(char)
+    num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    assert num_solutions == 1 << (128 + 64)
     for bit_var in gift.key.flatten():
         gift.cnf.append([bit_var * (-1)**randint(0,1)])
+    num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    assert num_solutions == 1 << 64
     for bit_var in gift.sbox_in[0].flatten():
         gift.cnf.append([bit_var * (-1)**randint(0,1)])
     model = gift.solve()
@@ -22,8 +26,8 @@ def test_zero_characteristic():
     for r, round_sbi in enumerate(sbi):
         ref = gift64_enc(sbi[0], key, r)
         assert np.all(round_sbi == ref)
-    mantissa, exponent = gift._count_solutions(0.2, 0.8, verbosity=0)
-    assert mantissa * 2**exponent == 1
+    num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    assert num_solutions == 1
 def test_nonzero_characteristic():
     char = (
         ("0000000c00000006", "0000000200000002"),

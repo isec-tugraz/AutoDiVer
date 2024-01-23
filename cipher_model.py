@@ -8,15 +8,47 @@ import copy
 import os
 import logging
 import time
+import subprocess as sp
+import tempfile
 import sys
 import numpy as np
 import numpy.typing as npt
 from sat_toolkit.formula import CNF, Truthtable
-from pyapproxmc import Counter
 from pycryptosat import Solver
 from util import IndexSet, Model
 from typing import Any
 log = logging.getLogger('main')
+def count_solutions(cnf: CNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None) -> int:
+    sampling_set_log = " over {len(sampling_set)} variables" if sampling_set is not None else ""
+    log.info(f'counting solutions to cnf with {cnf.nvars} variables and {len(cnf)} clauses{sampling_set_log}, {epsilon=}, {delta=}')
+    # create temporary file for cnf
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.cnf') as f:
+        if sampling_set is not None:
+            sampling_set_str = ' '.join(str(x) for x in sampling_set) + ' 0'
+            f.write(f'c ind {sampling_set_str}\n')
+        f.write(cnf.to_dimacs())
+        f.flush()
+        # run approxmc
+        seed = int.from_bytes(os.urandom(4), 'little')
+        args = ['approxmc', f'--seed={seed}', f'-e{epsilon}', f'-d{delta}', '--sparse=1', f'-v{verbosity}', f.name]
+        log.info(f'running: {" ".join(args)}')
+        with sp.Popen(args, stdout=sp.PIPE, text=True) as proc:
+            model_count: int | None = None
+            for line in proc.stdout:
+                line = line.strip()
+                log.debug(line)
+                if line.startswith('c [appmc] Number of solutions is:'):
+                    log.info(line)
+                elif line.startswith('s mc '):
+                    log.info(line)
+                    assert model_count is None
+                    model_count = int(line.removeprefix('s mc '))
+                else:
+                    log.debug(line)
+        assert model_count is not None
+        log.info(f'model count: 2^{log2(model_count):.1f} == {model_count}',
+                 extra={'seed': seed, 'epsilon': epsilon, 'delta': delta, 'sampling_set': sampling_set})
+        return model_count
 class DifferentialCharacteristic():
     num_rounds: int
     sbox_in: np.ndarray[Any, np.dtype[np.int8]]
@@ -83,16 +115,6 @@ class SboxCipher(IndexSet):
         raw_model = np.array(raw_model, dtype=np.uint8)
         model = self.get_model(raw_model)
         return model
-    def _count_solutions(self, epsilon, delta, verbosity=2, cnf=None):
-        counter = Counter(verbosity=verbosity, epsilon=epsilon, delta=delta)
-        counter.add_clauses(cnf or self.cnf)
-        start = time.process_time_ns()
-        mantissa, exponent = counter.count()
-        stop = time.process_time_ns()
-        if verbosity >= 1:
-            print(f'counting took {(stop-start)/1e9:.2f} seconds')
-        log.debug(f'counting took {(stop-start)/1e9:.2f} seconds')
-        return mantissa, exponent
     def count_probability_for_random_key(self, epsilon, delta, verbosity=2):
         assert self.key_size % 8 == 0
         key_bits = np.unpackbits(np.array(bytearray(os.urandom(self.key_size // 8))))
@@ -110,20 +132,19 @@ class SboxCipher(IndexSet):
         cnf += CNF.create_xor(self.key.flatten(), rhs=key_bits.flatten())
         if verbosity == 0:
             print(f'key: {key_str}', end=' ', flush=True)
-        mantissa, exponent = self._count_solutions(epsilon, delta, verbosity=verbosity, cnf=cnf)
+        num_solutions = count_solutions(cnf, epsilon, delta, verbosity=verbosity)
         if verbosity > 0:
             print(f'key: {key_str}', end=' ', flush=True)
-        if mantissa > 0:
-            log2_prob = (log2(mantissa) + exponent) - self.block_size
+        if num_solutions > 0:
+            log2_prob = (log2(num_solutions)) - self.block_size
             print(f'probability: 2^{log2_prob:.2f}')
         else:
             print('probability: 0')
             return float('-inf')
         return key_bits, log2_prob
-    def count_probability(self, epsilon, delta, verbosity=2):
-        mantissa, exponent = self._count_solutions(epsilon, delta, verbosity=verbosity)
-        print(f'{mantissa} * 2^{exponent} = 2^{log2(mantissa * 2**exponent):.1f} solutions')
-        log2_prob = (log2(mantissa) + exponent) - (self.block_size + self.key_size)
+    def count_probability(self, epsilon: float, delta: float, verbosity: int=2):
+        num_solutions = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity)
+        log2_prob = (log2(num_solutions)) - (self.block_size + self.key_size)
         print(f'probability: 2^{log2_prob:.2f}, {epsilon=}, {delta=}')
         return log2_prob
     def count_key_space(self, epsilon, delta, verbosity=2):
@@ -131,9 +152,10 @@ class SboxCipher(IndexSet):
         Use model counting to count the number of keys for which the
         characteristic is not impossible.
         """
-        counter = Counter(verbosity=verbosity, epsilon=epsilon, delta=delta)
-        counter.add_clauses(self.cnf)
-        mantissa, exponent = counter.count(self.key.flatten().tolist())
-        num_keys = mantissa * 2**exponent
+        sampling_set = self.key.flatten().tolist()
+        num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set)
         log_num_keys = log2(num_keys)
         log.info(f'key space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')
+if __name__ == '__main__':
+    from main import setup_logging
+    setup_logging()
