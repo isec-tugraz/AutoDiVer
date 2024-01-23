@@ -6,6 +6,7 @@ from util import IndexSet
 from math import log2
 import copy
 import os
+import logging
 import time
 import sys
 import numpy as np
@@ -15,6 +16,7 @@ from pyapproxmc import Counter
 from pycryptosat import Solver
 from util import IndexSet, Model
 from typing import Any
+log = logging.getLogger('main')
 class DifferentialCharacteristic():
     num_rounds: int
     sbox_in: np.ndarray[Any, np.dtype[np.int8]]
@@ -89,6 +91,7 @@ class SboxCipher(IndexSet):
         stop = time.process_time_ns()
         if verbosity >= 1:
             print(f'counting took {(stop-start)/1e9:.2f} seconds')
+        log.debug(f'counting took {(stop-start)/1e9:.2f} seconds')
         return mantissa, exponent
     def count_probability_for_random_key(self, epsilon, delta, verbosity=2):
         assert self.key_size % 8 == 0
@@ -121,7 +124,7 @@ class SboxCipher(IndexSet):
         mantissa, exponent = self._count_solutions(epsilon, delta, verbosity=verbosity)
         print(f'{mantissa} * 2^{exponent} = 2^{log2(mantissa * 2**exponent):.1f} solutions')
         log2_prob = (log2(mantissa) + exponent) - (self.block_size + self.key_size)
-        print(f'probability : 2^{log2_prob:.2f}')
+        print(f'probability: 2^{log2_prob:.2f}, {epsilon=}, {delta=}')
         return log2_prob
     def count_key_space(self, epsilon, delta, verbosity=2):
         """
@@ -133,4 +136,4 @@ class SboxCipher(IndexSet):
         mantissa, exponent = counter.count(self.key.flatten().tolist())
         num_keys = mantissa * 2**exponent
         log_num_keys = log2(num_keys)
-        print(f'key space: 2^{log_num_keys:.2f}')
+        log.info(f'key space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')

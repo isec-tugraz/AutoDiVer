@@ -6,11 +6,13 @@ from __future__ import annotations
 import sys
 import argparse
 from copy import copy
+import logging
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import CNF
 from gift64.gift_util import bit_perm, P64, DDT as GIFT_DDT, GIFT_RC, pack_bits, unpack_bits
 from cipher_model import SboxCipher, DifferentialCharacteristic
+log = logging.getLogger('main')
 class Gift64(SboxCipher):
     cipher_name = "GIFT64"
     sbox = np.array([int(x, 16) for x in "1a4c6f392db7508e"], dtype=np.uint8)
@@ -102,19 +104,18 @@ def main():
             trail.append(line_deltas)
     trail = np.array(trail)
     if len(trail) % 2 != 0:
-        print(f'expected an even number of differences in {args.trail!r}')
+        log.error(f'expected an even number of differences in {args.trail!r}')
         raise SystemExit(1)
     sbox_in = trail[0::2]
     sbox_out = trail[1::2]
     char = DifferentialCharacteristic(sbox_in, sbox_out)
     ddt_prob = char.log2_ddt_probability(GIFT_DDT)
-    print(f"ddt probability: 2**{ddt_prob:.1f}")
-    sanity_check_gift()
+    log.info(f"ddt probability: 2**{ddt_prob:.1f}")
     gift = Gift64(char)
     if args.cnf:
         with open(args.cnf, 'w') as f:
             f.write(gift.cnf.to_dimacs())
-        print(f"wrote cnf to {args.cnf}")
+        log.info(f"wrote cnf to {args.cnf}")
     gift.count_key_space(args.epsilon, args.delta, verbosity=0)
     # for _ in range(10):
     #     gift.count_probability_for_random_key(verbosity=0)
