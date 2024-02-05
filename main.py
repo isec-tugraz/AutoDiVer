@@ -5,10 +5,13 @@ import json
 import logging.config
 from pathlib import Path
 import subprocess as sp
-from typing import Optional
+import sys
+from typing import Optional, Callable
 import numpy as np
-from cipher_model import SboxCipher, DifferentialCharacteristic
+from IPython import start_ipython
+from cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from gift64.gift64 import Gift64
+from skinny.skinny128 import Skinny128, SkinnyCharacteristic
 log = logging.getLogger('main')
 def setup_logging(filename: Optional[Path] = None):
     config_file = Path(__file__).parent / 'log_config.json'
@@ -19,8 +22,21 @@ def setup_logging(filename: Optional[Path] = None):
     logging.getLogger().setLevel(logging.DEBUG)
     logging.config.dictConfig(config)
 def main():
-    ciphers: dict[str, type[SboxCipher]] = {
-        "gift64": Gift64,
+    ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
+        "gift64": (Gift64, DifferentialCharacteristic),
+        "skinny128": (Skinny128, SkinnyCharacteristic),
+    }
+    commands: dict[str, Callable[[SboxCipher, argparse.Namespace], None|CountResult]] = {
+        'count-tweaks': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=False, count_tweak=True),
+        'count-keys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=False),
+        'count-tweakeys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=True),
+        'count-prob': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta),
+        'count-prob-fixed-key': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta),
+        'count-prob-fixed-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_key=True),
+        'count-prob-fixed-tweakey': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True, fixed_key=True),
+        'count-prob-fixed-pt': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True),
+        'count-prob-fixed-pt-and-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True, fixed_tweak=True),
+        'embed': lambda _cipher, _args: __import__('IPython').embed(),
     }
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('cipher', choices=ciphers.keys())
@@ -29,40 +45,33 @@ def main():
     parser.add_argument('--epsilon', type=float, default=0.8)
     parser.add_argument('--delta', type=float, default=0.2)
     parser.add_argument('--cnf', type=str, help="file to save CNF in DIMACS format")
+    parser.add_argument('commands', choices=commands.keys(), nargs='+', help="commands to execute")
     args = parser.parse_args()
     setup_logging(args.trail.with_suffix('.jsonl'))
     git_commit = sp.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
     git_changed_files = sp.check_output(['git', 'status', '--porcelain', '-uno', '-z']).decode().strip('\0').split('\0')
     log.info("arguments: %s", vars(args), extra={"cli_args": vars(args), "git_commit": git_commit, "git_changed_files": git_changed_files})
-    trail = []
     log.info(f"reading trail from {args.trail!r}")
-    with open(args.trail, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            assert len(line) == 16
-            line_deltas = [int(l, 16) for l in line[::-1]]
-            trail.append(line_deltas)
-    trail = np.array(trail)
-    if len(trail) % 2 != 0:
-        log.error(f'expected an even number of differences in {args.trail!r}')
-        raise SystemExit(1)
-    sbox_in = trail[0::2]
-    sbox_out = trail[1::2]
-    char = DifferentialCharacteristic(sbox_in, sbox_out)
-    Cipher = ciphers[args.cipher]
+    Cipher, Characteristic = ciphers[args.cipher]
+    char = Characteristic.load(args.trail)
     cipher = Cipher(char)
     ddt_prob = char.log2_ddt_probability(Cipher.ddt)
     log.info(f"ddt probability: 2**{ddt_prob:.1f}")
+    ddt_prob_1_plus = np.log2(cipher.ddt[char.sbox_in[1:], char.sbox_out[1:]] / len(cipher.ddt)).sum()
+    log.info(f"ddt probability r1+: 2**{ddt_prob_1_plus:.1f}")
     if args.cnf:
         with open(args.cnf, 'w') as f:
             f.write(cipher.cnf.to_dimacs())
         log.info(f"wrote cnf to {args.cnf}")
-    cipher.count_key_space(args.epsilon, args.delta, verbosity=0)
-    # for _ in range(10):
-    #     gift.count_probability_for_random_key(verbosity=0)
-    # gift.count_probability(args.epsilon, args.delta, verbosity=2)
-    from IPython import embed; embed()
+    count_results = []
+    for command in args.commands:
+        if command == 'embed':
+            sys.argv = sys.argv[:1]
+            start_ipython(user_ns=globals()|locals())
+            continue
+        res = commands[command](cipher, args)
+        if res is not None:
+            count_results.append(res)
+    # from IPython import embed; embed()
 if __name__ == "__main__":
     raise SystemExit(main())

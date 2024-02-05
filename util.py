@@ -1,8 +1,16 @@
 from __future__ import annotations
 import numpy as np
 from typing import Any, Literal
+from math import log2
+def fmt_log2(number: float, width: int=0) -> str:
+    if number == 0:
+        num_str = "0"
+    else:
+        num_str = f"2^{log2(number):.2f}"
+    return num_str.rjust(width)
 class Model:
     def __init__(self, index_set: IndexSet, raw_model: np.ndarray[Any, np.dtype[np.uint8]], *, bitorder: Literal['big', 'little']='little'):
+        self.raw_model = raw_model
         for fieldname in index_set._fieldnames:
             index_array = getattr(index_set, fieldname)
             model = np.packbits(raw_model[index_array], axis=-1, bitorder=bitorder)[..., 0]
@@ -44,8 +52,8 @@ class IndexSet:
             else:
                 assert False, f"index {needle} not found?"
         return np.array(res, dtype=object).reshape(index_array.shape)
-    def get_model(self, model: np.ndarray[Any, np.dtype[np.uint8]], *, bitorder: Literal['big', 'little']='little') -> Model:
-        return Model(self, model, bitorder=bitorder)
+    def get_model(self, raw_model: np.ndarray[Any, np.dtype[np.uint8]], *, bitorder: Literal['big', 'little']='little') -> Model:
+        return Model(self, raw_model, bitorder=bitorder)
     def __repr__(self):
         res = f"{self.__class__.__name__}(\n"
         for fieldname in self._fieldnames:

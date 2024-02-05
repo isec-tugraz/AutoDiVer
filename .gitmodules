@@ -1,0 +1,5 @@
+[submodule "code/skinny/skinny-c"]
+	path = code/skinny/skinny-c
+	url = https://github.com/fanosta/skinny-c
+[submodule "skinny-c/"]
+	url = https://github.com/fanosta/skinny-c.git

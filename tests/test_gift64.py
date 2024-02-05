@@ -8,7 +8,10 @@ from gift64.gift_cipher import gift64_enc
 def test_zero_characteristic():
     numrounds = 5
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi, sbo)
+    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
+    char.sbox_in = sbi
+    char.sbox_out = sbo
+    char.num_rounds = numrounds
     gift = Gift64(char)
     num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1 << (128 + 64)
@@ -42,7 +45,10 @@ def test_nonzero_characteristic():
     )
     sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
+    char.sbox_in = sbi_delta
+    char.sbox_out = sbo_delta
+    char.num_rounds = len(sbi_delta)
     gift = Gift64(char)
     model = gift.solve()
     key = model.key # type: ignore
