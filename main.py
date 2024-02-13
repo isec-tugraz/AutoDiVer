@@ -11,7 +11,7 @@ import numpy as np
 from IPython import start_ipython
 from cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from gift64.gift64 import Gift64
-from skinny.skinny128 import Skinny128, SkinnyCharacteristic
+from skinny.skinny128 import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
 log = logging.getLogger('main')
 def setup_logging(filename: Optional[Path] = None):
     config_file = Path(__file__).parent / 'log_config.json'
@@ -24,7 +24,8 @@ def setup_logging(filename: Optional[Path] = None):
 def main():
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
         "gift64": (Gift64, DifferentialCharacteristic),
-        "skinny128": (Skinny128, SkinnyCharacteristic),
+        "skinny128": (Skinny128, Skinny128Characteristic),
+        "skinny64": (Skinny64, Skinny64Characteristic),
     }
     commands: dict[str, Callable[[SboxCipher, argparse.Namespace], None|CountResult]] = {
         'count-tweaks': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=False, count_tweak=True),
@@ -32,7 +33,7 @@ def main():
         'count-tweakeys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=True),
         'count-prob': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta),
         'count-prob-fixed-key': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta),
-        'count-prob-fixed-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_key=True),
+        'count-prob-fixed-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True),
         'count-prob-fixed-tweakey': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True, fixed_key=True),
         'count-prob-fixed-pt': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True),
         'count-prob-fixed-pt-and-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True, fixed_tweak=True),
@@ -54,11 +55,13 @@ def main():
     log.info(f"reading trail from {args.trail!r}")
     Cipher, Characteristic = ciphers[args.cipher]
     char = Characteristic.load(args.trail)
+    log.info(f"loaded characteristic with {char.num_rounds} rounds from {args.trail!r}")
     cipher = Cipher(char)
     ddt_prob = char.log2_ddt_probability(Cipher.ddt)
     log.info(f"ddt probability: 2**{ddt_prob:.1f}")
     ddt_prob_1_plus = np.log2(cipher.ddt[char.sbox_in[1:], char.sbox_out[1:]] / len(cipher.ddt)).sum()
     log.info(f"ddt probability r1+: 2**{ddt_prob_1_plus:.1f}")
+    log.info(f"generated {cipher.cnf!r}")
     if args.cnf:
         with open(args.cnf, 'w') as f:
             f.write(cipher.cnf.to_dimacs())

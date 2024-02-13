@@ -1,11 +1,11 @@
 import numpy as np
-from skinny.skinny128 import Skinny128, SkinnyCharacteristic
+from skinny.skinny128 import Skinny128, Skinny128Characteristic
 from skinny.constants import do_mix_cols, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
 def test_zero_characteristic():
     numrounds = 4
     sbox_in_delta = sbox_out_delta   = np.zeros((numrounds, 4, 4), dtype=np.uint8)
     tweakeys = np.zeros((numrounds, 3, 4, 4), dtype=np.uint8)
-    char = SkinnyCharacteristic(sbox_in_delta, sbox_out_delta, tweakeys)
+    char = Skinny128Characteristic(sbox_in_delta, sbox_out_delta, tweakeys)
     cipher = Skinny128(char)
     model = cipher.solve()
     sbox_in = model.sbox_in #type: ignore
@@ -69,7 +69,7 @@ def test_nonzero_characteristic():
     # sbox_in[:] = 0
     # sbox_out[:] = 0
     # tweakeys[:] = 0
-    char = SkinnyCharacteristic(sbox_in, sbox_out, tweakeys)
+    char = Skinny128Characteristic(sbox_in, sbox_out, tweakeys)
     cipher = Skinny128(char)
     numrounds = char.num_rounds
     model = cipher.solve()
@@ -164,7 +164,7 @@ def test_acns2021_characteristic():
     # sbox_in[:] = 0
     # sbox_out[:] = 0
     # tweakeys[:] = 0
-    char = SkinnyCharacteristic(sbox_in, sbox_out, tweakeys)
+    char = Skinny128Characteristic(sbox_in, sbox_out, tweakeys)
     cipher = Skinny128(char)
     numrounds = char.num_rounds
     model = cipher.solve()

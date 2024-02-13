@@ -50,7 +50,7 @@ class LfsrState:
             constraints.append(clause)
         return constraints
     def get_bit(self, index: int) -> np.int32:
-        assert index in range(len(self.vars))
+        assert index in range(len(self.vars)), f'index {index} out of range(0, {len(self.vars)})'
         return self.vars[index]
     def get_bit_range(self, start_idx, numbits=8) -> np.ndarray[Any, np.dtype[np.int32]]:
         assert start_idx in range(len(self.vars))
@@ -81,8 +81,8 @@ class LfsrState:
                     result ^= self.get_bit_mask(index + i)
             return result
         raise AssertionError('unreachable')
-def get_solution_set(in_delta, out_delta):
-    in_vals = np.arange(256, dtype=np.uint8)
+def get_solution_set(sbox: np.ndarray, in_delta, out_delta):
+    in_vals = np.arange(len(sbox), dtype=np.uint8)
     in_vals = in_vals[sbox[in_vals] ^ sbox[in_vals ^ in_delta] == out_delta]
     return in_vals
 def precisedelta(time_range: float):

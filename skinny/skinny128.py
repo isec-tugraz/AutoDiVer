@@ -4,8 +4,8 @@ This script tries to find a collision for RomulusHash based on a bitwise dual
 characteristic in numpy's .npz file format.
 """
 from __future__ import annotations
-from skinny.util import sbox, LfsrState, get_solution_set
-from skinny.constants import apply_perm, connection_poly, do_mix_cols, do_shift_rows, expanded_rc, get_ddt, mixing_mat, skinny_verbose, tweakey_mask, tweakey_perm, update_tweakey
+from skinny.util import sbox8, sbox4, LfsrState, get_solution_set
+from skinny.constants import apply_perm, connection_poly_4, connection_poly_8, do_mix_cols, do_shift_rows, expanded_rc, get_ddt, mixing_mat, skinny_verbose, tweakey_mask, tweakey_perm, update_tweakey
 from util import Model
 from itertools import product
 from pathlib import Path
@@ -20,9 +20,14 @@ import zipfile
 log = logging.getLogger(__name__)
 contexts = []
 interrupted = False
-sbox_dnf = Truthtable.from_indices(16, (sbox.astype(np.uint16) << 0) | (np.arange(256, dtype=np.uint16) << 8))
-sbox_cnf = sbox_dnf.to_cnf()
-class SkinnyCharacteristic(DifferentialCharacteristic):
+sbox8_dnf = Truthtable.from_indices(16, (sbox8.astype(np.uint16) << 0) | (np.arange(256, dtype=np.uint16) << 8))
+sbox8_cnf = sbox8_dnf.to_cnf()
+sbox4_dnf = Truthtable.from_indices(8, (sbox4.astype(np.uint16) << 0) | (np.arange(16, dtype=np.uint16) << 4))
+sbox4_cnf = sbox4_dnf.to_cnf()
+sboxes = {8: sbox8, 4: sbox4}
+sbox_cnfs = {8: sbox8_cnf, 4: sbox4_cnf}
+class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
+    block_size = 0
     tweakeys: np.ndarray
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
@@ -44,20 +49,25 @@ class SkinnyCharacteristic(DifferentialCharacteristic):
             raise ValueError('tweakeys must have shape (num_rounds, 3, 4, 4)')
         # sanity check characteristic
         for i in range(len(self.tweakeys) - 1):
-            assert np.all(self.tweakeys[i + 1] == update_tweakey(self.tweakeys[i])), f'tweakey update check failed at round {i}'
+            assert np.all(self.tweakeys[i + 1] == update_tweakey(self.tweakeys[i], self.block_size)), f'tweakey update check failed at round {i}'
             rtk = np.bitwise_xor.reduce(self.tweakeys[i], axis=0) & tweakey_mask
             assert np.all(self.sbox_in[i + 1] == do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk)))
         self.num_rounds = len(self.sbox_in)
-class Skinny128(SboxCipher):
-    sbox = sbox
-    ddt = get_ddt(sbox)
+class Skinny128Characteristic(_SkinnyBaseCharacteristic):
+    block_size = 128
+class Skinny64Characteristic(_SkinnyBaseCharacteristic):
+    block_size = 64
+class SkinnyBase(SboxCipher):
+    sbox: np.ndarray
+    ddt: np.ndarray
     block_size = 128
     key_size = 128
     tweak_size = 256
     sbox_bits = 8
+    connection_poly: np.ndarray
     _tk2: np.ndarray
     _tk3: np.ndarray
-    def __init__(self, char: SkinnyCharacteristic):
+    def __init__(self, char: _SkinnyBaseCharacteristic):
         super().__init__(char)
         self.numrounds = len(char.sbox_in)
         self._nldtool_char = None
@@ -82,33 +92,33 @@ class Skinny128(SboxCipher):
         self.cnf += lfsr_cnf
     def _create_vars(self):
         rnds = self.numrounds
-        self.add_index_array('sbox_in', (self.num_rounds + 1, 4, 4, 8))
-        self.add_index_array('sbox_out', (self.num_rounds, 4, 4, 8))
+        self.add_index_array('sbox_in', (self.num_rounds + 1, 4, 4, self.sbox_bits))
+        self.add_index_array('sbox_out', (self.num_rounds, 4, 4, self.sbox_bits))
         self.pt = self.sbox_in[0]
         self.ct = self.sbox_in[-1]
         lfsr_updates = (self.numrounds - 1) // 2 + 1
-        self.add_index_array('key', (4, 4, 8))
-        self.add_index_array('_tk2', (4, 4, 8 + lfsr_updates))
-        self.add_index_array('_tk3', (4, 4, 8 + lfsr_updates))
-        self.tweak = np.array([self._tk2[..., :8], self._tk3[..., :8]])
-        tk2_tmp = self._tk2.reshape(16, 8 + lfsr_updates)
-        tk3_tmp = self._tk3.reshape(16, 8 + lfsr_updates)
-        self._tk2_lfsrs = [LfsrState(f'tk2_{i}', connection_poly[::-1].tolist(), tk2_tmp[i]) for i in range(16)]
-        self._tk3_lfsrs = [LfsrState(f'tk3_{i}', connection_poly[::-1].tolist(), tk3_tmp[i]) for i in range(16)]
+        self.add_index_array('key', (4, 4, self.sbox_bits))
+        self.add_index_array('_tk2', (4, 4, self.sbox_bits + lfsr_updates))
+        self.add_index_array('_tk3', (4, 4, self.sbox_bits + lfsr_updates))
+        self.tweak = np.array([self._tk2[..., :self.sbox_bits], self._tk3[..., :self.sbox_bits]])
+        tk2_tmp = self._tk2.reshape(16, self.sbox_bits + lfsr_updates)
+        tk3_tmp = self._tk3.reshape(16, self.sbox_bits + lfsr_updates)
+        self._tk2_lfsrs = [LfsrState(f'tk2_{i}', self.connection_poly[::-1].tolist(), tk2_tmp[i]) for i in range(16)]
+        self._tk3_lfsrs = [LfsrState(f'tk3_{i}', self.connection_poly[::-1].tolist(), tk3_tmp[i]) for i in range(16)]
         self.round_tweakeys = []
         for rnd in range(rnds):
-            key = self.key.reshape(16, 8)
+            key = self.key.reshape(16, self.sbox_bits)
             # rows 2, 3 of the base tweakey are updated one round earlier
             # corresponding to indices in range(8, 16)
             # tk2 = [self._tk2_lfsrs[i].get_bit_range((rnd + (i in range(8, 16))) // 2) for i in range(16)]
-            tk2 = [self._tk2_lfsrs[i].get_bit_range(len(self._tk2_lfsrs[i].vars) - 8 - (rnd + (i in range(8, 16))) // 2) for i in range(16)]
-            tk3 = [self._tk3_lfsrs[i].get_bit_range((rnd + (i in range(8, 16))) // 2) for i in range(16)]
+            tk2 = [self._tk2_lfsrs[i].get_bit_range(len(self._tk2_lfsrs[i].vars) - self.sbox_bits - (rnd + (i in range(8, 16))) // 2, self.sbox_bits) for i in range(16)]
+            tk3 = [self._tk3_lfsrs[i].get_bit_range((rnd + (i in range(8, 16))) // 2, self.sbox_bits) for i in range(16)]
             # tk3 = [self._tk3_lfsrs[i].get_bit_range((rnds - 1) // 2 - (rnd + (i in range(8, 16))) // 2) for i in range(16)]
             key = apply_perm(key, tweakey_perm, rnd)
             tk2 = apply_perm(tk2, tweakey_perm, rnd)
             tk3 = apply_perm(tk3, tweakey_perm, rnd)
             self.round_tweakeys.append((key, tk2, tk3))
-        self.round_tweakeys = np.array(self.round_tweakeys).reshape(rnds, 3, 4, 4, 8)
+        self.round_tweakeys = np.array(self.round_tweakeys).reshape(rnds, 3, 4, 4, self.sbox_bits)
         # from IPython import embed; embed(); raise SystemExit()
         self.m1 = self.round_tweakeys[0][1]
         self.m2 = self.round_tweakeys[0][2]
@@ -140,11 +150,12 @@ class Skinny128(SboxCipher):
                     lin_layer_cnf += XorCNF.create_xor(sb_out_var, *sb_in_vars, rhs=constant.astype(np.int32))
             self.cnf += lin_layer_cnf
     @staticmethod
-    def _get_cnf(delta_in: int, delta_out: int) -> CNF:
+    def _get_cnf(delta_in: int, delta_out: int, cellsize) -> CNF:
         if delta_in == delta_out == 0:
-            return sbox_cnf
-        in_vals = get_solution_set(delta_in, delta_out)
-        dnf = Truthtable.from_indices(16, (sbox[in_vals].astype(np.uint16) << 0) | (in_vals.astype(np.uint16) << 8))
+            return sbox_cnfs[cellsize]
+        sbox = sboxes[cellsize]
+        in_vals = get_solution_set(sbox, delta_in, delta_out)
+        dnf = Truthtable.from_indices(2 * cellsize, (sbox[in_vals].astype(np.uint16) << 0) | (in_vals.astype(np.uint16) << cellsize))
         cnf = dnf.to_cnf()
         return cnf
     def _model_sboxes(self):
@@ -152,7 +163,7 @@ class Skinny128(SboxCipher):
             for row, col in product(range(4), range(4)):
                 sbox_in = self._sbox_in[rnd, row, col]
                 sbox_out = self._sbox_out[rnd, row, col]
-                cnf = self._get_cnf(sbox_in, sbox_out)
+                cnf = self._get_cnf(sbox_in, sbox_out, self.sbox_bits)
                 variables = [0] + self.sbox_out[rnd, row, col].tolist() + self.sbox_in[rnd, row, col].tolist()
                 self.cnf += cnf.translate(variables)
     def get_rtk_value(self, m: Model, rnd: int):
@@ -167,6 +178,22 @@ class Skinny128(SboxCipher):
             pt[i] = x
         assert np.all(self.sbox[pt] ^ self.sbox[pt ^ self.char.sbox_in[0].ravel()] == self.char.sbox_out[0].ravel())
         return np.unpackbits(pt, bitorder='little')
+class Skinny128(SkinnyBase):
+    sbox = sbox8
+    ddt = get_ddt(sbox8)
+    connection_poly = connection_poly_8
+    block_size = 128
+    key_size = 128
+    tweak_size = 256
+    sbox_bits = 8
+class Skinny64(SkinnyBase):
+    sbox = sbox4
+    ddt = get_ddt(sbox4)
+    connection_poly = connection_poly_4
+    block_size = 64
+    key_size = 64
+    tweak_size = 128
+    sbox_bits = 4
 def find_collision(bit_char_file: str, start_arg: int, to_arg: int, iv_arg: str, tid: int):
     suffix = '_coll' if iv_arg == 'free' else '_full_coll'
     out_file = bit_char_file.replace('.npz', f'{suffix}.npz')
