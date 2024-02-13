@@ -13,7 +13,10 @@ class Model:
         self.raw_model = raw_model
         for fieldname in index_set._fieldnames:
             index_array = getattr(index_set, fieldname)
-            model = np.packbits(raw_model[index_array], axis=-1, bitorder=bitorder)[..., 0]
+            if np.prod(index_array.shape) == 0:
+                model = np.zeros_like(index_array, dtype=np.uint8)
+            else:
+                model = np.packbits(raw_model[index_array], axis=-1, bitorder=bitorder)[..., 0]
             setattr(self, fieldname, model)
 class IndexSet:
     numvars: int
