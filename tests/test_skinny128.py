@@ -1,5 +1,5 @@
 import numpy as np
-from skinny.skinny64 import Skinny128, SkinnyCharacteristic
+from skinny.skinny128 import Skinny128, SkinnyCharacteristic
 from skinny.constants import do_mix_cols, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
 def test_zero_characteristic():
     numrounds = 4

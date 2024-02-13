@@ -12,7 +12,7 @@ from pathlib import Path
 import logging
 from typing import Any, Literal
 from binascii import hexlify
-from sat_toolkit.formula import CNF, Truthtable
+from sat_toolkit.formula import XorCNF, CNF, Truthtable
 from cipher_model import SboxCipher, DifferentialCharacteristic
 import numpy.typing as npt
 import numpy as np
@@ -129,7 +129,7 @@ class Skinny128(SboxCipher):
                     sb_mc_input[row, col].append(rtks[i, row, col])
             sb_mc_input = do_shift_rows(sb_mc_input)
             in_rcs = do_shift_rows(in_rcs)
-            lin_layer_cnf = CNF()
+            lin_layer_cnf = XorCNF()
             for col in range(4):
                 for row in range(4):
                     sb_out_var = self.sbox_in[rnd + 1][row, col]
@@ -137,8 +137,7 @@ class Skinny128(SboxCipher):
                     sb_in_vars = sum(sb_in_vars, start=[])
                     constant = np.bitwise_xor.reduce(in_rcs[mixing_mat[row] != 0, col])
                     constant = np.unpackbits(constant, bitorder='little')
-                    # TODO: native xor clauses might speed this up
-                    lin_layer_cnf += CNF.create_xor(sb_out_var, *sb_in_vars, rhs=constant)
+                    lin_layer_cnf += XorCNF.create_xor(sb_out_var, *sb_in_vars, rhs=constant.astype(np.int32))
             self.cnf += lin_layer_cnf
     @staticmethod
     def _get_cnf(delta_in: int, delta_out: int) -> CNF:

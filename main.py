@@ -62,7 +62,7 @@ def main():
     if args.cnf:
         with open(args.cnf, 'w') as f:
             f.write(cipher.cnf.to_dimacs())
-        log.info(f"wrote cnf to {args.cnf}")
+        log.info(f"wrote {cipher.cnf!r} to {args.cnf}")
     count_results = []
     for command in args.commands:
         if command == 'embed':

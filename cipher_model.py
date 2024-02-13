@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 import numpy as np
 import numpy.typing as npt
-from sat_toolkit.formula import CNF, Truthtable
+from sat_toolkit.formula import XorCNF, CNF, Truthtable
 from pycryptosat import Solver
 from util import IndexSet, Model, fmt_log2
 from typing import Any
@@ -34,15 +34,16 @@ class CountResult:
     tweak={fmt_array(self.tweak)},
     pt={fmt_array(self.pt)}
 )'''
-def count_solutions(cnf: CNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None) -> int:
+def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None) -> int:
     sampling_set_log = f" over {len(sampling_set)} variables" if sampling_set is not None else ""
-    log.info(f'counting solutions to cnf with {cnf.nvars} variables and {len(cnf)} clauses{sampling_set_log}, {epsilon=}, {delta=}')
+    log.info(f'counting solutions to cnf with {cnf.nvars} variables, {cnf.nclauses} clauses, and {cnf.nxor_clauses} xor clauses{sampling_set_log}, {epsilon=}, {delta=}')
     # create temporary file for cnf
     with tempfile.NamedTemporaryFile(mode='w', suffix='.cnf') as f:
         if sampling_set is not None:
             sampling_set_str = ' '.join(str(x) for x in sampling_set) + ' 0'
             f.write(f'c ind {sampling_set_str}\n')
-        f.write(cnf.to_dimacs())
+        # ApproxMC does not support XOR clauses, so we convert to a CNF
+        f.write(cnf.to_cnf().to_dimacs())
         f.flush()
         # run approxmc
         seed = int.from_bytes(os.urandom(4), 'little')
@@ -64,6 +65,9 @@ def count_solutions(cnf: CNF, epsilon: float, delta: float, verbosity: int=2, sa
                     model_count = int(line.removeprefix('s mc '))
                 else:
                     log.debug(line)
+        retcode = proc.wait()
+        if retcode != 0:
+            raise sp.CalledProcessError(retcode, args)
         assert model_count is not None
         log.info(f'model count: {fmt_log2(model_count)} == {model_count}',
                  extra={'seed': seed, 'epsilon': epsilon, 'delta': delta, 'sampling_set': sampling_set})
@@ -118,7 +122,7 @@ class SboxCipher(IndexSet):
         super().__init__()
         self.char = char
         self.num_rounds = char.num_rounds
-        self.cnf = CNF()
+        self.cnf = XorCNF()
     def get_solution_set_cnf(self, delta_in, delta_out):
         x = np.arange(len(self.sbox), dtype=np.uint8)
         x_set, = np.where(self.sbox[x] ^ self.sbox[x ^ delta_in] == delta_out)
@@ -144,7 +148,11 @@ class SboxCipher(IndexSet):
         raise NotImplementedError("this should be implemented by subclasses")
     def _solve(self):
         solver = Solver()
-        solver.add_clauses(self.cnf)
+        solver.add_clauses(self.cnf._clauses)
+        for xor_clause in self.cnf._xor_clauses:
+            rhs = int(np.prod(np.sign(xor_clause))) < 0
+            pos_clause = np.abs(xor_clause).tolist()
+            solver.add_xor_clause(pos_clause, rhs=rhs)
         is_sat, model = solver.solve()
         if not is_sat:
             raise ValueError('cnf is UNSAT')

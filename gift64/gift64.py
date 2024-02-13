@@ -9,7 +9,7 @@ from copy import copy
 import logging
 import numpy as np
 from typing import Any
-from sat_toolkit.formula import CNF
+from sat_toolkit.formula import XorCNF
 from gift64.gift_util import bit_perm, P64, DDT as GIFT_DDT, GIFT_RC, pack_bits, unpack_bits
 from cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger('main')
@@ -75,12 +75,12 @@ class Gift64(SboxCipher):
         X_flat[19] *= (-1)**((RC >> 4) & 0x1)
         X_flat[23] *= (-1)**((RC >> 5) & 0x1)
         X_flat[63] *= (-1)
-        key_xor_cnf = CNF()
-        key_xor_cnf += CNF.create_all_equal(X[:, 2:].flatten(), Y[:, 2:].flatten())
-        key_xor_cnf += CNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten(), K.flatten(), )
+        key_xor_cnf = XorCNF()
+        key_xor_cnf += XorCNF.create_xor(X[:, 2:].flatten(), Y[:, 2:].flatten())
+        key_xor_cnf += XorCNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten(), K.flatten(), )
         self.cnf += key_xor_cnf
     def _model_linear_layer(self) -> None:
-        cnf = CNF()
+        cnf = XorCNF()
         for r in range(self.num_rounds):
             permOut = self.applyPerm(self.sbox_out[r])
             self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r], GIFT_RC[r])
