@@ -153,15 +153,31 @@ class SboxCipher(IndexSet):
             rhs = int(np.prod(np.sign(xor_clause))) < 0
             pos_clause = np.abs(xor_clause).tolist()
             solver.add_xor_clause(pos_clause, rhs=rhs)
+        log.info(f'solving with CryptoMiniSat #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}')
         is_sat, model = solver.solve()
         if not is_sat:
+            log.info('RESULT cnf is UNSAT')
             raise ValueError('cnf is UNSAT')
+        log.info('RESULT cnf is SAT')
         return list(model)
+    @staticmethod
+    def _fmt_arr(arr: np.ndarray, cellsize: int):
+        if cellsize == 0 and len(arr) == 0:
+            return ''
+        if cellsize == 4:
+            return ''.join(f'{x:01x}' for x in arr)
+        if cellsize == 8:
+            return ''.join(f'{x:02x}' for x in arr)
+        raise ValueError(f'cellsize must be 4 or 8 not {cellsize}')
     def solve(self) -> Model:
         raw_model = self._solve()
         raw_model[0] = False
         raw_model = np.array(raw_model, dtype=np.uint8)
         model = self.get_model(raw_model)
+        key_str = self._fmt_arr(model.key, self.key.shape[-1]) # type: ignore
+        tweak_str = self._fmt_arr(model.tweak, self.tweak.shape[-1]) # type: ignore
+        pt_str = self._fmt_arr(model.pt, self.pt.shape[-1]) # type: ignore
+        log.info(f'RESULT key={key_str}, tweak={tweak_str}, pt={pt_str}')
         return model
     def _fmt_tweak_or_key(self, key_bits: np.ndarray):
         if self.key.shape[-1] == 4:

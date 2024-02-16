@@ -41,6 +41,7 @@ class Gift64(SboxCipher):
         self.add_index_array('key', (self.sbox_count*2, self.sbox_bits))
         self.add_index_array('tweak', (0,))
         self.pt = self.sbox_in[0]
+        self._fieldnames.add('pt')
         self._model_sboxes()
         self._model_key_schedule()
         self._model_linear_layer()

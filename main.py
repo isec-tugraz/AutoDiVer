@@ -37,6 +37,7 @@ def main():
         'count-prob-fixed-tweakey': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True, fixed_key=True),
         'count-prob-fixed-pt': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True),
         'count-prob-fixed-pt-and-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True, fixed_tweak=True),
+        'solve': lambda cipher, _args: cipher.solve(),
         'embed': lambda _cipher, _args: __import__('IPython').embed(),
     }
     parser = argparse.ArgumentParser(description=__doc__)

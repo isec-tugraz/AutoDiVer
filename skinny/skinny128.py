@@ -95,7 +95,9 @@ class SkinnyBase(SboxCipher):
         self.add_index_array('sbox_in', (self.num_rounds + 1, 4, 4, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, 4, 4, self.sbox_bits))
         self.pt = self.sbox_in[0]
+        self._fieldnames.add('pt')
         self.ct = self.sbox_in[-1]
+        self._fieldnames.add('ct')
         lfsr_updates = (self.numrounds - 1) // 2 + 1
         self.add_index_array('key', (4, 4, self.sbox_bits))
         self.add_index_array('_tk2', (4, 4, self.sbox_bits + lfsr_updates))
