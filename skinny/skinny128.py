@@ -103,6 +103,7 @@ class SkinnyBase(SboxCipher):
         self.add_index_array('_tk2', (4, 4, self.sbox_bits + lfsr_updates))
         self.add_index_array('_tk3', (4, 4, self.sbox_bits + lfsr_updates))
         self.tweak = np.array([self._tk2[..., :self.sbox_bits], self._tk3[..., :self.sbox_bits]])
+        self._fieldnames.add('tweak')
         tk2_tmp = self._tk2.reshape(16, self.sbox_bits + lfsr_updates)
         tk3_tmp = self._tk3.reshape(16, self.sbox_bits + lfsr_updates)
         self._tk2_lfsrs = [LfsrState(f'tk2_{i}', self.connection_poly[::-1].tolist(), tk2_tmp[i]) for i in range(16)]

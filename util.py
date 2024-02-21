@@ -8,6 +8,14 @@ def fmt_log2(number: float, width: int=0) -> str:
     else:
         num_str = f"2^{log2(number):.2f}"
     return num_str.rjust(width)
+def get_ddt(sbox):
+    ddt = np.zeros((len(sbox), len(sbox)), dtype=np.int16)
+    for in_delta in range(len(sbox)):
+        in_val = np.arange(len(sbox), dtype=sbox.dtype)
+        out_delta = sbox[in_val] ^ sbox[in_val ^ in_delta]
+        out_delta, counts = np.unique(out_delta, return_counts=True)
+        ddt[in_delta, out_delta] = counts
+    return ddt
 class Model:
     def __init__(self, index_set: IndexSet, raw_model: np.ndarray[Any, np.dtype[np.uint8]], *, bitorder: Literal['big', 'little']='little'):
         self.raw_model = raw_model

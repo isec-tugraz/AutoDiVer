@@ -19,7 +19,7 @@ from sat_toolkit.formula import XorCNF, CNF, Truthtable
 from pycryptosat import Solver
 from util import IndexSet, Model, fmt_log2
 from typing import Any
-log = logging.getLogger('main')
+log = logging.getLogger(__name__)
 @dataclass
 class CountResult:
     probability: float
@@ -131,11 +131,11 @@ class SboxCipher(IndexSet):
         dnf = Truthtable.from_lut(lut.T.flatten())
         cnf = dnf.to_cnf()
         return cnf
-    def _model_sboxes(self):
-        # assert self.sbox_in.shape == self.sbox_out.shape
-        # assert self.sbox_in.shape == self.char.sbox_in.shape
-        inp = self.sbox_in.reshape(-1, self.sbox_bits)
-        out = self.sbox_out.reshape(-1, self.sbox_bits)
+    def _model_sboxes(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
+        sbox_in = sbox_in if sbox_in is not None else self.sbox_in
+        sbox_out = sbox_out if sbox_out is not None else self.sbox_out
+        inp = sbox_in.reshape(-1, self.sbox_bits)
+        out = sbox_out.reshape(-1, self.sbox_bits)
         delta_in = self.char.sbox_in.reshape(-1)
         delta_out = self.char.sbox_out.reshape(-1)
         sbox_cnf = CNF()
@@ -165,9 +165,9 @@ class SboxCipher(IndexSet):
         if cellsize == 0 and len(arr) == 0:
             return ''
         if cellsize == 4:
-            return ''.join(f'{x:01x}' for x in arr)
+            return ''.join(f'{x:01x}' for x in arr.flatten())
         if cellsize == 8:
-            return ''.join(f'{x:02x}' for x in arr)
+            return ''.join(f'{x:02x}' for x in arr.flatten())
         raise ValueError(f'cellsize must be 4 or 8 not {cellsize}')
     def solve(self) -> Model:
         raw_model = self._solve()

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from util import get_ddt
 import numpy as np
 from pathlib import Path
 connection_poly_8 = np.array([0] * 9)
@@ -62,21 +63,6 @@ inv_mixing_mat = np.array([
     [0, 1, 0, 1],
     [1, 0, 0, 1],
 ])
-def get_ddt(sbox):
-    # from os import path
-    # ddt_path = Path(__file__).parent / 'ddt.npy'
-    # try:
-    #     return np.load(ddt_path)
-    # except FileNotFoundError:
-    #     pass
-    ddt = np.zeros((len(sbox), len(sbox)), dtype=np.int16)
-    for in_delta in range(len(sbox)):
-        in_val = np.arange(len(sbox), dtype=sbox.dtype)
-        out_delta = sbox[in_val] ^ sbox[in_val ^ in_delta]
-        out_delta, counts = np.unique(out_delta, return_counts=True)
-        ddt[in_delta, out_delta] = counts
-    # np.save(ddt_path, ddt)
-    return ddt
 ddt8 = get_ddt(sbox8)
 def apply_perm(vec: list, perm: list[int], repeats: int):
     for _ in range(repeats):
