@@ -3,14 +3,11 @@
 model the solutions of a differential characteristic for GIFT64 and count them.
 """
 from __future__ import annotations
-import sys
-import argparse
-from copy import copy
 import logging
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import XorCNF
-from gift64.gift_util import bit_perm, P64, DDT as GIFT_DDT, GIFT_RC, pack_bits, unpack_bits
+from gift64.gift_util import bit_perm, P64, DDT as GIFT_DDT, GIFT_RC
 from cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger('main')
 class Gift64(SboxCipher):
@@ -88,41 +85,3 @@ class Gift64(SboxCipher):
             permOut = self.applyPerm(self.sbox_out[r])
             self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r], GIFT_RC[r])
         self.cnf += cnf
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('trail', help='Text file containing the sbox input and output differences.\n'\
-                                      'Input and output differences are listed on separate lines.')
-    parser.add_argument('--epsilon', type=float, default=0.8)
-    parser.add_argument('--delta', type=float, default=0.2)
-    parser.add_argument('--cnf', type=str, help="file to save CNF in DIMACS format")
-    args = parser.parse_args()
-    trail = []
-    with open(args.trail, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith('#'):
-                continue
-            assert len(line) == 16
-            line_deltas = [int(l, 16) for l in line[::-1]]
-            trail.append(line_deltas)
-    trail = np.array(trail)
-    if len(trail) % 2 != 0:
-        log.error(f'expected an even number of differences in {args.trail!r}')
-        raise SystemExit(1)
-    sbox_in = trail[0::2]
-    sbox_out = trail[1::2]
-    char = DifferentialCharacteristic(sbox_in, sbox_out)
-    ddt_prob = char.log2_ddt_probability(GIFT_DDT)
-    log.info(f"ddt probability: 2**{ddt_prob:.1f}")
-    gift = Gift64(char)
-    if args.cnf:
-        with open(args.cnf, 'w') as f:
-            f.write(gift.cnf.to_dimacs())
-        log.info(f"wrote cnf to {args.cnf}")
-    gift.count_key_space(args.epsilon, args.delta, verbosity=0)
-    # for _ in range(10):
-    #     gift.count_probability_for_random_key(verbosity=0)
-    # gift.count_probability(args.epsilon, args.delta, verbosity=2)
-    # from IPython import embed; embed()
-if __name__ == "__main__":
-    raise SystemExit(main())
