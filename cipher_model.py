@@ -8,11 +8,11 @@ import copy
 from dataclasses import dataclass
 import os
 import logging
-import time
+import random
 import subprocess as sp
 import tempfile
-import sys
 from pathlib import Path
+from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
 from sat_toolkit.formula import XorCNF, CNF, Truthtable
@@ -118,19 +118,32 @@ class SboxCipher(IndexSet):
     pt: np.ndarray[Any, np.dtype[np.int32]]
     tweak: np.ndarray[Any, np.dtype[np.int32]]
     cnf: CNF
+    _cnf_cache: dict[bytes, CNF] = {}
     def __init__(self, char: DifferentialCharacteristic):
         super().__init__()
         self.char = char
         self.num_rounds = char.num_rounds
         self.cnf = XorCNF()
+    @classmethod
+    def _get_cnf(cls, sbox, x_set):
+        lut = np.zeros((len(sbox), len(sbox)), dtype=np.uint8)
+        lut[x_set, sbox[x_set]] = 1
+        assert lut.sum() == len(x_set)
+        dnf = Truthtable.from_lut(lut.T.flatten())
+        cache_key = dnf.on_set.astype(np.int32).tobytes()
+        try:
+            # return a copy from the cache
+            return CNF(cls._cnf_cache[cache_key])
+        except KeyError:
+            pass
+        cnf = dnf.to_cnf()
+        cls._cnf_cache[cache_key] = cnf
+        # don't return the original, because it's mutable
+        return CNF(cnf)
     def get_solution_set_cnf(self, delta_in, delta_out):
         x = np.arange(len(self.sbox), dtype=np.uint8)
         x_set, = np.where(self.sbox[x] ^ self.sbox[x ^ delta_in] == delta_out)
-        lut = np.zeros((len(self.sbox), len(self.sbox)), dtype=np.uint8)
-        lut[x_set, self.sbox[x_set]] = 1
-        dnf = Truthtable.from_lut(lut.T.flatten())
-        cnf = dnf.to_cnf()
-        return cnf
+        return self._get_cnf(self.sbox, x_set)
     def _model_sboxes(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
         sbox_in = sbox_in if sbox_in is not None else self.sbox_in
         sbox_out = sbox_out if sbox_out is not None else self.sbox_out
@@ -138,6 +151,10 @@ class SboxCipher(IndexSet):
         out = sbox_out.reshape(-1, self.sbox_bits)
         delta_in = self.char.sbox_in.reshape(-1)
         delta_out = self.char.sbox_out.reshape(-1)
+        self._actual_sbox_in = inp.copy()
+        self._actual_sbox_out = out.copy()
+        self._fieldnames.add('_actual_sbox_in')
+        self._fieldnames.add('_actual_sbox_out')
         sbox_cnf = CNF()
         for inp, out, delta_in, delta_out in zip(inp, out, delta_in, delta_out):
             mapping = np.concatenate((np.array([0], dtype=np.int32), inp, out))
@@ -147,21 +164,18 @@ class SboxCipher(IndexSet):
     def _model_linear_layer(self):
         raise NotImplementedError("this should be implemented by subclasses")
     def _solve(self):
-        solver = Solver()
-        solver.add_clauses(self.cnf._clauses)
-        for xor_clause in self.cnf._xor_clauses:
-            rhs = int(np.prod(np.sign(xor_clause))) < 0
-            pos_clause = np.abs(xor_clause).tolist()
-            solver.add_xor_clause(pos_clause, rhs=rhs)
-        log.info(f'solving with CryptoMiniSat #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}')
-        is_sat, model = solver.solve()
+        seed = int.from_bytes(os.urandom(4), 'little')
+        args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
+        log.info(args)
+        log.info(f'solving with {args} #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}')
+        is_sat, model = self.cnf.solve_dimacs(args)
         if not is_sat:
             log.info('RESULT cnf is UNSAT')
             raise ValueError('cnf is UNSAT')
         log.info('RESULT cnf is SAT')
         return list(model)
-    @staticmethod
-    def _fmt_arr(arr: np.ndarray, cellsize: int):
+    @classmethod
+    def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
         if cellsize == 0 and len(arr) == 0:
             return ''
         if cellsize == 4:
@@ -244,6 +258,35 @@ class SboxCipher(IndexSet):
         num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set)
         log_num_keys = log2(num_keys)
         log.info(f'RESULT {name} space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')
+    def count_tweakey_space_sat_solver(self, trials: int, count_key: bool=True, count_tweak: bool=True, verbosity: int=2):
+        """
+        Use repeated SAT solving to estimate the number of tweakeys for which
+        the characteristic is not impossible.
+        """
+        sampling_set = []
+        if count_key:
+            sampling_set += self.key.flatten().tolist()
+        if count_tweak:
+            sampling_set += self.tweak.flatten().tolist()
+        name = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
+        solver = Solver()
+        solver.add_clauses(self.cnf._clauses)
+        for xor_clause in self.cnf._xor_clauses:
+            rhs = int(np.prod(np.sign(xor_clause))) < 0
+            pos_clause = np.abs(xor_clause).tolist()
+            solver.add_xor_clause(pos_clause, rhs=rhs)
+        log.info(f'solving with CryptoMiniSat #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}')
+        count_sat = 0
+        pbar = tqdm(range(trials))
+        for i in pbar:
+            sampling_new = [x * (-1)**random.randint(0, 1) for x in sampling_set]
+            is_sat, _ = solver.solve(sampling_new)
+            count_sat += is_sat
+            pbar.set_description(f'valid {name}s: {count_sat}/{i + 1}')
+        log.info(f'RESULT {name} count: {count_sat}/{trials}')
+        # num_keys = count_sat
+        # log_num_keys = log2(num_keys)
+        # log.info(f'RESULT {name} space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')
 if __name__ == '__main__':
     from main import setup_logging
     setup_logging()

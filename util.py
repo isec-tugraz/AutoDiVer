@@ -27,8 +27,6 @@ class Model:
                 # make sure to handle negative indices correctly
                 relevant_raw_model = raw_model[np.abs(index_array)] ^ (index_array < 0)
                 packed = np.packbits(relevant_raw_model, axis=-1, bitorder=bitorder)
-                from icecream import ic
-                ic(fieldname, packed.shape, packed.dtype)
                 if packed.shape[-1] in (1, 2, 4, 8):
                     model = packed.view(f'u{packed.shape[-1]}')
                     if model.shape[-1] == 1:
@@ -36,7 +34,6 @@ class Model:
                 else:
                     model = packed
                 # model = packed[..., 0] if packed.shape[-1] == 1 else packed
-                ic(model.shape, model.dtype)
             setattr(self, fieldname, model)
 class IndexSet:
     numvars: int

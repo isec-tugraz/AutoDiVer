@@ -11,6 +11,7 @@ import numpy as np
 from IPython import start_ipython
 from cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from gift64.gift64 import Gift64
+from ascon.ascon_model import Ascon, AsconCharacteristic
 from skinny.skinny128 import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
 log = logging.getLogger('main')
 def setup_logging(filename: Optional[Path] = None):
@@ -26,13 +27,17 @@ def main():
         "gift64": (Gift64, DifferentialCharacteristic),
         "skinny128": (Skinny128, Skinny128Characteristic),
         "skinny64": (Skinny64, Skinny64Characteristic),
+        "ascon": (Ascon, AsconCharacteristic),
     }
     commands: dict[str, Callable[[SboxCipher, argparse.Namespace], None|CountResult]] = {
         'count-tweaks': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=False, count_tweak=True),
         'count-keys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=False),
         'count-tweakeys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=True),
+        'count-tweaks-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=False, count_tweak=True),
+        'count-keys-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=True, count_tweak=False),
+        'count-tweakeys-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=True, count_tweak=True),
         'count-prob': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta),
-        'count-prob-fixed-key': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta),
+        'count-prob-fixed-key': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_key=True),
         'count-prob-fixed-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True),
         'count-prob-fixed-tweakey': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True, fixed_key=True),
         'count-prob-fixed-pt': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True),
