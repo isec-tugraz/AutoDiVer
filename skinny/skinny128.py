@@ -145,12 +145,12 @@ class SkinnyBase(SboxCipher):
             lin_layer_cnf = XorCNF()
             for col in range(4):
                 for row in range(4):
-                    sb_out_var = self.sbox_in[rnd + 1][row, col]
-                    sb_in_vars = sb_mc_input[mixing_mat[row] != 0, col]
-                    sb_in_vars = sum(sb_in_vars, start=[])
+                    mc_out_var = self.sbox_in[rnd + 1][row, col]
+                    mc_in_vars = sb_mc_input[mixing_mat[row] != 0, col]
+                    mc_in_vars = sum(mc_in_vars, start=[])
                     constant = np.bitwise_xor.reduce(in_rcs[mixing_mat[row] != 0, col])
-                    constant = np.unpackbits(constant, bitorder='little')
-                    lin_layer_cnf += XorCNF.create_xor(sb_out_var, *sb_in_vars, rhs=constant.astype(np.int32))
+                    constant = np.unpackbits(constant, bitorder='little')[:self.sbox_bits]
+                    lin_layer_cnf += XorCNF.create_xor(mc_out_var, *mc_in_vars, rhs=constant.astype(np.int32))
             self.cnf += lin_layer_cnf
     @staticmethod
     def _get_cnf(delta_in: int, delta_out: int, cellsize) -> CNF:
