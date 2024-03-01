@@ -53,11 +53,21 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
             model_count: int | None = None
             for line in proc.stdout:
                 line = line.strip()
-                if line.startswith('c Reduced to '):
+                if not line.startswith('c '):
                     log.info(line)
-                if line.startswith('c [appmc] Number of solutions is:'):
+                elif 'ERROR' in line:
+                    line = line.removeprefix('c ').removeprefix('ERROR')
+                    line = line.lstrip(': ')
+                    log.error(f'[appmc] {line}')
+                elif 'WARN' in line:
+                    line = line.removeprefix('c ').removeprefix('WARNING').removeprefix('WARN')
+                    line = line.lstrip(': ')
+                    log.warning(f'[appmc] {line}')
+                elif line.startswith('c Reduced to '):
                     log.info(line)
-                if line.startswith('c [appmc+arjun] Total time'):
+                elif line.startswith('c [appmc] Number of solutions is:'):
+                    log.info(line)
+                elif line.startswith('c [appmc+arjun] Total time'):
                     log.info(line)
                 elif line.startswith('s mc '):
                     log.info(line)
@@ -287,6 +297,32 @@ class SboxCipher(IndexSet):
         # num_keys = count_sat
         # log_num_keys = log2(num_keys)
         # log.info(f'RESULT {name} space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')
+        key_cnf = CNF([], nvars=self.cnf.nvars)
+        try:
+            pbar = tqdm()
+            solver.start_getting_small_clauses(1<<32 - 1, 1<<32 - 1)
+            min_var = min(sampling_set)
+            max_var = max(sampling_set)
+            sampling_set = set(sampling_set)
+            while True:
+                clause = solver.get_next_small_clause()
+                if clause is None:
+                    break
+                clause = np.array(clause)
+                variables = np.abs(clause)
+                if np.all((variables >= min_var) & (variables <= max_var)):
+                    if any(variable not in sampling_set for variable in variables):
+                        continue
+                    tqdm.write(self.format_clause(clause))
+                    key_cnf.add_clause(clause)
+                pbar.update()
+        finally:
+            pbar.close()
+            solver.end_getting_small_clauses()
+        min_key_cnf = key_cnf.minimize_espresso()
+        log.info(f'key conditions: {min_key_cnf!r}')
+        for clause in min_key_cnf:
+            log.info(self.format_clause(np.array(clause)))
 if __name__ == '__main__':
     from main import setup_logging
     setup_logging()
