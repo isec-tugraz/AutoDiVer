@@ -1,0 +1,8 @@
+cython
+icecream
+ipython
+pyapproxmc
+pycryptosat
+sat_toolkit
+setuptools
+tqdm
