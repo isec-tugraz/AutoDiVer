@@ -62,6 +62,9 @@ if __name__ == '__main__':
     res = []
     with open(args.filename, 'r') as f:
         for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
             line = line.strip().replace(',', '').replace(' ', '')
             ints = [int(x, 16) for x in line[::-1]]
             res.append(ints)
