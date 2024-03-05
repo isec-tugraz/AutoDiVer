@@ -53,7 +53,7 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
             model_count: int | None = None
             for line in proc.stdout:
                 line = line.strip()
-                if not line.startswith('c '):
+                if not (line.startswith('c ') or line.startswith('s ')):
                     log.info(line)
                 elif 'ERROR' in line:
                     line = line.removeprefix('c ').removeprefix('ERROR')
