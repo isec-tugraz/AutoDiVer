@@ -1,4 +1,11 @@
 #!/usr/bin/env python3
+"""
+Efficient Methods to Search for Best Differential Characteristics on SKINNY
+Stephanie Delaune, Patrick Derbez, Paul Huynh, Marine Minier, Victor Mollimard, and Charles Prud’homme
+Table 12. The Best TK3 differential characteristics we found on 17 rounds of
+SKINNY-128 with probability equal to 2^-110.
+https://doi.org/10.1007/978-3-030-78375-4_8
+"""
 from pathlib import Path
 import numpy as np
 if __name__ == '__main__':
