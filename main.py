@@ -10,9 +10,9 @@ from typing import Optional, Callable
 import numpy as np
 from IPython import start_ipython
 from cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
-from gift64.gift64 import Gift64
+from gift64.gift_model import Gift64
 from ascon.ascon_model import Ascon, AsconCharacteristic
-from skinny.skinny128 import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
+from skinny.skinny_model import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
 log = logging.getLogger('main')
 def setup_logging(filename: Optional[Path] = None):
     config_file = Path(__file__).parent / 'log_config.json'
