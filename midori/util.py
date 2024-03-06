@@ -53,7 +53,7 @@ def model_mix_cols(A, B):
         colB = B[(4*c):(4*c)+4]
         for r in range(4):
             colA_red = colA[mixing_mat[r] != 0, :]
-            print(f'{colB[r]}', "===>", f'{colA_red}')
+            # print(f'{colB[r]}', "===>", f'{colA_red}')
             mc_cnf += XorCNF.create_xor(colB[r], *colA_red)
     return mc_cnf
 # def do_mix_cols(state):

@@ -47,11 +47,6 @@ class Midori64(SboxCipher):
         self.add_index_array('tweak', (0,))
         self.pt = self.sbox_in[0]
         self._fieldnames.add('pt')
-    def applyPerm(self, array: np.ndarray[Any, np.dtype[np.int32]]) -> np.ndarray[Any, np.dtype[np.int32]]:
-        arrayFlat = array.flatten()
-        arrayPermuted = arrayFlat[P64]
-        arrayOut = arrayPermuted.reshape(16, 4)
-        return arrayOut
     def _key_schedule(self) -> None:
         keyWords = self.key.copy().reshape(2, 64)
         RK = []
@@ -61,26 +56,21 @@ class Midori64(SboxCipher):
             # print(f'{rk = }')
         self._round_keys = np.array(RK)
     def _addKey(self, Y, X, K, RC: int):
-        """
-        Y = addKey(X, K)
-        """
-        X = X.copy()
-        X_flat = X.reshape(-1) # don't use .flatten() here because it creates a copy
+        X_flat = X.flatten()
         # flip bits according to round constant
         #round constants are (may be) added only in the LSB of each nibble
         for i in range(16):
             X_flat[4*i + 3]  *= (-1)**(RC[i] & 0x1)
-        key_xor_cnf = XorCNF()
-        key_xor_cnf += XorCNF.create_xor(X_flat, Y.flatten(), K.flatten(), )
+        key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten(), )
         return key_xor_cnf
     def _model_add_key(self):
         for r in range(self.num_rounds):
             self.cnf += self._addKey(self.mc_out[r], self.sbox_in[r+1], self._round_keys[r], RC[r])
     def _model_linear_layer(self):
         for r in range(self.num_rounds):
-            print(f'{self.sbox_out[r] = }')
+            # print(f'{self.sbox_out[r] = }')
             mc_input = do_shift_rows(self.sbox_out[r])
-            mc_output = self.sbox_out[r].copy()
-            print(f'{mc_input = }')
-            print(f'{mc_output = }')
+            mc_output = self.mc_out[r].copy()
+            # print(f'{mc_input = }')
+            # print(f'{mc_output = }')
             self.cnf += model_mix_cols(mc_input, mc_output)
