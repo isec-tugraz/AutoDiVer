@@ -1,7 +1,7 @@
 from random import randint
 import numpy as np
 from cipher_model import DifferentialCharacteristic, count_solutions
-from gift64.gift64 import Gift64
+from gift64.gift_model import Gift64
 from sat_toolkit.formula import CNF
 from pyximport import install
 install()
