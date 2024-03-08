@@ -7,9 +7,9 @@ import logging
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import XorCNF
-from midori.util import DDT, RC, do_linear_layer, do_shift_rows, model_mix_cols
+from midori.util import DDT, RC, do_shift_rows, mixing_mat
 from cipher_model import SboxCipher, DifferentialCharacteristic
-log = logging.getLogger('main')
+log = logging.getLogger(__name__)
 class Midori64(SboxCipher):
     cipher_name = "MIDORI64"
     sbox = np.array([int(x, 16) for x in "cad3ebf789150246"], dtype=np.uint8)
@@ -19,6 +19,7 @@ class Midori64(SboxCipher):
     sbox_bits = 4
     sbox_count = 16
     key: np.ndarray[Any, np.dtype[np.int32]]
+    mc_out: np.ndarray[Any, np.dtype[np.int32]]
     def __init__(self, char: DifferentialCharacteristic):
         super().__init__(char)
         self.char = char
@@ -55,7 +56,7 @@ class Midori64(SboxCipher):
             RK.append(rk)
             # print(f'{rk = }')
         self._round_keys = np.array(RK)
-    def _addKey(self, Y, X, K, RC: int):
+    def _addKey(self, Y, X, K, RC: np.ndarray):
         X_flat = X.flatten()
         # flip bits according to round constant
         #round constants are (may be) added only in the LSB of each nibble
@@ -66,6 +67,17 @@ class Midori64(SboxCipher):
     def _model_add_key(self):
         for r in range(self.num_rounds):
             self.cnf += self._addKey(self.mc_out[r], self.sbox_in[r+1], self._round_keys[r], RC[r])
+    @staticmethod
+    def model_mix_cols(A, B):
+        mc_cnf = XorCNF()
+        for c in range(4):
+            colA = A[(4*c):(4*c)+4]
+            colB = B[(4*c):(4*c)+4]
+            for r in range(4):
+                colA_red = colA[mixing_mat[r] != 0, :]
+                # print(f'{colB[r]}', "===>", f'{colA_red}')
+                mc_cnf += XorCNF.create_xor(colB[r], *colA_red)
+        return mc_cnf
     def _model_linear_layer(self):
         for r in range(self.num_rounds):
             # print(f'{self.sbox_out[r] = }')
@@ -73,4 +85,4 @@ class Midori64(SboxCipher):
             mc_output = self.mc_out[r].copy()
             # print(f'{mc_input = }')
             # print(f'{mc_output = }')
-            self.cnf += model_mix_cols(mc_input, mc_output)
+            self.cnf += self.model_mix_cols(mc_input, mc_output)

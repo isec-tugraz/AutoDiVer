@@ -51,25 +51,29 @@ uint64_t mc(uint64_t msg){
 uint64_t add_round_key(uint64_t msg, uint64_t key){
     return (msg^key);
 }
-void generate_rnd_key(uint64_t *key, uint64_t *rnd_key){
+void generate_rnd_key(uint64_t *key, uint64_t *rnd_key, int rounds){
     uint64_t alpha[15] = {0x0001010110110011, 0x0111100011000000, 0x1010010000110101,
                           0x0110001000010011, 0x0001000001001111, 0x1101000101110000,
                           0x0000001001100110, 0x0000101111001100, 0x1001010010000001,
                           0x0100000010111000, 0x0111000110010111, 0x0010001010001110,
                           0x0101000100110000, 0x1111100011001010, 0x1101111110010000};
     /* getting the round keys */
-    for (uint8_t i=0; i<=(ROUNDS-2); i++){
-        rnd_key[i] = key[i%2]^alpha[i];
+    for (uint8_t i = 0; i < rounds - 1; i++){
+        rnd_key[i] = key[i % 2] ^ alpha[i];
     }
 }
-uint64_t enc_midori64(uint64_t msg, uint64_t *key){
+uint64_t enc_midori64(uint64_t msg, uint64_t *key, int rounds){
+    if (rounds > ROUNDS) {
+        fprintf(stderr, "rounds should be less than or equal to %d\n", ROUNDS);
+        abort();
+    }
     /* allocating mem for round keys */
-    uint64_t rnd_key[ROUNDS-1];
-    generate_rnd_key(key, rnd_key);
+    uint64_t rnd_key[ROUNDS - 1];
+    generate_rnd_key(key, rnd_key, rounds);
     uint64_t cip = msg;
     cip = cip ^ key[0] ^ key[1];
     printf("W %016lX \n", cip);
-    for (uint8_t i=0; i<=ROUNDS-2; i++){
+    for (uint8_t i = 0; i < rounds - 1; i++){
         cip = sbox(cip);
         cip = sr(cip);
         cip = mc(cip);
@@ -83,18 +87,21 @@ uint64_t enc_midori64(uint64_t msg, uint64_t *key){
     printf("W %016lX \n", cip);
     return cip;
 }
-int main(){
-    uint64_t msg;
-    uint64_t cip;
-    uint64_t key[2];
-    msg = 0x42c20fd3b586879e;
-    key[0] = 0x687ded3b3c85b3f3;
-    key[1] = 0x5b1009863e2a8cbf;
-    /* msg[0] = 0x0; */
-    /* insert(key, 0x0, 0x0); */
-    cip = enc_midori64(msg, key);
-    printf("%016lX \n", msg);
-    printf("%016lX",key[0]);
-    printf("%016lX \n",key[1]);
-    printf("%016lX \n", cip);
-}
+// int main(){
+//     uint64_t msg;
+//     uint64_t cip;
+//     uint64_t key[2];
+//
+//     msg = 0x42c20fd3b586879e;
+//     key[0] = 0x687ded3b3c85b3f3;
+//     key[1] = 0x5b1009863e2a8cbf;
+//
+//     /* msg[0] = 0x0; */
+//     /* insert(key, 0x0, 0x0); */
+//
+//     cip = enc_midori64(msg, key);
+//     printf("%016lX \n", msg);
+//     printf("%016lX",key[0]);
+//     printf("%016lX \n",key[1]);
+//     printf("%016lX \n", cip);
+// }

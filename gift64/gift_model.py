@@ -9,7 +9,7 @@ from typing import Any
 from sat_toolkit.formula import XorCNF
 from gift64.gift_util import bit_perm, P64, DDT as GIFT_DDT, GIFT_RC
 from cipher_model import SboxCipher, DifferentialCharacteristic
-log = logging.getLogger('main')
+log = logging.getLogger(__name__)
 class Gift64(SboxCipher):
     cipher_name = "GIFT64"
     sbox = np.array([int(x, 16) for x in "1a4c6f392db7508e"], dtype=np.uint8)
