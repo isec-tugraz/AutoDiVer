@@ -11,6 +11,7 @@ import numpy as np
 from IPython import start_ipython
 from cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from gift64.gift_model import Gift64
+from midori.midori64_model import Midori64
 from ascon.ascon_model import Ascon, AsconCharacteristic
 from skinny.skinny_model import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
 log = logging.getLogger(__name__)
@@ -25,6 +26,7 @@ def setup_logging(filename: Optional[Path] = None):
 def main():
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
         "gift64": (Gift64, DifferentialCharacteristic),
+        "midori64": (Midori64, DifferentialCharacteristic),
         "skinny128": (Skinny128, Skinny128Characteristic),
         "skinny64": (Skinny64, Skinny64Characteristic),
         "ascon": (Ascon, AsconCharacteristic),

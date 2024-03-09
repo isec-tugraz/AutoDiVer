@@ -161,6 +161,8 @@ class SboxCipher(IndexSet):
         out = sbox_out.reshape(-1, self.sbox_bits)
         delta_in = self.char.sbox_in.reshape(-1)
         delta_out = self.char.sbox_out.reshape(-1)
+        # print(f'{inp.shape = }', f'{out.shape}')
+        # print(f'{delta_in.shape = }', f'{delta_out.shape}')
         self._actual_sbox_in = inp.copy()
         self._actual_sbox_out = out.copy()
         self._fieldnames.add('_actual_sbox_in')

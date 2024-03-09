@@ -16,5 +16,5 @@ def midori64_enc(uint64_t pt, uint64_t key0, uint64_t key1, int rounds):
     key_arr[0] = key0
     key_arr[1] = key1
     result = enc_midori64(pt, key_arr, rounds)
-    print('result:', result)
+    # print('result:', result)
     return result

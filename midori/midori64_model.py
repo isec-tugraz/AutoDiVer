@@ -61,7 +61,7 @@ class Midori64(SboxCipher):
         # flip bits according to round constant
         #round constants are (may be) added only in the LSB of each nibble
         for i in range(16):
-            X_flat[4*i + 3]  *= (-1)**(RC[i] & 0x1)
+            X_flat[4*i]  *= (-1)**(RC[i] & 0x1)
         key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten(), )
         return key_xor_cnf
     def _model_add_key(self):

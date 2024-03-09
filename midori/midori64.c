@@ -58,8 +58,10 @@ void generate_rnd_key(uint64_t *key, uint64_t *rnd_key, int rounds){
                           0x0100000010111000, 0x0111000110010111, 0x0010001010001110,
                           0x0101000100110000, 0x1111100011001010, 0x1101111110010000};
     /* getting the round keys */
-    for (uint8_t i = 0; i < rounds - 1; i++){
+    /* for (uint8_t i = 0; i < rounds - 1; i++){ */
+    for (uint8_t i = 0; i < rounds; i++){
         rnd_key[i] = key[i % 2] ^ alpha[i];
+        /* rnd_key[i] = key[i % 2]; */
     }
 }
 uint64_t enc_midori64(uint64_t msg, uint64_t *key, int rounds){
@@ -71,20 +73,25 @@ uint64_t enc_midori64(uint64_t msg, uint64_t *key, int rounds){
     uint64_t rnd_key[ROUNDS - 1];
     generate_rnd_key(key, rnd_key, rounds);
     uint64_t cip = msg;
+    /*
     cip = cip ^ key[0] ^ key[1];
     printf("W %016lX \n", cip);
-    for (uint8_t i = 0; i < rounds - 1; i++){
+    */
+    /* for (uint8_t i = 0; i < rounds - 1; i++){ */
+    for (uint8_t i = 0; i < rounds; i++){
         cip = sbox(cip);
         cip = sr(cip);
         cip = mc(cip);
-        printf("%d %016lX \n", i, cip);
-        printf("K %016lX \n", rnd_key[i]);
+        /* printf("%d %016lX \n", i, cip); */
+        /* printf("K %016lX \n", rnd_key[i]); */
         cip = add_round_key(cip, rnd_key[i]);
-        printf("%d %016lX \n", i, cip);
+        /* printf("%d %016lX \n", i, cip); */
     }
+    /*
     cip = sbox(cip);
     cip = cip ^ key[0] ^ key[1];
     printf("W %016lX \n", cip);
+    */
     return cip;
 }
 // int main(){
