@@ -1,11 +1,11 @@
 from random import randint
 import numpy as np
 from cipher_model import DifferentialCharacteristic, count_solutions
-from midori.midori64_model import Midori64
+from midori64.midori64_model import Midori64
 from sat_toolkit.formula import CNF
 from pyximport import install
 install()
-from midori.midori_cipher import midori64_enc
+from midori64.midori_cipher import midori64_enc
 #0th bit is the LSB
 def nibble_to_block(key_arr):
     key_arr_str = [str(hex(x)[2:]) for x in key_arr]
