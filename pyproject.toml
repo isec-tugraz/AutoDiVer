@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools", "wheel", "Cython"]
+[project]
+name = "differential_verification"
+version = "0.1"
+dependencies = [
+   "cython",
+   "icecream",
+   "ipython",
+   "pyapproxmc",
+   "pycryptosat",
+   "sat_toolkit",
+   "setuptools",
+   "tqdm",
+]
+requires-python = ">=3.9"
+authors = [
+  {name = "Marcel Nageler", email = "marcel.nageler@iaik.tugraz.at"},
+  {name = "Shibam Ghosh", email = "shibam.math@gmail.com"},
+]
+description = "A tool for verifying differential characteristics in block ciphers"
+readme = "README.md"
+license = {file = "LICENSE.txt"}
+keywords = ["egg", "bacon", "sausage", "tomatoes", "Lobster Thermidor"]
+classifiers = [
+   "License :: OSI Approved :: MIT License",
+   "Operating System :: POSIX :: Linux",
+   "Operating System :: MacOS",
+   "Programming Language :: Python",
+   "Programming Language :: Cython",
+   "Programming Language :: C",
+   "Framework :: Pytest",
+]
+[project.scripts]
+verify-characteristic = "differential_verification.main:main"

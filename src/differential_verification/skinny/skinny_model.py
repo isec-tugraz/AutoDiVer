@@ -4,19 +4,19 @@ This script tries to find a collision for RomulusHash based on a bitwise dual
 characteristic in numpy's .npz file format.
 """
 from __future__ import annotations
-from skinny.util import sbox8, sbox4, LfsrState, get_solution_set
-from skinny.constants import apply_perm, connection_poly_4, connection_poly_8, do_mix_cols, do_shift_rows, expanded_rc, get_ddt, mixing_mat, skinny_verbose, tweakey_mask, tweakey_perm, update_tweakey
-from util import Model
+from binascii import hexlify
 from itertools import product
 from pathlib import Path
-import logging
 from typing import Any, Literal
-from binascii import hexlify
-from sat_toolkit.formula import XorCNF, CNF, Truthtable
-from cipher_model import SboxCipher, DifferentialCharacteristic
-import numpy.typing as npt
-import numpy as np
+import logging
 import zipfile
+from sat_toolkit.formula import XorCNF, CNF, Truthtable
+import numpy as np
+import numpy.typing as npt
+from ..cipher_model import SboxCipher, DifferentialCharacteristic
+from ..util import Model
+from .constants import apply_perm, connection_poly_4, connection_poly_8, do_mix_cols, do_shift_rows, expanded_rc, get_ddt, mixing_mat, skinny_verbose, tweakey_mask, tweakey_perm, update_tweakey
+from .util import sbox8, sbox4, LfsrState, get_solution_set
 log = logging.getLogger(__name__)
 contexts = []
 interrupted = False

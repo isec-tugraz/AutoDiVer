@@ -1,4 +1,4 @@
-from util import IndexSet
+from ..util import IndexSet
 class GiftIndices(IndexSet):
     def __init__(self, numrounds):
         super().__init__()

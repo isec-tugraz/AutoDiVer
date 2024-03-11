@@ -7,9 +7,9 @@ import logging
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import XorCNF
-from midori128.util import DDT, RC, do_shift_rows, mixing_mat
-from midori128.generate_perm import permutation
-from cipher_model import SboxCipher, DifferentialCharacteristic
+from .util import DDT, RC, do_shift_rows, mixing_mat
+from .generate_perm import permutation
+from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
 class Midori128(SboxCipher):
     cipher_name = "MIDORI128"

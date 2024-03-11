@@ -1,11 +1,9 @@
 from random import randint
 import numpy as np
-from cipher_model import DifferentialCharacteristic, count_solutions
-from gift64.gift_model import Gift64
+from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
+from differential_verification.gift64.gift_model import Gift64
+from differential_verification.gift64.gift_cipher import gift64_enc
 from sat_toolkit.formula import CNF
-from pyximport import install
-install()
-from gift64.gift_cipher import gift64_enc
 def test_zero_characteristic():
     numrounds = 5
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)

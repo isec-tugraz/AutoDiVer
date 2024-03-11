@@ -1,5 +1,5 @@
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = midori128/midori128.c
+#distutils: sources = src/differential_verification/midori128/midori128.c
 cimport cython
 from libc.stdio cimport printf
 from libc.string cimport memcpy, memset

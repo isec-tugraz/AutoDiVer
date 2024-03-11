@@ -1,7 +1,7 @@
 from __future__ import annotations
-from util import get_ddt
 import numpy as np
 from pathlib import Path
+from ..util import get_ddt
 connection_poly_8 = np.array([0] * 9)
 connection_poly_8[[0, 2, 8]] = 1
 connection_poly_4 = np.array([0] * 5)

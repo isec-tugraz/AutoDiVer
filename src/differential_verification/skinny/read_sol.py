@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-from typing import *
+# from typing import *
 from ast import literal_eval
 from collections import defaultdict
-import re
-import io
-import numpy as np
 from dataclasses import dataclass
+import io
+import re
+import numpy as np
 def transform_vars(var: dict) -> np.array:
     numrounds = max(round_nr for _, _, round_nr in var.keys()) + 1
     result = np.zeros(shape=(numrounds, 4, 4), dtype=int)
@@ -31,12 +31,12 @@ def _read_milp_sol(f: io.TextIOWrapper):
         idx = tuple(literal_eval(idx))
         variables[varname][idx] = val
     return dict(variables)
-def read_milp_sol(f: Union[str, io.TextIOWrapper]):
+def read_milp_sol(f: str|io.TextIOWrapper):
     if isinstance(f, io.TextIOWrapper):
         return _read_milp_sol(f)
     with open(f, 'r') as f:
         return _read_milp_sol(f)
-def _parse_nldtool_round(rnd: int, lines: List[str]):
+def _parse_nldtool_round(rnd: int, lines: list[str]):
     res = defaultdict(lambda: [None] * len(lines))
     for line in lines:
         parts = re.split(r' (?=[A-Za-z0-9]+[0-9]:)', line)
@@ -47,7 +47,7 @@ def _parse_nldtool_round(rnd: int, lines: List[str]):
             assert res[k][idx] is None
             res[k][idx] = v
     return dict(res)
-def _read_nldtool_sol(f: io.TextIOWrapper) -> List[Dict[str, List[str]]]:
+def _read_nldtool_sol(f: io.TextIOWrapper) -> list[dict[str, list[str]]]:
     result = []
     lines_for_round = []
     prev_round = None
@@ -70,12 +70,12 @@ def _read_nldtool_sol(f: io.TextIOWrapper) -> List[Dict[str, List[str]]]:
             raise ValueError(f"expected differences for round {len(result)} got {prev_round}")
         result.append(_parse_nldtool_round(prev_round, lines_for_round))
     return result
-def read_nldtool_sol(f: Union[str, io.TextIOWrapper]) -> List[Dict[str, List[str]]]:
+def read_nldtool_sol(f: str|io.TextIOWrapper) -> list[dict[str, list[str]]]:
     if isinstance(f, io.TextIOWrapper):
         return _read_nldtool_sol(f)
     with open(f, 'r') as f:
         return _read_nldtool_sol(f)
-def nldtool_state_to_byte_differences(state: List[str]) -> np.ndarray:
+def nldtool_state_to_byte_differences(state: list[str]) -> np.ndarray:
     assert len(state[0]) % 8 == 0
     rows, cols = len(state), len(state[0]) // 8
     res = np.zeros((rows, cols), dtype=np.uint8)
@@ -88,8 +88,8 @@ def nldtool_state_to_byte_differences(state: List[str]) -> np.ndarray:
             else:
                 raise ValueError(f"unknown bit condition: '{bit_cond}'")
     return res
-def convert_nldtool_characteristic_to_bitwise(nldtool_characteristic: List[Dict[str, List[str]]]):
-    result: List[Dict[str, List[List[int]]]] = []
+def convert_nldtool_characteristic_to_bitwise(nldtool_characteristic: list[dict[str, list[str]]]):
+    result: list[dict[str, list[list[int]]]] = []
     for d in nldtool_characteristic:
         result.append({ k: nldtool_state_to_byte_differences(v) for k, v in d.items() })
     return result
@@ -103,7 +103,7 @@ class TruncatedCharacteristic:
     unknown: np.ndarray
     forget: np.ndarray
     numrounds: int
-    shape: Tuple[int, int, int]
+    shape: tuple[int, int, int]
     def __init__(self, byte_char_file: str):
         self.filename = byte_char_file
         milp_char = read_milp_sol(byte_char_file)

@@ -9,8 +9,8 @@ from pathlib import Path
 import numpy as np
 from sat_toolkit.formula import XorCNF
 import sys
-from util import get_ddt
-from cipher_model import SboxCipher, DifferentialCharacteristic
+from ..util import get_ddt
+from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
 def rotr(val: np.uint64, r: int):
     val_int = int(val)

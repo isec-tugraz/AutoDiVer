@@ -1,23 +1,14 @@
 from __future__ import annotations
-from typing import *
-from sat_toolkit.formula import CNF, Truthtable
-from pycryptosat import Solver as CmsSolver
+from typing import Any
 from functools import reduce, lru_cache
 from itertools import product
 import numpy as np
 from os import path
-from skinny._util import *
-from skinny.constants import *
-from skinny.read_sol import *
-from sat_util import XorClause
-def itershape(shape: Tuple[int, ...]):
-    return product(*[range(s) for s in shape])
-def xddt(alpha: int, beta: int) -> np.ndarray:
-    in_vals = np.arange(256)
-    in_vals = in_vals[sbox[in_vals] ^ sbox[in_vals ^ alpha] == beta]
-    return in_vals
+from .constants import *
+from .read_sol import *
+from ..sat_util import XorClause
 class LfsrState:
-    def __init__(self, name: str, connection_poly: List[int], vars:np.ndarray[Any, np.dtype[np.int32]]):
+    def __init__(self, name: str, connection_poly: list[int], vars:np.ndarray[Any, np.dtype[np.int32]]):
         """
         connection_poly: list of exponents of the connection polynomial
         """
@@ -29,7 +20,7 @@ class LfsrState:
         self.constraints_generated = False
     def __repr__(self):
         return f'LfsrState({self.name!r}, {self.poly!r})'
-    def get_constraints(self, ref_indices: Optional[range] = None):
+    def get_constraints(self, ref_indices: range|None = None):
         if ref_indices is None:
             start = (len(self.vars) - self.degree) // 2
             ref_indices = range(start, start + self.degree)

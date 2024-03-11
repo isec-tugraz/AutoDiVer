@@ -1,7 +1,7 @@
 from __future__ import annotations
-import numpy as np
-from typing import Any, Literal
 from math import log2
+from typing import Any, Literal
+import numpy as np
 def fmt_log2(number: float, width: int=0) -> str:
     if number == 0:
         num_str = "0"

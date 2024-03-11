@@ -2,7 +2,6 @@
 Cipher model base classes
 """
 from __future__ import annotations
-from util import IndexSet
 from math import log2
 import copy
 from dataclasses import dataclass
@@ -12,13 +11,13 @@ import random
 import subprocess as sp
 import tempfile
 from pathlib import Path
+from typing import Any
 from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
 from sat_toolkit.formula import XorCNF, CNF, Truthtable
 from pycryptosat import Solver
-from util import IndexSet, Model, fmt_log2
-from typing import Any
+from .util import IndexSet, Model, fmt_log2
 log = logging.getLogger(__name__)
 @dataclass
 class CountResult:
