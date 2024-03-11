@@ -73,7 +73,7 @@ class Midori128(SboxCipher):
         for i in range(16):
             X_flat[i][4]  *= (-1)**(RC[i] & 0x1)
         X_flat = X_flat.flatten()
-        key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten(), )
+        key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())
         return key_xor_cnf
     def _model_add_key(self):
         for r in range(self.num_rounds):

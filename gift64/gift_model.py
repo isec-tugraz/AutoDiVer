@@ -77,7 +77,7 @@ class Gift64(SboxCipher):
         X_flat[63] *= (-1)
         key_xor_cnf = XorCNF()
         key_xor_cnf += XorCNF.create_xor(X[:, 2:].flatten(), Y[:, 2:].flatten())
-        key_xor_cnf += XorCNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten(), K.flatten(), )
+        key_xor_cnf += XorCNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten(), K.flatten())
         self.cnf += key_xor_cnf
     def _model_linear_layer(self) -> None:
         cnf = XorCNF()
