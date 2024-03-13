@@ -4,17 +4,18 @@ import numpy as np
 import argparse
 from typing import Literal
 from  .util import DDT, RC, do_shift_rows, do_shift_rows_inv, do_mix_columns
+from  .util import nibble_to_byte, byte_to_nibble
 from .generate_perm import permutation
 P128 = permutation()
 def unpack_bits(cell):
-    cellBin = [0 for _ in range(8)]
-    for j in range(8):
+    cellBin = [0 for _ in range(4)]
+    for j in range(4):
         cellBin[j] = (cell >> j) & 0x01
     return cellBin
 def pack_bits(cellBin):
     cell = 0;
-    for j in range(8):
-        cell = (cell << 1) | cellBin[7 - j];
+    for j in range(4):
+        cell = (cell << 1) | cellBin[3 - j];
     return cell
 def unpack_bits_arr(A):
     B = []
@@ -23,8 +24,8 @@ def unpack_bits_arr(A):
     return B
 def pack_bits_arr(A):
     B = []
-    for i in range(len(A)//8):
-        b = A[8*i:8*(i+1)]
+    for i in range(len(A)//4):
+        b = A[4*i:4*(i+1)]
         # print(b)
         B.append(pack_bits(b))
     B = np.asarray(B, dtype = np.uint8)
@@ -34,9 +35,9 @@ def bit_perm(arr_in):
     for A in arr_in:
         # print(A)
         B = np.asarray(unpack_bits_arr(A))
-        # print(B)
         B = B[P128]
         B = pack_bits_arr(B)
+        # print(B)
         arr_out.append(B)
     arr_out = np.asarray(arr_out)
     return arr_out
@@ -63,25 +64,48 @@ if __name__ == '__main__':
                 continue
             line = line.strip().split(' ')
             line.reverse()
-            # print(ints)
-            ints = get_bytes(line)
-            print(ints)
+            line = ''.join(line)
+            ints = [int(x, 16) for x in line]
+            # ints.reverse()
             res.append(ints)
     res = np.array(res, dtype=np.uint8)
-    print(f'{res = }')
-    sbox_in = bit_perm(res[:-1])
-    sbox_out = res[1:]
+    print(res)
+    sbox_in = res.copy()[:-1]
+    sbox_out = res.copy()[1:]
+    for i in range(sbox_out.shape[0]):
+        sbox_out[i] = byte_to_nibble(do_mix_columns(nibble_to_byte(sbox_out[i])))
+        sbox_out[i] = byte_to_nibble(do_shift_rows_inv(nibble_to_byte(sbox_out[i])))
+    sbox_in_or  = sbox_in.copy()
+    sbox_out_or = sbox_out.copy()
+    sbox_in = bit_perm(sbox_in)
+    sbox_out = bit_perm(sbox_out)
     print(sbox_in)
     print(sbox_out)
-    for i in range(sbox_out.shape[0]):
-        sbox_out[i] = do_shift_rows_inv(sbox_out[i])
-        sbox_out[i] = do_mix_columns(sbox_out[i])
-    print(sbox_out)
     assert sbox_in.shape == sbox_out.shape
-    # for inp, out in zip(sbox_in, sbox_out, strict=True):
-    #     print(''.join(f'{x:x}' for x in inp)[::-1])
-    #     print(''.join(f'{x:x}' for x in out)[::-1])
-    #     print()
+    for inp, out in zip(sbox_in, sbox_out, strict=True):
+        print(DDT[inp, out])
+    ddt_prob = np.log2(DDT[sbox_in, sbox_out] / 16).sum()
+    print(f"ddt probability: 2**{ddt_prob:.1f}")
+    for inp, out in zip(sbox_in, sbox_out, strict=True):
+        print(''.join(f'{x:x}' for x in inp)[::])
+        print(''.join(f'{x:x}' for x in out)[::])
+        print()
+    char = []
+    for inp, out in zip(sbox_in, sbox_out, strict=True):
+        s = []
+        s.append(''.join(f'{x:x}' for x in inp)[::])
+        s.append(''.join(f'{x:x}' for x in out)[::])
+        s = tuple(s)
+        char.append(s)
+    print('char = ', tuple(char))
+    char = []
+    for inp, out in zip(sbox_in_or, sbox_out_or, strict=True):
+        s = []
+        s.append(''.join(f'{x:x}' for x in inp)[::])
+        s.append(''.join(f'{x:x}' for x in out)[::])
+        s = tuple(s)
+        char.append(s)
+    print('char1 = ', tuple(char))
     # if args.output:
     #     with open(args.output, 'w') as f:
     #         for inp, out in zip(sbox_in, sbox_out, strict=True):

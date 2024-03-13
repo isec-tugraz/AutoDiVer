@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import XorCNF
-from .util import DDT, RC, do_shift_rows, mixing_mat
+from .util import DDT, RC, do_shift_rows, mixing_mat, do_linear_layer
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
 class Midori64(SboxCipher):
