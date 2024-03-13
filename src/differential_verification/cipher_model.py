@@ -93,7 +93,7 @@ class DifferentialCharacteristic():
                 line = line.strip()
                 if not line or line.startswith('#'):
                     continue
-                assert len(line) == 16
+                assert len(line) == 16 or len(line) == 32
                 line_deltas = [int(l, 16) for l in line[::-1]]
                 trail.append(line_deltas)
         trail = np.array(trail)
