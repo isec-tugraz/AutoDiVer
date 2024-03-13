@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 import argparse
 from typing import Literal
-from midori128.util import DDT, RC, do_shift_rows, do_shift_rows_inv
-from midori128.generate_perm import permutation
+from  .util import DDT, RC, do_shift_rows, do_shift_rows_inv, do_mix_columns
+from .generate_perm import permutation
 P128 = permutation()
 def unpack_bits(cell):
     cellBin = [0 for _ in range(8)]
@@ -70,11 +70,12 @@ if __name__ == '__main__':
     res = np.array(res, dtype=np.uint8)
     print(f'{res = }')
     sbox_in = bit_perm(res[:-1])
+    sbox_out = res[1:]
     print(sbox_in)
-    sbox_out = bit_perm(res[1:])
     print(sbox_out)
     for i in range(sbox_out.shape[0]):
         sbox_out[i] = do_shift_rows_inv(sbox_out[i])
+        sbox_out[i] = do_mix_columns(sbox_out[i])
     print(sbox_out)
     assert sbox_in.shape == sbox_out.shape
     # for inp, out in zip(sbox_in, sbox_out, strict=True):

@@ -1,7 +1,7 @@
 from random import randint
 import numpy as np
-from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
-from differential_verification.midori64.midori64_model import Midori64
+from src.differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
+from src.differential_verification.midori64.midori64_model import Midori64
 from differential_verification.midori64.midori_cipher import midori64_enc
 from sat_toolkit.formula import CNF
 #0th bit is the LSB

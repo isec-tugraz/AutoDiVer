@@ -51,14 +51,17 @@ def do_shift_rows(state):
     return state[sr_mapping]
 def do_shift_rows_inv(state):
     return state[sri_mapping]
-# def do_mix_cols(state):
-#     state_2d = state.reshape(4, 4)
-#     print(f'{state_2d = }')
-#     result = np.zeros_like(state_2d)
-#     for col in range(4):
-#         result[col, :] = np.bitwise_xor.reduce(mixing_mat * state_2d[col, :], axis=-1)
-#     return result
-# def do_linear_layer(state):
-#     state = do_shift_rows(state)
-#     state = do_mix_cols(state)
-#     return state.flatten()
+def do_mix_columns(state):
+    out_state = [0 for i in range(16)]
+    for c in range(4):
+        colA = state[(4*c):(4*c)+4]
+        for r in range(4):
+            colA_red = colA[mixing_mat[r] != 0]
+            out_state[4*c + r] = np.bitwise_xor.reduce(colA_red)
+    out_state = np.asarray(out_state, dtype = np.uint8)
+    return out_state
+def do_linear_layer(state):
+    state = state.flatten()
+    state = do_shift_rows(state)
+    state = do_mix_cols(state)
+    return state.flatten()
