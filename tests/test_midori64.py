@@ -1,5 +1,6 @@
 from random import randint
 import numpy as np
+import pytest
 from src.differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
 from src.differential_verification.midori64.midori64_model import Midori64
 from src.differential_verification.midori64.midori_cipher import midori64_enc
@@ -10,6 +11,18 @@ def nibble_to_block(key_arr):
     key = ''.join(key_arr_str)
     key = int(key, 16)
     return key
+midori64_testvectors = [
+    (0x0000000000000000, 0x00000000000000000000000000000000, 0x3c9cceda2bbd449a),
+    (0x42c20fd3b586879e, 0x687ded3b3c85b3f35b1009863e2a8cbf, 0x66bcdc6270d901cd),
+]
+@pytest.mark.parametrize("pt,key,ct_ref", midori64_testvectors)
+def test_tv(pt, key, ct_ref):
+    print(f'{pt = :016x}', f'{key = :032x}', f'{ct_ref = :016x}')
+    key0 = key >> 64
+    key1 = key & 0xFFFFFFFFFFFFFFFF
+    ct = midori64_enc(pt, key0, key1, 16)
+    print(' ' * 65 + f'{ct = :016x}')
+    assert ct == ct_ref
 def test_zero_characteristic():
     numrounds = 3
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
@@ -83,3 +96,5 @@ def test_nonzero_characteristic():
 if __name__ == "__main__":
     test_zero_characteristic()
     test_nonzero_characteristic()
+    for tv in midori64_testvectors:
+        test_tv(*tv)
