@@ -70,7 +70,7 @@ uint64_t enc_midori64(uint64_t msg, uint64_t *key, int rounds){
         abort();
     }
     /* allocating mem for round keys */
-    uint64_t rnd_key[ROUNDS - 1];
+    uint64_t rnd_key[ROUNDS];
     generate_rnd_key(key, rnd_key, rounds);
     uint64_t cip = msg;
     /*
