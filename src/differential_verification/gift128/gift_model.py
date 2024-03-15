@@ -35,7 +35,7 @@ class Gift128(SboxCipher):
         #generate Variables
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
-        self.add_index_array('key', (1, self.sbox_count, self.sbox_bits))
+        self.add_index_array('key', (self.sbox_count, self.sbox_bits))
         # print(self.sbox_in)
         # print(self.sbox_out)
         # print(self.key)
@@ -45,13 +45,14 @@ class Gift128(SboxCipher):
         self._model_sboxes()
         self._model_key_schedule()
         self._model_linear_layer()
+        self.cnf.nvars = self.numvars
     def applyPerm(self, array: np.ndarray[Any, np.dtype[np.int32]]) -> np.ndarray[Any, np.dtype[np.int32]]:
         arrayFlat = array.flatten()
         arrayPermuted = arrayFlat[P128]
         arrayOut = arrayPermuted.reshape(32, 4)
         return arrayOut
     def _model_key_schedule(self) -> None:
-       keyWords = self.key[0].copy().reshape(8, 16)
+       keyWords = self.key.copy().reshape(8, 16)
        RK = []
        for _ in range(self.num_rounds):
            keyWords32 = keyWords.copy().reshape(4, 32)

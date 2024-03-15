@@ -9,7 +9,7 @@ dependencies = [
    "ipython",
    "pyapproxmc",
    "pycryptosat",
-   "sat_toolkit",
+   "sat_toolkit>=0.3.5",
    "setuptools",
    "tqdm",
 ]
