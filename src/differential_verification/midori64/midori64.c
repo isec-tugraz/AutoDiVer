@@ -61,6 +61,10 @@ void generate_rnd_key(const uint64_t *key, uint64_t *rnd_key, int rounds){
     /* getting the round keys */
     /* for (uint8_t i = 0; i < rounds - 1; i++){ */
     for (int i = 0; i < rounds; i++){
+        if (!(i < sizeof(alpha)/sizeof(alpha[0]))) {
+            fprintf(stderr, "not enough round constants");
+            abort();
+        }
         rnd_key[i] = key[i % 2] ^ alpha[i];
         /* rnd_key[i] = key[i % 2]; */
     }
@@ -76,7 +80,7 @@ uint64_t enc_midori64(uint64_t msg, const uint64_t *key, int rounds){
     uint64_t cip = msg;
 #ifdef REF_IMPLEMENTATION
     cip = cip ^ key[0] ^ key[1];
-    printf("W %016lX \n", cip);
+    /* printf("W %016lX \n", cip); */
     for (uint8_t i = 0; i < rounds - 1; i++){
 #else
     for (int i = 0; i < rounds; i++){
