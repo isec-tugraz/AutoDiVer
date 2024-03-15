@@ -80,10 +80,18 @@ class IndexSet:
         return Model(self, raw_model, bitorder=bitorder)
     def __repr__(self):
         res = f"{self.__class__.__name__}(\n"
+        fieldnames_len = max(len(name) for name in self._fieldnames)
         for fieldname in self._fieldnames:
             field = getattr(self, fieldname)
+            if field.shape == (0,) or field.shape == ():
+                res += f"  {fieldname.ljust(fieldnames_len)} = {field!r},\n"
+                continue
             min_val = field.ravel()[0]
             max_val = field.ravel()[-1]
-            res += f"  {fieldname} = np.arange({min_val}, {max_val + 1}).reshape({field.shape!r})\n"
+            total_len = np.prod(field.shape)
+            if max_val + 1 - min_val == total_len and np.all(field == np.arange(min_val, max_val + 1).reshape(field.shape)):
+                res += f"  {fieldname.ljust(fieldnames_len)} = np.arange({min_val}, {max_val + 1}).reshape({field.shape!r}),\n"
+                continue
+            res += f"  {fieldname.ljust(fieldnames_len)} = ...,\n"
         res += ")"
         return res
