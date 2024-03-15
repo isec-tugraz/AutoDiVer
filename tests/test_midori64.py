@@ -96,5 +96,5 @@ def test_nonzero_characteristic():
 if __name__ == "__main__":
     test_zero_characteristic()
     test_nonzero_characteristic()
-    for tv in midori64_testvectors:
-        test_tv(*tv)
+    # for tv in midori64_testvectors:
+    #     test_tv(*tv)

@@ -27,14 +27,14 @@ class Midori64(SboxCipher):
         assert self.char.sbox_in.shape == self.char.sbox_out.shape
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
-        # for i in range(1, self.num_rounds):
-        #     lin_input = self.char.sbox_out[i - 1]
-        #     lin_output = self.char.sbox_in[i]
-        #     print(f'{lin_output = }')
-        #     temp = do_linear_layer(lin_input)
-        #     print(f'{temp = }')
-        #     if not np.all(temp == lin_output):
-        #         raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
+        for i in range(1, self.num_rounds):
+            lin_input = self.char.sbox_out[i - 1]
+            lin_output = self.char.sbox_in[i]
+            print(f'{lin_output = }')
+            temp = do_linear_layer(lin_input)
+            print(f'{temp = }')
+            if not np.all(temp == lin_output):
+                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
         self._create_vars()
         self._key_schedule()
         self._model_sboxes()
