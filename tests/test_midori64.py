@@ -1,9 +1,9 @@
 from random import randint
 import numpy as np
 import pytest
-from src.differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
-from src.differential_verification.midori64.midori64_model import Midori64
-from src.differential_verification.midori64.midori_cipher import midori64_enc
+from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
+from differential_verification.midori64.midori64_model import Midori64
+from differential_verification.midori64.midori_cipher import midori64_enc
 from sat_toolkit.formula import CNF
 #0th bit is the LSB
 def nibble_to_block(key_arr):
@@ -22,6 +22,8 @@ def test_tv(pt, key, ct_ref):
     key1 = key & 0xFFFFFFFFFFFFFFFF
     ct = midori64_enc(pt, key0, key1, 16)
     print(' ' * 65 + f'{ct = :016x}')
+    print(f'{ct = :016x}')
+    print(f'{ct ^ ct_ref = :016x}')
     assert ct == ct_ref
 def test_zero_characteristic():
     numrounds = 3

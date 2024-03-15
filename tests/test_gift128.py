@@ -1,8 +1,8 @@
 from random import randint
 import numpy as np
-from src.differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
-from src.differential_verification.gift128.gift_model import Gift128
-from src.differential_verification.gift128.gift_cipher import gift128_enc
+from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
+from differential_verification.gift128.gift_model import Gift128
+from differential_verification.gift128.gift_cipher import gift128_enc
 from sat_toolkit.formula import CNF
 def test_zero_characteristic():
     numrounds = 1

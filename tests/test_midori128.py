@@ -1,8 +1,8 @@
 from random import randint
 import numpy as np
-from src.differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
-from src.differential_verification.midori128.midori128_model import Midori128
-from src.differential_verification.midori128.midori_cipher import midori128_enc
+from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
+from differential_verification.midori128.midori128_model import Midori128
+from differential_verification.midori128.midori_cipher import midori128_enc
 from sat_toolkit.formula import CNF
 #0th bit is the LSB
 def print_state(key):
