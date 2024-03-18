@@ -1,8 +1,9 @@
 [build-system]
-requires = ["setuptools", "wheel", "Cython"]
+requires = ["setuptools>=64", "setuptools-scm>=8.0", "wheel", "Cython"]
 [project]
 name = "differential_verification"
-version = "0.1"
+# version = "0.1"
+dynamic = ["version"]
 dependencies = [
    "cython",
    "icecream",
@@ -21,7 +22,6 @@ authors = [
 description = "A tool for verifying differential characteristics in block ciphers"
 readme = "README.md"
 license = {file = "LICENSE.txt"}
-keywords = ["egg", "bacon", "sausage", "tomatoes", "Lobster Thermidor"]
 classifiers = [
    "License :: OSI Approved :: MIT License",
    "Operating System :: POSIX :: Linux",
@@ -31,5 +31,10 @@ classifiers = [
    "Programming Language :: C",
    "Framework :: Pytest",
 ]
+[tool.setuptools.package-data]
+differential_verification = ["**/log_config.json"]
 [project.scripts]
 verify-characteristic = "differential_verification.main:main"
+[tool.setuptools_scm]
+root = ".."
+version_file = "src/differential_verification/_version.py"

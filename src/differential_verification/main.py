@@ -4,11 +4,13 @@ import argparse
 import json
 import logging.config
 from pathlib import Path
+import shutil
 import subprocess as sp
 import sys
 from typing import Optional, Callable
 import numpy as np
 from IPython import start_ipython
+from .import version
 from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from .gift64.gift_model import Gift64
 from .midori64.midori64_model import Midori64
@@ -59,9 +61,11 @@ def main():
     parser.add_argument('commands', choices=commands.keys(), nargs='+', help="commands to execute")
     args = parser.parse_args()
     setup_logging(args.trail.with_suffix('.jsonl'))
-    git_commit = sp.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
-    git_changed_files = sp.check_output(['git', 'status', '--porcelain', '-uno', '-z']).decode().strip('\0').split('\0')
-    log.info("arguments: %s", vars(args), extra={"cli_args": vars(args), "git_commit": git_commit, "git_changed_files": git_changed_files})
+    git_cmd = shutil.which('git')
+    git_commit = git_cmd and sp.check_output([git_cmd, 'rev-parse', 'HEAD']).decode().strip()
+    git_changed_files = git_cmd and sp.check_output([git_cmd, 'status', '--porcelain', '-uno', '-z']).decode().strip('\0').split('\0')
+    log.info(f"version: {version}, git_commit: {git_commit}, git_changed_files: {git_changed_files}")
+    log.info("arguments: %s", vars(args), extra={"cli_args": vars(args), "git_commit": git_commit, "git_changed_files": git_changed_files, "version": version})
     log.info(f"reading trail from {args.trail!r}")
     Cipher, Characteristic = ciphers[args.cipher]
     char = Characteristic.load(args.trail)
