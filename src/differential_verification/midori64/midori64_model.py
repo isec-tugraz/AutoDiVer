@@ -36,11 +36,6 @@ class Midori64(SboxCipher):
             lin_input = matrix_as_uint64(self.char.sbox_out[i - 1])
             lin_output = matrix_as_uint64(self.char.sbox_in[i])
             temp = midori64_mc(midori64_sr(lin_input))
-            print(f'{lin_input  = :016x}')
-            print(f'{lin_output = :016x}')
-            print(f'{temp       = :016x}')
-            print()
-            # print(f'{temp = }')
             if not temp == lin_output:
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
         self._create_vars()
