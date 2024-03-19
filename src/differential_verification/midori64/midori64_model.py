@@ -9,7 +9,13 @@ from typing import Any
 from sat_toolkit.formula import XorCNF
 from .util import DDT, RC, do_shift_rows, mixing_mat, do_linear_layer
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
+from .midori_cipher import midori64_mc, midori64_sr
 log = logging.getLogger(__name__)
+def matrix_as_uint64(matrix: np.ndarray) -> int:
+    assert np.all(matrix >= 0) and np.all(matrix < 16)
+    assert matrix.shape == (4, 4)
+    flat = matrix.T.ravel()
+    return int(''.join(f'{x:01x}' for x in flat), 16)
 class Midori64(SboxCipher):
     cipher_name = "MIDORI64"
     sbox = np.array([int(x, 16) for x in "cad3ebf789150246"], dtype=np.uint8)
@@ -17,7 +23,6 @@ class Midori64(SboxCipher):
     block_size = 64
     key_size = 128
     sbox_bits = 4
-    sbox_count = 16
     key: np.ndarray[Any, np.dtype[np.int32]]
     mc_out: np.ndarray[Any, np.dtype[np.int32]]
     def __init__(self, char: DifferentialCharacteristic):
@@ -28,22 +33,25 @@ class Midori64(SboxCipher):
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
         for i in range(1, self.num_rounds):
-            lin_input = self.char.sbox_out[i - 1]
-            lin_output = self.char.sbox_in[i]
-            print(f'{lin_output = }')
-            temp = do_linear_layer(lin_input)
-            print(f'{temp = }')
-            if not np.all(temp == lin_output):
+            lin_input = matrix_as_uint64(self.char.sbox_out[i - 1])
+            lin_output = matrix_as_uint64(self.char.sbox_in[i])
+            temp = midori64_mc(midori64_sr(lin_input))
+            print(f'{lin_input  = :016x}')
+            print(f'{lin_output = :016x}')
+            print(f'{temp       = :016x}')
+            print()
+            # print(f'{temp = }')
+            if not temp == lin_output:
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
         self._create_vars()
         self._model_sboxes()
         self._model_linear_layer()
         self._model_add_key()
     def _create_vars(self):
-        self.add_index_array('key', (2, self.sbox_count, self.sbox_bits))
-        self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
-        self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
-        self.add_index_array('mc_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
+        self.add_index_array('key', (2, 4, 4, self.sbox_bits))
+        self.add_index_array('sbox_in', (self.num_rounds+1, 4, 4, self.sbox_bits))
+        self.add_index_array('sbox_out', (self.num_rounds, 4, 4, self.sbox_bits))
+        self.add_index_array('mc_out', (self.num_rounds, 4, 4, self.sbox_bits))
         self.add_index_array('tweak', (0,))
         self.pt = self.sbox_in[0]
         self._fieldnames.add('pt')
@@ -53,10 +61,10 @@ class Midori64(SboxCipher):
         # values can always be calculated in a post-processing step
         key_words = self.key.reshape(2, 64)
         for r in range(self.num_rounds):
-            inp = self.mc_out[r].flatten()
-            out = self.sbox_in[r + 1].flatten()
-            key = key_words[r % 2].flatten()
-            rc = RC[r]
+            inp = self.mc_out[r].swapaxes(0, 1).flatten()
+            out = self.sbox_in[r + 1].swapaxes(0, 1).flatten()
+            key = self.key[r % 2].swapaxes(0, 1).flatten()
+            rc = RC[r].swapaxes(0, 1).flatten()
             for i in range(16):
                 inp[4*i]  *= (-1)**(rc[i] & 0x1)
             if r < self.num_rounds - 1:
@@ -68,10 +76,11 @@ class Midori64(SboxCipher):
     def model_mix_cols(A, B):
         mc_cnf = XorCNF()
         for c in range(4):
-            colA = A[(4*c):(4*c)+4]
-            colB = B[(4*c):(4*c)+4]
+            colA = A[:, c]
+            colB = B[:, c]
             for r in range(4):
                 colA_red = colA[mixing_mat[r] != 0, :]
+                assert len(colA_red) == 3
                 # print(f'{colB[r]}', "===>", f'{colA_red}')
                 mc_cnf += XorCNF.create_xor(colB[r], *colA_red)
         return mc_cnf

@@ -35,22 +35,26 @@ RC = np.array([[0,0,0,1,0,1,0,1,1,0,1,1,0,0,1,1],
                [0,0,0,1,1,1,0,0,0,0,1,0,0,1,0,0],
                [0,0,1,0,0,0,1,1,1,0,1,1,0,1,0,0],
                [0,1,1,0,0,0,1,0,1,0,0,0,1,0,1,0]],
-               dtype=np.uint8)
+               dtype=np.uint8).reshape(-1, 4, 4).swapaxes(-1, -2)
 # 0, 10, 5, 15,
 # 14, 4, 11, 1,
 # 9, 3, 12, 6,
 # 7, 13, 2, 8
 sr_mapping = np.array([0, 10, 5, 15, 14, 4, 11, 1, 9, 3, 12, 6, 7, 13, 2, 8])
 sri_mapping = np.array([0, 7, 14, 9, 5, 2, 11, 12, 15, 8, 1, 6, 10, 13, 4, 3])
+sr_mapping = sr_mapping.reshape(4, 4).T
+sri_mapping = sri_mapping.reshape(4, 4).T
 mixing_mat = np.array([
             [0, 1, 1, 1],
             [1, 0, 1, 1],
             [1, 1, 0, 1],
             [1, 1, 1, 0],])
 def do_shift_rows(state):
-    return state[sr_mapping]
+    assert state.shape == (4, 4, 4)
+    return state.swapaxes(0, 1).reshape(-1, 4)[sr_mapping]
 def do_shift_rows_inv(state):
-    return state[sri_mapping]
+    assert state.shape[:2] == (4, 4)
+    return state.swapaxes(0, 1).reshape(-1, 4)[sri_mapping]
 def do_mix_columns(state):
     out_state = [0 for i in range(16)]
     for c in range(4):
