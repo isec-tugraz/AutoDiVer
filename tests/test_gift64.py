@@ -7,10 +7,7 @@ from sat_toolkit.formula import CNF
 def test_zero_characteristic():
     numrounds = 5
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
-    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
-    char.sbox_in = sbi
-    char.sbox_out = sbo
-    char.num_rounds = numrounds
+    char = DifferentialCharacteristic(sbi, sbo)
     gift = Gift64(char)
     num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1 << (128 + 64)

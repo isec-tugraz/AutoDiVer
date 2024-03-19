@@ -21,11 +21,8 @@ def nibble_to_byte(key_arr):
     return key
 def test_zero_characteristic():
     numrounds = 2
-    sbi = sbo = np.zeros((numrounds, 32), dtype=np.uint8)
-    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
-    char.sbox_in = sbi
-    char.sbox_out = sbo
-    char.num_rounds = numrounds
+    sbi_delta = sbo_delta = np.zeros((numrounds, 32), dtype=np.uint8)
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori128(char)
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1 << (128 + 128)
@@ -62,10 +59,7 @@ def test_nonzero_characteristic():
     sbo_delta = np.array([[int(x, 32) for x in in_out[1]] for in_out in char], dtype=np.uint8)
     sbi_delta_or = np.array([[int(x, 32) for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta_or = np.array([[int(x, 32) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
-    char.sbox_in = sbi_delta
-    char.sbox_out = sbo_delta
-    char.num_rounds = len(sbi_delta)
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori128(char)
     model = midori.solve()
     key = model.key # type: ignore
