@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <stdint.h>
 #define ROUNDS 16
-/* #define REF_IMPLEMENTATION */
 uint64_t sbox(uint64_t msg){
     /* sbox table of midori-64 cipher */
     uint8_t sbox_table[16] = {0xc, 0xa, 0xd, 0x3, 0xe, 0xb, 0xf, 0x7,
@@ -78,14 +77,13 @@ uint64_t enc_midori64(uint64_t msg, const uint64_t *key, int rounds){
     /* allocating mem for round keys */
     uint64_t rnd_key[ROUNDS];
     generate_rnd_key(key, rnd_key, rounds);
+    if (rounds == 0) {
+      return msg;
+    }
     uint64_t cip = msg;
-#ifdef REF_IMPLEMENTATION
     cip = cip ^ key[0] ^ key[1];
     /* printf("W %016lX \n", cip); */
     for (uint8_t i = 0; i < rounds - 1; i++){
-#else
-    for (int i = 0; i < rounds; i++){
-#endif
         cip = sbox(cip);
         cip = sr(cip);
         cip = mc(cip);
@@ -94,11 +92,8 @@ uint64_t enc_midori64(uint64_t msg, const uint64_t *key, int rounds){
         cip = add_round_key(cip, rnd_key[i]);
         /* printf("%d %016lX \n", i, cip); */
     }
-#ifdef REF_IMPLEMENTATION
     cip = sbox(cip);
     cip = cip ^ key[0] ^ key[1];
-#endif
-    /* printf("W %016lX \n", cip); */
     return cip;
 }
 // int main(){

@@ -36,7 +36,6 @@ class Midori64(SboxCipher):
             if not np.all(temp == lin_output):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
         self._create_vars()
-        self._key_schedule()
         self._model_sboxes()
         self._model_linear_layer()
         self._model_add_key()
@@ -48,25 +47,23 @@ class Midori64(SboxCipher):
         self.add_index_array('tweak', (0,))
         self.pt = self.sbox_in[0]
         self._fieldnames.add('pt')
-    def _key_schedule(self) -> None:
-        keyWords = self.key.copy().reshape(2, 64)
-        RK = []
-        for i in range(self.num_rounds):
-            rk = keyWords[i % 2]
-            RK.append(rk)
-            # print(f'{rk = }')
-        self._round_keys = np.array(RK)
-    def _addKey(self, Y, X, K, RC: np.ndarray):
-        X_flat = X.flatten()
-        # flip bits according to round constant
-        #round constants are (may be) added only in the LSB of each nibble
-        for i in range(16):
-            X_flat[4*i]  *= (-1)**(RC[i] & 0x1)
-        key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())
-        return key_xor_cnf
     def _model_add_key(self):
+        # we omit the round key addition at the first and last round
+        # as the do not influence the number of solutions and the corresponding
+        # values can always be calculated in a post-processing step
+        key_words = self.key.reshape(2, 64)
         for r in range(self.num_rounds):
-            self.cnf += self._addKey(self.mc_out[r], self.sbox_in[r+1], self._round_keys[r], RC[r])
+            inp = self.mc_out[r].flatten()
+            out = self.sbox_in[r + 1].flatten()
+            key = key_words[r % 2].flatten()
+            rc = RC[r]
+            for i in range(16):
+                inp[4*i]  *= (-1)**(rc[i] & 0x1)
+            if r < self.num_rounds - 1:
+                self.cnf += XorCNF.create_xor(inp, out, key)
+            else:
+                # all equal
+                self.cnf += XorCNF.create_xor(inp, out)
     @staticmethod
     def model_mix_cols(A, B):
         mc_cnf = XorCNF()
@@ -85,4 +82,8 @@ class Midori64(SboxCipher):
             mc_output = self.mc_out[r].copy()
             # print(f'{mc_input = }')
             # print(f'{mc_output = }')
-            self.cnf += self.model_mix_cols(mc_input, mc_output)
+            if r < self.num_rounds - 1:
+                self.cnf += self.model_mix_cols(mc_input, mc_output)
+            else:
+                # no mix columns in the last round
+                self.cnf += XorCNF.create_xor(mc_input.flatten(), mc_output.flatten())

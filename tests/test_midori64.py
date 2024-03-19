@@ -3,8 +3,9 @@ import numpy as np
 import pytest
 from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
 from differential_verification.midori64.midori64_model import Midori64
-from differential_verification.midori64.midori_cipher import midori64_enc
+from differential_verification.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr
 from sat_toolkit.formula import CNF
+from icecream import ic
 #0th bit is the LSB
 def nibble_to_block(key_arr):
     key_arr_str = [str(hex(x)[2:]) for x in key_arr]
@@ -26,12 +27,9 @@ def test_tv(pt, key, ct_ref):
     print(f'{ct ^ ct_ref = :016x}')
     assert ct == ct_ref
 def test_zero_characteristic():
-    numrounds = 3
-    sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
-    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
-    char.sbox_in = sbi
-    char.sbox_out = sbo
-    char.num_rounds = numrounds
+    numrounds = 5
+    sbi_delta = sbo_delta = np.zeros((numrounds, 16), dtype=np.uint8)
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori64(char)
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1 << (128 + 64)
@@ -50,12 +48,21 @@ def test_zero_characteristic():
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     assert np.all(midori.sbox[sbi[:midori.num_rounds]] == sbo)
-    sbi0 = nibble_to_block(sbi[0])
-    for r, round_sbi in enumerate(sbi):
-        sbiR = nibble_to_block(sbi[r])
-        ref = midori64_enc(sbi0, key0, key1, r)
-        print(f'{sbi0 = }', f'{ref = }', f'{sbiR = }')
-        assert sbiR == ref
+    # we need to add the key here in post-processing
+    pt = nibble_to_block(sbi[0] ^ key[0] ^ key[1])
+    for r in range(1, numrounds):
+        sbiR = nibble_to_block(sbo[r - 1])
+        # we need to add the key here in post-processing
+        out = sbiR ^ key0 ^ key1
+        ref = midori64_enc(pt, key0, key1, r)
+        print(f" round {r} ".center(80, '='))
+        print(f'{pt   = :016x})')
+        print(f'{sbiR = :016x}')
+        print(f'{out  = :016x}')
+        print(f'{ref  = :016x}')
+        print(f'diff = {out ^ ref:016x}')
+        print()
+        assert out == ref
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
 def test_nonzero_characteristic():
@@ -68,10 +75,7 @@ def test_nonzero_characteristic():
     )
     sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
-    char.sbox_in = sbi_delta
-    char.sbox_out = sbo_delta
-    char.num_rounds = len(sbi_delta)
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori64(char)
     model = midori.solve()
     key = model.key # type: ignore
@@ -81,19 +85,24 @@ def test_nonzero_characteristic():
     print(f'{hex(key0) = }', f'{hex(key1) = }')
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
-    sbi0 = nibble_to_block(sbi[0])
+    # we need to add the key here in post-processing
+    pt = nibble_to_block(sbi[0]) ^ key0 ^ key1
     sbi_delta0 = nibble_to_block(sbi_delta[0])
-    for r, round_sbi in enumerate(sbi):
-        ref = midori64_enc(sbi0, key0, key1, r)
-        ref_xor = midori64_enc(sbi0 ^ sbi_delta0, key0, key1, r)
-        sbiR = nibble_to_block(sbi[r])
-        assert sbiR == ref
+    for r in range(1, char.num_rounds):
+        ref = midori64_enc(pt, key0, key1, r)
+        ref_xor = midori64_enc(pt ^ sbi_delta0, key0, key1, r)
+        # we need to add the key here in post-processing
+        out = nibble_to_block(sbo[r - 1]) ^ key0 ^ key1
+        assert out == ref
         if r < midori.num_rounds - 1:
-            sbi_deltaR = nibble_to_block(sbi_delta[r])
-            outD = sbiR ^ sbi_deltaR
-            print(f'{hex(ref) = }', f'{hex(sbiR) = }')
-            print(f'{hex(ref_xor) = }', f'{hex(outD) = }')
-            assert outD == ref_xor
+            # sbi_deltaR = nibble_to_block(sbi_delta[r])
+            # outD = out ^ sbi_deltaR
+            # print(f'{hex(ref) = }', f'{hex(sbiR) = }')
+            # print(f'{hex(ref_xor) = }', f'{hex(outD) = }')
+            print(f"{out     = :016x}")
+            print(f"{ref_xor = :016x}")
+            ic(out, ref_xor)
+            assert np.all(sbo_delta[r] == ref_xor)
     print('sanity check 2 passed')
 if __name__ == "__main__":
     test_zero_characteristic()
