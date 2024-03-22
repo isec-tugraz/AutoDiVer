@@ -10,9 +10,9 @@ cdef extern from *:
     void enc_midori128(uint8_t *msg, uint8_t *key, int rounds);
     """
     void enc_midori128(uint8_t *msg, uint8_t *key, int rounds) nogil;
-def midori128_enc(const uint8_t[:] pt not None, uint8_t[:] key not None, int rounds)-> uint8_t[:]:
+def midori128_enc(const uint8_t[:] pt not None, const uint8_t[:] key not None, int rounds)-> uint8_t[:]:
     cdef ssize_t i
     ct = bytearray(pt)
     cdef uint8_t[:] ct_view = ct
     enc_midori128(&ct_view[0], &key[0], rounds)
-    return np.array(ct)
+    return bytes(ct)
