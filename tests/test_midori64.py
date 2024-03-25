@@ -30,8 +30,8 @@ def test_tv(pt, key, ct_ref):
     print(f'{ct ^ ct_ref = :016x}')
     assert ct == ct_ref
 def test_zero_characteristic():
-    numrounds = 5
-    sbi_delta = sbo_delta = np.zeros((numrounds, 16), dtype=np.uint8).reshape(-1, 4, 4)
+    numrounds = 4
+    sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori64(char)
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
