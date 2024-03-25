@@ -40,7 +40,7 @@ class Midori128(SboxCipher):
         self._key_schedule()
         self._model_add_key()
         self._model_linear_layer()
-        self._model_SSB()
+        self._model_sboxes()
     def _create_vars(self):
         self.add_index_array('key', (1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
@@ -55,28 +55,17 @@ class Midori128(SboxCipher):
             rk = self.key.copy()
             RK.append(rk)
         self._round_keys = np.array(RK)
-    def _model_SSB(self):
+    def _model_sboxes(self):
         perm = permutation()
-        sbox_in_permuted   = self.sbox_in.copy()
-        sbox_out_permuted  = self.sbox_out.copy()
+        sbox_in_permuted = np.zeros_like(self.sbox_in)
+        sbox_out_permuted = np.zeros_like(self.sbox_out)
         for i in range(self.num_rounds):
-            temp_in = self.sbox_in[i].copy().flatten()
-            sin_flat = temp_in[perm]
-            temp_out = self.sbox_out[i].copy().flatten()
-            sout_flat = temp_out[perm]
-            # print(temp_in)
-            # print(sin_flat)
-            # print(temp_out)
-            # print(sout_flat)
+            sin_flat = self.sbox_in[i].flatten()[perm]
+            sout_flat = self.sbox_out[i].flatten()[perm]
             sbox_in_permuted[i] = sin_flat.reshape(32, 4)
             sbox_out_permuted[i] = sout_flat.reshape(32, 4)
-            # print(sbox_in_permuted[i])
-            # print(sbox_out_permuted[i])
-        self._model_sboxes(sbox_in_permuted, sbox_out_permuted)
-        # self._model_sboxes()
+        super()._model_sboxes(sbox_in_permuted, sbox_out_permuted)
     def _addKey(self, Y, X, K, RC: np.ndarray):
-        # print(X.shape)
-        # print(f'{X = }')
         X_flat = X.copy().reshape(16, 8)
         for i in range(16):
             X_flat[i][4]  *= (-1)**(RC[i] & 0x1)
@@ -90,18 +79,19 @@ class Midori128(SboxCipher):
     def model_mix_cols(A, B):
         mc_cnf = XorCNF()
         for c in range(4):
-            colA = A[(4*c):(4*c)+4]
-            colB = B[(4*c):(4*c)+4]
+            colA = A[:, c]
+            colB = B[:, c]
             for r in range(4):
                 colA_red = colA[mixing_mat[r] != 0, :]
-                # print(f'{colB[r]}', "===>", f'{colA_red}')
+                assert len(colA_red) == 3
                 mc_cnf += XorCNF.create_xor(colB[r], *colA_red)
         return mc_cnf
     def _model_linear_layer(self):
         for r in range(self.num_rounds):
-            # print(f'{self.sbox_out[r] = }')
-            mc_input = do_shift_rows(self.sbox_out[r].reshape(16, 8))
-            mc_output = self.mc_out[r].copy().reshape(16, 8)
-            # print(f'{mc_input = }')
-            # print(f'{mc_output = }')
-            self.cnf += self.model_mix_cols(mc_input, mc_output)
+            mc_input = do_shift_rows(self.sbox_out[r].reshape(4, 4, 8).swapaxes(0, 1))
+            mc_output = self.mc_out[r].reshape(4, 4, 8).swapaxes(0, 1)
+            if r < self.num_rounds - 1:
+                self.cnf += self.model_mix_cols(mc_input, mc_output)
+            else:
+                # no mix columns in the last round
+                self.cnf += XorCNF.create_xor(mc_input.flatten(), mc_output.flatten())

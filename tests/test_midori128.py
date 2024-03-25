@@ -1,10 +1,12 @@
-from random import randint
+from random import seed, randint
 from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
 from differential_verification.midori128.midori128_model import Midori128
 from differential_verification.midori128.midori_cipher import midori128_enc
+from differential_verification.midori128.util import sr_mapping
 import numpy as np
 import pytest
 from sat_toolkit.formula import CNF
+from icecream import ic
 #0th bit is the LSB
 def print_state(key):
     for k in key:
@@ -19,13 +21,7 @@ midori128_testvectors = [
 ]
 @pytest.mark.parametrize("pt,key,ct_ref", midori128_testvectors)
 def test_tv(pt: bytes, key: bytes, ct_ref: bytes):
-    # print(f'{pt = :016x}', f'{key = :032x}', f'{ct_ref = :016x}')
-    # key0 = key >> 64
-    # key1 = key & 0xFFFFFFFFFFFFFFFF
     ct = midori128_enc(pt, key, 20)
-    # print(' ' * 65 + f'{ct = :016x}')
-    # print(f'{ct = :016x}')
-    # print(f'{ct ^ ct_ref = :016x}')
     assert ct == ct_ref
 def nibble_to_byte(key_arr):
     key = []
@@ -38,39 +34,48 @@ def nibble_to_byte(key_arr):
     key = np.asarray(key, dtype=np.uint8)
     return key
 def test_zero_characteristic():
-    numrounds = 2
+    seed("test_midori128::test_zero_characteristic")
+    numrounds = 3
     sbi_delta = sbo_delta = np.zeros((numrounds, 32), dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori128(char)
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1 << (128 + 128)
     for bit_var in midori.key.flatten():
-        midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+        # midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+        midori.cnf += CNF([-bit_var, 0])
     # num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     # assert num_solutions == 1 << 128
-    for bit_var in midori.sbox_in[0].flatten():
+    ic(midori.sbox_in[0].shape)
+    for bit_var in midori.sbox_out[0, 1:].flatten():
         midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+        # midori.cnf += CNF([-bit_var, 0])
+    for bit_var in midori.sbox_out[0, :1].flatten():
+        midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+        # midori.cnf += CNF([bit_var, 0])
     model = midori.solve()
     key = model.key # type: ignore
-    print(f'{key = }')
     key = nibble_to_byte(key[0])
-    print_state(key)
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     # assert np.all(midori.sbox[sbi[:midori.num_rounds]] == sbo)
-    # print(sbi[0])
-    sbi0 = nibble_to_byte(sbi[0])
-    print_state(sbi0)
-    for r, round_sbi in enumerate(sbi):
-        sbiR = nibble_to_byte(sbi[r])
-        ref = midori128_enc(sbi0, key, r)
-        print_state(sbiR)
-        print_state(ref)
-        assert np.all(sbiR == ref)
+    np.set_printoptions(formatter={'int': lambda x: f'{x:02x}'})
+    pt = nibble_to_byte(sbi[0]) ^ key
+    # from IPython import embed; embed()
+    for r in range(1, numrounds):
+        sbiR = nibble_to_byte(sbo[r - 1])
+        # we need to add the key here in post-processing
+        out = sbiR ^ key
+        ref = midori128_enc(pt, key, r)
+        ref = np.array(bytearray(ref))
+        ic(sbiR.reshape(4, 4), out.reshape(4, 4), ref.reshape(4, 4))
+        ic(out ^ ref)
+        assert np.all(out == ref)
         print("--------------------------------------")
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
 def test_nonzero_characteristic():
+    seed("test_midori128::test_nonzero_characteristic")
     char =  (
         ('00000000000200000000400000000000', '00000000000100000000200000000000'),
         ('00012000000000000000000000000000', '00021000000000000000000000000000'),
@@ -125,7 +130,3 @@ def test_nonzero_characteristic():
         #     print_state(outD)
         #     print("--------------------------------------")
         #     assert np.all(outD == ref_xor)
-    print('sanity check 2 passed')
-if __name__ == "__main__":
-    test_zero_characteristic()
-    test_nonzero_characteristic()
