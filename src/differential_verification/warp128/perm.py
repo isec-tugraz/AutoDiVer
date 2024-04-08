@@ -14,20 +14,20 @@ def perm_nibble_16(state):
 def perm_nibble_16_inv(state):
     state1 = [0 for i in range(32)]
     for i in range(16):
-        state1[2*i+1] = state[i]
+        state1[2*i] = state[i]
     temp = [0 for i in range(32)]
     for i in range(32):
         temp[i] = state1[perm[i]]
     print(state1)
     print(temp)
     for i in range(16):
-        state[i] = temp[2*i]
+        state[i] = temp[2*i + 1]
     return state
-state = [i+1 for i in range(16)]
+state = [2*i for i in range(16)]
 print(state)
 state = perm_nibble_16(state)
 print(state)
-state = [i+1 for i in range(16)]
+state = [2*i for i in range(16)]
 print(state)
 state = perm_nibble_16_inv(state)
 print(state)

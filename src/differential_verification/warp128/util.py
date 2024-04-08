@@ -7,6 +7,11 @@ def perm_nibble_inv(temp):
     for j in range(32):
         state[j] = temp[perm[j]]
     return np.asarray(state, np.uint32)
+def perm_nibble(temp):
+    state = [0 for i in range(32)]
+    for j in range(32):
+        state[perm[j]] = temp[j]
+    return np.asarray(state, np.uint32)
 def perm_nibble_16(state):
     state1 = [0 for i in range(32)]
     for i in range(16):
@@ -21,11 +26,25 @@ def perm_nibble_16(state):
 def perm_nibble_16_inv(state):
     state1 = [0 for i in range(32)]
     for i in range(16):
-        state1[2*i+1] = state[i]
+        state1[2*i] = state[i]
     temp = [0 for i in range(32)]
     for i in range(32):
         temp[i] = state1[perm[i]]
     state2 = [0 for i in range(16)]
     for i in range(16):
-        state2[i] = temp[2*i]
+        state2[i] = temp[2*i + 1]
     return np.asarray(state2, np.uint32)
+def get_round_val(a, b):
+    v = np.empty(32, dtype=np.uint8)
+    for i in range(16):
+        v[2*i] = a[i]
+        v[2*i+1] = b[i]
+    return v
+def get_round_in_out(rounds, model):
+    rounds_in = np.empty((rounds, 32), dtype=np.uint8)
+    rounds_out = np.empty((rounds, 32), dtype=np.uint8)
+    for i in range(0, rounds-1):
+        rounds_out[i] = get_round_val(model.sbox_in[i], perm_nibble_16_inv(model.sbox_in[i+1]))
+    #no permutation at the end
+    rounds_out[rounds-1] = get_round_val(model.sbox_in[rounds-1], model.Y)
+    return rounds_out
