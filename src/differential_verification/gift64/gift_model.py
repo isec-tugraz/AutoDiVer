@@ -80,8 +80,6 @@ class Gift64(SboxCipher):
         key_xor_cnf += XorCNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten(), K.flatten())
         self.cnf += key_xor_cnf
     def _model_linear_layer(self) -> None:
-        cnf = XorCNF()
         for r in range(self.num_rounds):
             permOut = self.applyPerm(self.sbox_out[r])
             self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r], GIFT_RC[r])
-        self.cnf += cnf

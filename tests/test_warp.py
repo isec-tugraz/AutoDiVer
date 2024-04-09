@@ -12,12 +12,6 @@ def print_state(S, state = "s"):
     for s in S:
         print(hex(s)[2:], end = "")
     print("")
-def str_to_state(A_str):
-    state = []
-    for a in A_str:
-        b = int(a, 16)
-        state.append(b)
-    return np.asarray(state, np.uint8)
 def Add(A, B):
     assert A.shape == B.shape
     state = []
@@ -112,7 +106,7 @@ def test_nonzero_characteristic():
     rout = get_round_in_out(warp.num_rounds, model)
     assert np.all(warp.sbox[sbi[:warp.num_rounds]] == sbo)
     print_state(pt, "pt")
-    delta0 = str_to_state(inds[0])
+    delta0 = read_hex(inds[0])
     for r in range(1, char.num_rounds):
         print(f' round {r} '.center(80, '='))
         ref = warp_enc(pt, key, r)
@@ -120,7 +114,7 @@ def test_nonzero_characteristic():
         assert np.all(rout[r-1] == ref)
         found_diff = Add(ref, ref_xor)
         print_state(found_diff)
-        expected_diff = perm_nibble_inv(str_to_state(inds[r]))
+        expected_diff = perm_nibble_inv(read_hex(inds[r]))
         print_state(expected_diff)
         assert np.all(expected_diff == found_diff)
 if __name__ == "__main__":

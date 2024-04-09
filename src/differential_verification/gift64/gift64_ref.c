@@ -51,6 +51,12 @@ const unsigned char GIFT_RC[62] = {
     0x0a, 0x15, 0x2a, 0x14, 0x28, 0x10, 0x20};
 void enc64(unsigned char *pt, const unsigned char *key, int num_rounds);
 void dec64(unsigned char *ct, const unsigned char *key, int num_rounds);
+void print_state(unsigned char *state){
+  for(int i = 0; i < 16; i++){
+    printf("%x", state[i]);
+  }
+  printf("\n");
+}
 void enc64(unsigned char *input, const unsigned char *masterkey, int no_of_rounds) {
   unsigned char key[32];
   for (int i = 0; i < 32; i++) {
@@ -62,6 +68,7 @@ void enc64(unsigned char *input, const unsigned char *masterkey, int no_of_round
   unsigned char key_bits[128];
   unsigned char temp_key[32];
   for (int r = 0; r < no_of_rounds; r++) {
+    /* print_state(input); */
     // SubCells
     for (int i = 0; i < 16; i++) {
       input[i] = GIFT_S[input[i]];

@@ -67,7 +67,7 @@ class Gift128(SboxCipher):
            keyWords[1] = np.roll(keyWords[1], -2)
            #rotatate the words by 2
            keyWords = np.roll(keyWords, -2, axis=0)
-           # rk = rk.reshape(32, 2)
+           rk = rk.reshape(32, 2)
            RK.append(rk)
        self._round_keys = np.array(RK)
     def _addKey(self, Y, X, K, RC: int) -> None:
@@ -84,19 +84,12 @@ class Gift128(SboxCipher):
         X_flat[19] *= (-1)**((RC >> 4) & 0x1)
         X_flat[23] *= (-1)**((RC >> 5) & 0x1)
         X_flat[127] *= (-1)
-        # key_xor_cnf = XorCNF()
-        # key_xor_cnf += XorCNF.create_xor(X[:, 2:].flatten(), Y[:, 2:].flatten())
-        # # key_xor_cnf += XorCNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten())
-        # key_xor_cnf += XorCNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten(), K.flatten())
-        # self.cnf += key_xor_cnf
         key_xor_cnf = XorCNF()
         key_xor_cnf += XorCNF.create_xor(X[:, :1].flatten(), Y[:, :1].flatten())
         key_xor_cnf += XorCNF.create_xor(X[:, 3:].flatten(), Y[:, 3:].flatten())
         key_xor_cnf += XorCNF.create_xor(X[:, 1:3].flatten(), Y[:, 1:3].flatten(), K.flatten())
         self.cnf += key_xor_cnf
     def _model_linear_layer(self) -> None:
-        cnf = XorCNF()
         for r in range(self.num_rounds):
             permOut = self.applyPerm(self.sbox_out[r])
             self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r], GIFT_RC[r])
-        self.cnf += cnf

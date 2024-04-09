@@ -1,9 +1,31 @@
 from random import randint
 import numpy as np
+import pytest
 from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
 from differential_verification.gift64.gift_model import Gift64
 from differential_verification.gift64.gift_cipher import gift64_enc
 from sat_toolkit.formula import CNF
+def print_state(S, state = "s"):
+    print(state, ":", end = " ")
+    for s in S:
+        print(hex(s)[2:], end = "")
+    print("")
+def read_hex(s: str) -> np.ndarray:
+    a = [int(x, 16) for x in s]
+    a.reverse()  #test vectors are given in MSB first
+    return np.array(a, dtype=np.uint8)
+testvectors = [
+    (read_hex("c450c7727a9b8a7d"), read_hex("bd91731eb6bc2713a1f9f6ffc75044e7"), read_hex("e3272885fa94ba8b")),
+    (read_hex("fedcba9876543210"), read_hex("fedcba9876543210fedcba9876543210"), read_hex("c1b71f66160ff587"))
+]
+@pytest.mark.parametrize("pt,key,ct_ref", testvectors)
+def test_tv(pt, key, ct_ref):
+    print_state(pt, "M")
+    print_state(key, "K")
+    print_state(ct_ref, "C")
+    ct = gift64_enc(pt, key, 28)
+    print_state(ct, "C")
+    assert np.all(ct == ct_ref)
 def test_zero_characteristic():
     numrounds = 5
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
@@ -24,6 +46,8 @@ def test_zero_characteristic():
     assert np.all(gift.sbox[sbi[:gift.num_rounds]] == sbo)
     for r, round_sbi in enumerate(sbi):
         ref = gift64_enc(sbi[0], key, r)
+        print(f'{ref}')
+        print(f'{round_sbi}')
         assert np.all(round_sbi == ref)
     num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
@@ -57,3 +81,6 @@ def test_nonzero_characteristic():
         if r < gift.num_rounds - 1:
             assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)
     print('sanity check 2 passed')
+if __name__ == "__main__":
+    test_zero_characteristic()
+    test_nonzero_characteristic()
