@@ -26,12 +26,12 @@ class Gift128(SboxCipher):
         assert self.char.sbox_in.shape == self.char.sbox_out.shape
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
-        # for i in range(1, self.num_rounds):
-        #     lin_input = self.char.sbox_out[i - 1].copy()
-        #     lin_output = self.char.sbox_in[i].copy()
-        #     permuted = bit_perm(lin_input)
-        #     if not np.all(permuted == lin_output):
-        #         raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
+        for i in range(1, self.num_rounds):
+            lin_input = self.char.sbox_out[i - 1].copy()
+            lin_output = self.char.sbox_in[i].copy()
+            permuted = bit_perm(lin_input)
+            if not np.all(permuted == lin_output):
+                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
         #generate Variables
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))

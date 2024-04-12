@@ -15,7 +15,9 @@ def read_hex(s: str) -> np.ndarray:
     a.reverse()  #test vectors are given in MSB first
     return np.array(a, dtype=np.uint8)
 testvectors = [
-    (read_hex("e39c141fa57dba43f08a85b6a91f86c1"), read_hex("d0f5c59a7700d3e799028fa9f90ad837"), read_hex("13ede67cbdcc3dbf400a62d6977265ea"))
+    (read_hex("00000000000000000000000000000000"), read_hex("00000000000000000000000000000000"), read_hex("cd0bd738388ad3f668b15a36ceb6ff92")),
+    (read_hex("fedcba9876543210fedcba9876543210"), read_hex("fedcba9876543210fedcba9876543210"), read_hex("8422241a6dbf5a9346af468409ee0152")),
+    (read_hex("e39c141fa57dba43f08a85b6a91f86c1"), read_hex("d0f5c59a7700d3e799028fa9f90ad837"), read_hex("13ede67cbdcc3dbf400a62d6977265ea")),
 ]
 @pytest.mark.parametrize("pt,key,ct_ref", testvectors)
 def test_tv(pt, key, ct_ref):
@@ -56,36 +58,43 @@ def test_zero_characteristic():
         assert np.all(round_sbi == ref)
     num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
-# def test_nonzero_characteristic():
-#     char = (
-#         ("0000000c00000006", "0000000200000002"),
-#         ("0000000002020000", "0000000005050000"),
-#         ("0000005000000050", "0000002000000020"),
-#         ("0000000000000202", "0000000000000505"),
-#         ("0000000500000005", "0000000200000002"),
-#         ("0000000002020000", "0000000005050000"),
-#         ("0000005000000050", "0000002000000020"),
-#         ("0000000000000202", "0000000000000505"),
-#         ("0000000500000005", "0000000f0000000f"),
-#     )
-#     sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
-#     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-#     char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
-#     char.sbox_in = sbi_delta
-#     char.sbox_out = sbo_delta
-#     char.num_rounds = len(sbi_delta)
-#     gift = Gift64(char)
-#     model = gift.solve()
-#     key = model.key # type: ignore
-#     sbi = model.sbox_in # type: ignore
-#     sbo = model.sbox_out # type: ignore
-#     for r, round_sbi in enumerate(sbi):
-#         ref = gift64_enc(sbi[0], key, r)
-#         ref_xor = gift64_enc(sbi[0] ^ sbi_delta[0], key, r)
-#         assert np.all(round_sbi == ref)
-#         if r < gift.num_rounds - 1:
-#             assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)
-#     print('sanity check 2 passed')
-if __name__ == "__main__":
-    test_zero_characteristic()
-    # test_nonzero_characteristic()
+def test_nonzero_characteristic():
+    char = (
+        ("00000000000000000000060700000000", "00000000000000000000020800000000"),
+        ("00000a00000000000000000000000000", "00000100000000000000000000000000"),
+        ("00000000000000000000000001000000", "00000000000000000000000008000000"),
+        ("00000000000000000000008000000000", "00000000000000000000003000000000"),
+        ("00000000000000000000010000000200", "00000000000000000000060000000600"),
+        ("00000202000004040000000000000000", "00000505000005050000000000000000"),
+        ("00000000050500000000000005050000", "00000000020800000000000002080000"),
+        # ("00a000a0000000000000000000000000", "00100010000000000000000000000000"),
+        # ("00000000000000001100000000000000", "00000000000000008800000000000000"),
+        # ("00000000000000000000800000008000", "00000000000000000000300000003000"),
+        # ("00000101000002020000000000000000", "00000505000005050000000000000000"),
+        # ("00000000050500000000000005050000", "00000000080200000000000008020000"),
+        # ("000000000000000000a000a000000000", "00000000000000000010001000000000"),
+        # ("00000000000000000000110000000000", "00000000000000000000c90000000000"),
+        # ("000000000000000000000c0000000900", "00000000000000000000080000000100"),
+        # ("00000000000000000000080000000001", "00000000000000000000030000000008"),
+        # ("00000208000000000000000000000100", "00000603000000000000000000000800"), # <---
+        # ("02000000050000000200000800000000", "060000000f0000000600000300000000"), # <--- these two rounds are UNSAT
+    )
+    np.set_printoptions(formatter={'int': lambda x: f'{x:01x}'})
+    sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
+    sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    print(f'ddt probability: 2^{char.log2_ddt_probability(Gift128.ddt):.1f}')
+    gift = Gift128(char)
+    model = gift.solve()
+    key = model.key # type: ignore
+    sbi = model.sbox_in # type: ignore
+    sbo = model.sbox_out # type: ignore
+    assert np.all(gift.sbox[sbi[:gift.num_rounds]] == sbo)
+    assert np.all(gift.sbox[sbi[:gift.num_rounds] ^ char.sbox_in] == sbo ^ char.sbox_out)
+    for r, round_sbi in enumerate(sbi):
+        ref = gift128_enc(sbi[0], key, r)
+        ref_xor = gift128_enc(sbi[0] ^ sbi_delta[0], key, r)
+        assert np.all(round_sbi == ref)
+        if r < gift.num_rounds - 1:
+            print(f"round {r:2d}: {ref_xor ^ round_sbi ^ sbi_delta[r]}")
+            assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)

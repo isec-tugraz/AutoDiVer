@@ -65,10 +65,7 @@ def test_nonzero_characteristic():
     )
     sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
-    char.sbox_in = sbi_delta
-    char.sbox_out = sbo_delta
-    char.num_rounds = len(sbi_delta)
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     gift = Gift64(char)
     model = gift.solve()
     key = model.key # type: ignore
@@ -80,7 +77,3 @@ def test_nonzero_characteristic():
         assert np.all(round_sbi == ref)
         if r < gift.num_rounds - 1:
             assert np.all(round_sbi ^ sbi_delta[r] == ref_xor)
-    print('sanity check 2 passed')
-if __name__ == "__main__":
-    test_zero_characteristic()
-    test_nonzero_characteristic()
