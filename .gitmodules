@@ -3,3 +3,6 @@
 	url = https://github.com/fanosta/skinny-c
 [submodule "skinny-c/"]
 	url = https://github.com/fanosta/skinny-c.git
+[submodule "talk/2024-04-lorentz-center/cryptolecture"]
+	path = talk/2024-04-lorentz-center/cryptolecture
+	url = git@extgit.iaik.tugraz.at:castle/teaching/cryptolecture.git
