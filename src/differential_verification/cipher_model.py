@@ -10,12 +10,13 @@ import logging
 import random
 import subprocess as sp
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
-from sat_toolkit.formula import XorCNF, CNF, Truthtable
+from sat_toolkit.formula import XorCNF, CNF, XorClauseList, Truthtable, Clause
 from pycryptosat import Solver
 from .util import IndexSet, Model, fmt_log2
 log = logging.getLogger(__name__)
@@ -269,16 +270,41 @@ class SboxCipher(IndexSet):
         num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set)
         log_num_keys = log2(num_keys)
         log.info(f'RESULT {name} space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')
+    @staticmethod
+    def get_small_clauses(solver: Solver, max_len: int, max_glue: int):
+        try:
+            solver.start_getting_small_clauses(max_len, max_glue)
+            while True:
+                clause = solver.get_next_small_clause()
+                if clause is None:
+                    break
+                yield clause
+        finally:
+            solver.end_getting_small_clauses()
+    @staticmethod
+    def get_small_clauses_over_set(solver: Solver, max_len: int, max_glue: int, sampling_set: set[int]):
+        min_var = min(sampling_set)
+        max_var = max(sampling_set)
+        for clause in SboxCipher.get_small_clauses(solver, max_len, max_glue):
+            clause = sorted(clause, key=abs)
+            np_clause = np.array(clause)
+            variables = np.abs(np_clause)
+            if np.any((variables < min_var) | (variables > max_var)):
+                continue
+            if any(variable not in sampling_set for variable in variables):
+                continue
+            yield clause
     def count_tweakey_space_sat_solver(self, trials: int, count_key: bool=True, count_tweak: bool=True, verbosity: int=2):
         """
         Use repeated SAT solving to estimate the number of tweakeys for which
         the characteristic is not impossible.
         """
-        sampling_set = []
+        sampling_set_list = []
         if count_key:
-            sampling_set += self.key.flatten().tolist()
+            sampling_set_list += self.key.flatten().tolist()
         if count_tweak:
-            sampling_set += self.tweak.flatten().tolist()
+            sampling_set_list += self.tweak.flatten().tolist()
+        sampling_set = set(sampling_set_list)
         name = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
         solver = Solver()
         solver.add_clauses(self.cnf._clauses)
@@ -288,42 +314,35 @@ class SboxCipher(IndexSet):
             solver.add_xor_clause(pos_clause, rhs=rhs)
         log.info(f'solving with CryptoMiniSat #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}')
         count_sat = 0
+        key_cnf = CNF([], nvars=self.cnf.nvars)
+        prev_small_clauses_check = time.monotonic()
         pbar = tqdm(range(trials))
         for i in pbar:
-            sampling_new = [x * (-1)**random.randint(0, 1) for x in sampling_set]
+            sampling_new = [x * (-1)**random.randint(0, 1) for x in sampling_set_list]
             is_sat, _ = solver.solve(sampling_new)
             count_sat += is_sat
             pbar.set_description(f'valid {name}s: {count_sat}/{i + 1}')
-        log.info(f'RESULT {name} count: {count_sat}/{trials}')
-        # num_keys = count_sat
-        # log_num_keys = log2(num_keys)
-        # log.info(f'RESULT {name} space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')
-        key_cnf = CNF([], nvars=self.cnf.nvars)
-        try:
-            pbar = tqdm()
-            solver.start_getting_small_clauses(1<<32 - 1, 1<<32 - 1)
-            min_var = min(sampling_set)
-            max_var = max(sampling_set)
-            sampling_set = set(sampling_set)
-            while True:
-                clause = solver.get_next_small_clause()
-                if clause is None:
-                    break
-                clause = np.array(clause)
-                variables = np.abs(clause)
-                if np.all((variables >= min_var) & (variables <= max_var)):
-                    if any(variable not in sampling_set for variable in variables):
-                        continue
+            # check for learnt clauses over the sampling set if we haven't done
+            # so in the last 10 seconds
+            if time.monotonic() - prev_small_clauses_check <= 10:
+                continue
+            prev_small_clauses_check = time.monotonic()
+            for clause in self.get_small_clauses_over_set(solver, len(sampling_set), 1<<32 - 1, sampling_set):
+                clause = Clause(clause)
+                if clause not in key_cnf:
                     tqdm.write(self.format_clause(clause))
                     key_cnf.add_clause(clause)
-                pbar.update()
-        finally:
-            pbar.close()
-            solver.end_getting_small_clauses()
+        log.info(f'RESULT {name} count: {count_sat}/{trials}')
+        for clause in self.get_small_clauses_over_set(solver, len(sampling_set), 1<<32 - 1, sampling_set):
+            clause = Clause(clause)
+            if clause not in key_cnf:
+                tqdm.write(self.format_clause(clause))
+                key_cnf.add_clause(clause)
         min_key_cnf = key_cnf.minimize_espresso()
         log.info(f'key conditions: {min_key_cnf!r}')
         for clause in min_key_cnf:
             log.info(self.format_clause(np.array(clause)))
-if __name__ == '__main__':
-    from main import setup_logging
-    setup_logging()
+        # epsilon = 0.8
+        # delta = 0.2
+        # num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=0, sampling_set=sampling_set_list)
+        # log.info(f'key space: 2^{log2(num_keys):.2f}, {epsilon=}, {delta=}')
