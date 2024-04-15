@@ -19,7 +19,7 @@ https://www.gnu.org/licenses/lgpl-3.0.html (license)
 Example
 -------
 >>> import binascii as B
->>> import pypride as P
+>>> import pride_ref as P
 >>> key1        = B.unhexlify(b"00000000000000000000000000000000")
 >>> plain1      = B.unhexlify(b"0000000000000000")
 >>> cipher1     = P.Pride(key1)

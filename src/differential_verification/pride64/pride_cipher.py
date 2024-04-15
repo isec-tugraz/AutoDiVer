@@ -1,75 +1,5 @@
-# --                                                            ; {{{1
-#
-# File        : pypride.py
-# Maintainer  : Felix C. Stegerman <flx@obfusk.net>
-# Date        : 2016-10-20
-#
-# Copyright   : Copyright (C) 2016  Felix C. Stegerman
-# Version     : v0.1.1
-# License     : LGPLv3+
-#
-# --                                                            ; }}}1
-                                                                # {{{1
-"""
-Python (2+3) PRIDE cipher implementation
-Links
------
-https://eprint.iacr.org/2014/453.pdf (specification)
-https://www.gnu.org/licenses/lgpl-3.0.html (license)
-Example
--------
->>> import binascii as B
->>> import pypride as P
->>> key1        = B.unhexlify(b"00000000000000000000000000000000")
->>> plain1      = B.unhexlify(b"0000000000000000")
->>> cipher1     = P.Pride(key1)
->>> encrypted1  = cipher1.encrypt(plain1)
->>> P.b2s(B.hexlify(encrypted1))  # b2s so it works w/ python 2 and 3
-'82b4109fcc70bd1f'
->>> decrypted1  = cipher1.decrypt(encrypted1)
->>> P.b2s(B.hexlify(decrypted1))
-'0000000000000000'
-More Testvectors
-----------------
->>> key2        = B.unhexlify(b"00000000000000000000000000000000")
->>> plain2      = B.unhexlify(b"ffffffffffffffff")
->>> cipher2     = P.Pride(key2)
->>> encrypted2  = cipher2.encrypt(plain2)
->>> P.b2s(B.hexlify(encrypted2))
-'d70e60680a17b956'
->>> decrypted2  = cipher2.decrypt(encrypted2)
->>> P.b2s(B.hexlify(decrypted2))
-'ffffffffffffffff'
->>> key3        = B.unhexlify(b"ffffffffffffffff0000000000000000")
->>> plain3      = B.unhexlify(b"0000000000000000")
->>> cipher3     = P.Pride(key3)
->>> encrypted3  = cipher3.encrypt(plain3)
->>> P.b2s(B.hexlify(encrypted3))
-'28f19f97f5e846a9'
->>> decrypted3  = cipher3.decrypt(encrypted3)
->>> P.b2s(B.hexlify(decrypted3))
-'0000000000000000'
->>> key4        = B.unhexlify(b"0000000000000000ffffffffffffffff")
->>> plain4      = B.unhexlify(b"0000000000000000")
->>> cipher4     = P.Pride(key4)
->>> encrypted4  = cipher4.encrypt(plain4)
->>> P.b2s(B.hexlify(encrypted4))
-'d123ebaf368fce62'
->>> decrypted4  = cipher4.decrypt(encrypted4)
->>> P.b2s(B.hexlify(decrypted4))
-'0000000000000000'
->>> key5        = B.unhexlify(b"0000000000000000fedcba9876543210")
->>> plain5      = B.unhexlify(b"0123456789abcdef")
->>> cipher5     = P.Pride(key5)
->>> encrypted5  = cipher5.encrypt(plain5)
->>> P.b2s(B.hexlify(encrypted5))
-'d1372929712d336e'
->>> decrypted5  = cipher5.decrypt(encrypted5)
->>> P.b2s(B.hexlify(decrypted5))
-'0123456789abcdef'
-"""
-                                                                # }}}1
 import binascii, sys
+import binascii as B
 if sys.version_info.major == 2:
   def b2s(x):
     """convert bytes to str"""
@@ -87,60 +17,6 @@ else:
     if isinstance(x, bytes): return x
     return x.encode("utf8")
   xrange = range
-class Pride(object):                                            # {{{1
-  """PRIDE cipher"""
-  def __init__(self, key, rounds = 20):
-    """
-    Create a PRIDE cipher object
-    key:      the key as a 128-bit bytes
-    rounds:   the number of rounds as an integer (32 by default)
-    """
-    if len(key) != 16:
-      raise ValueError("Key must be a 128-bit bytes")
-    self.k0, k1     = b2i(key[:8]), key[8:]
-    self.rounds     = rounds
-    self.roundkeys  = [ f(i+1, k1) for i in xrange(rounds) ]
-  def encrypt(self, block):
-    """
-    Encrypt 1 block (8 bytes)
-    block:    plaintext block as bytes
-    returns:  ciphertext block as bytes
-    """
-    state = b2i(block)
-    state = p_layer_inv(state)
-    state = whiten(state, self.k0)
-    for i in xrange(self.rounds):
-      state = add_roundkey(state, p_layer_inv(self.roundkeys[i]))
-      state = s_layer(state)
-      if i != self.rounds - 1:
-        state = p_layer(state)
-        state = l_layer(state)
-        state = p_layer_inv(state)
-    state = whiten(state, self.k0)  # k2 = k0
-    state = p_layer(state)
-    return i2b(state, 8)
-  def decrypt(self, block):
-    """
-    Decrypt 1 block (8 bytes)
-    block:    ciphertext block as bytes
-    returns:  plaintext block as bytes
-    """
-    state = b2i(block)
-    state = p_layer_inv(state)
-    state = whiten(state, self.k0)  # k2 = k0
-    for i in xrange(self.rounds):
-      state = s_layer_inv(state)
-      state = add_roundkey(state, p_layer_inv(self.roundkeys[-i-1]))
-      if i != self.rounds - 1:
-        state = p_layer(state)
-        state = l_layer_inv(state)
-        state = p_layer_inv(state)
-    state = whiten(state, self.k0)
-    state = p_layer(state)
-    return i2b(state, 8)
-  def get_block_size(self):
-    return 8
-                                                                # }}}1
 def xor_key(state, key):
   """
   XOR key
@@ -295,8 +171,66 @@ def i2b(x, n = 1):
   """convert integer to bytes of length (at least) n"""
   if isinstance(x, bytes): return x
   return binascii.unhexlify(s2b("%0*x" % (n*2,x)))
+class Pride(object):                                            # {{{1
+  """PRIDE cipher"""
+  def __init__(self, key, rounds = 20):
+    """
+    Create a PRIDE cipher object
+    key:      the key as a 128-bit bytes
+    rounds:   the number of rounds as an integer (32 by default)
+    """
+    if len(key) != 16:
+      raise ValueError("Key must be a 128-bit bytes")
+    self.k0, k1     = b2i(key[:8]), key[8:]
+    self.rounds     = rounds
+    self.roundkeys  = [ f(i+1, k1) for i in xrange(rounds) ]
+  def encrypt(self, block):
+    """
+    Encrypt 1 block (8 bytes)
+    block:    plaintext block as bytes
+    returns:  ciphertext block as bytes
+    """
+    state = b2i(block)
+    state = p_layer_inv(state)
+    state = whiten(state, self.k0)
+    for i in xrange(self.rounds):
+      state = add_roundkey(state, p_layer_inv(self.roundkeys[i]))
+      state = s_layer(state)
+      if i != self.rounds - 1:
+        state = p_layer(state)
+        state = l_layer(state)
+        state = p_layer_inv(state)
+    state = whiten(state, self.k0)  # k2 = k0
+    state = p_layer(state)
+    return i2b(state, 8)
+  def decrypt(self, block):
+    """
+    Decrypt 1 block (8 bytes)
+    block:    ciphertext block as bytes
+    returns:  plaintext block as bytes
+    """
+    state = b2i(block)
+    state = p_layer_inv(state)
+    state = whiten(state, self.k0)  # k2 = k0
+    for i in xrange(self.rounds):
+      state = s_layer_inv(state)
+      state = add_roundkey(state, p_layer_inv(self.roundkeys[-i-1]))
+      if i != self.rounds - 1:
+        state = p_layer(state)
+        state = l_layer_inv(state)
+        state = p_layer_inv(state)
+    state = whiten(state, self.k0)
+    state = p_layer(state)
+    return i2b(state, 8)
+  def get_block_size(self):
+    return 8
 if __name__ == "__main__":
-  import doctest
-  failures, tests = doctest.testmod(verbose = "-v" in sys.argv[1:])
-  sys.exit(0 if failures == 0 else 1)
-# vim: set tw=70 sw=2 sts=2 et fdm=marker :
+    key1        = B.unhexlify(b"00000000000000000000000000000000")
+    plain1      = B.unhexlify(b"0000000000000000")
+    PP     = Pride(key1)
+    encrypted1  = PP.encrypt(plain1)
+    C = b2s(B.hexlify(encrypted1))  # b2s so it works w/ python 2 and 3
+    print(C)
+    decrypted1  = PP.decrypt(encrypted1)
+    D = b2s(B.hexlify(decrypted1))
+    print(D)
