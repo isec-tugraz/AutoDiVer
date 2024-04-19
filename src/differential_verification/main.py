@@ -13,7 +13,8 @@ from IPython import start_ipython
 from .import version
 from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from .gift64.gift_model import Gift64
-from .midori64.midori64_model import Midori64
+from .gift128.gift_model import Gift128
+from .midori64.midori64_model import Midori64, Midori64Characteristic
 from .midori128.midori128_model import Midori128
 from .warp128.warp128_model import WARP128
 from .ascon.ascon_model import Ascon, AsconCharacteristic
@@ -27,11 +28,19 @@ def setup_logging(filename: Optional[Path] = None):
         config['handlers']['file']['filename'] = filename
     logging.getLogger().setLevel(logging.DEBUG)
     logging.config.dictConfig(config)
+def parse_slice(s: str) -> slice:
+    start, sep, stop = s.partition('..')
+    if sep == '':
+        raise argparse.ArgumentTypeError(f"invalid slice {s!r} -> expected 'start..stop'")
+    start = int(start) if start else None
+    stop = int(stop) if stop else None
+    return slice(start, stop)
 def main():
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
         "warp128": (WARP128, DifferentialCharacteristic),
         "gift64": (Gift64, DifferentialCharacteristic),
-        "midori64": (Midori64, DifferentialCharacteristic),
+        "gift128": (Gift128, DifferentialCharacteristic),
+        "midori64": (Midori64, Midori64Characteristic),
         "midori128": (Midori128, DifferentialCharacteristic),
         "skinny128": (Skinny128, Skinny128Characteristic),
         "skinny64": (Skinny64, Skinny64Characteristic),
@@ -44,6 +53,9 @@ def main():
         'count-tweaks-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=False, count_tweak=True),
         'count-keys-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=True, count_tweak=False),
         'count-tweakeys-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=True, count_tweak=True),
+        'count-tweaks-lin': lambda cipher, args: cipher.count_lin_tweakey_space(count_key=False, count_tweak=True),
+        'count-keys-lin': lambda cipher, args: cipher.count_lin_tweakey_space(count_key=True, count_tweak=False),
+        'count-tweakeys-lin': lambda cipher, args: cipher.count_lin_tweakey_space(count_key=True, count_tweak=True),
         'count-prob': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta),
         'count-prob-fixed-key': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_key=True),
         'count-prob-fixed-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True),

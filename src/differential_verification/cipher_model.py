@@ -13,9 +13,11 @@ import tempfile
 import time
 from pathlib import Path
 from typing import Any
+from itertools import count
 from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
+from galois import GF2
 from sat_toolkit.formula import XorCNF, CNF, XorClauseList, Truthtable, Clause
 from pycryptosat import Solver
 from .util import IndexSet, Model, fmt_log2
@@ -47,7 +49,7 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
         f.flush()
         # run approxmc
         seed = int.from_bytes(os.urandom(4), 'little')
-        args = ['approxmc', f'--seed={seed}', f'-e{epsilon}', f'-d{delta}', '--sparse=1', f'-v{verbosity}', f.name]
+        args = ['approxmc', f'--seed={seed}', f'--{epsilon=}', f'--{delta=}', '--sparse=1', f'--verb={verbosity}', f.name]
         log.info(f'running: {" ".join(args)}')
         with sp.Popen(args, stdout=sp.PIPE, text=True) as proc:
             model_count: int | None = None
@@ -175,16 +177,19 @@ class SboxCipher(IndexSet):
         self.cnf += sbox_cnf
     def _model_linear_layer(self):
         raise NotImplementedError("this should be implemented by subclasses")
-    def _solve(self):
+    def _solve(self, cnf: CNF=None, log_result: bool=True):
         seed = int.from_bytes(os.urandom(4), 'little')
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
-        log.info(args)
-        log.info(f'solving with {args} #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}')
-        is_sat, model = self.cnf.solve_dimacs(args)
+        cnf = cnf if cnf is not None else self.cnf
+        if log_result:
+            log.info(f'solving with {args} #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
+        is_sat, model = cnf.solve_dimacs(args)
         if not is_sat:
-            log.info('RESULT cnf is UNSAT')
+            if log_result:
+                log.info('RESULT cnf is UNSAT')
             raise ValueError('cnf is UNSAT')
-        log.info('RESULT cnf is SAT')
+        if log_result:
+            log.info('RESULT cnf is SAT')
         return list(model)
     @classmethod
     def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
@@ -294,6 +299,76 @@ class SboxCipher(IndexSet):
             if any(variable not in sampling_set for variable in variables):
                 continue
             yield clause
+    def count_lin_tweakey_space(self, count_key: bool=True, count_tweak: bool=True):
+        """
+        count the size of the tweakey space under the assumption that it is a vector space
+        """
+        sampling_set_list = []
+        if count_key:
+            sampling_set_list += self.key.flatten().tolist()
+        if count_tweak:
+            sampling_set_list += self.tweak.flatten().tolist()
+        sampling_set_list = np.array(sampling_set_list, dtype=np.int32)
+        sampling_set = set(sampling_set_list)
+        count_initial_samples = len(sampling_set)
+        initial_samples = []
+        for _ in tqdm(range(count_initial_samples), desc='gathering valid keys'):
+            raw_model = self._solve(log_result=False)
+            raw_model[0] = False
+            raw_model = np.array(raw_model, dtype=np.uint8)
+            sample = raw_model[sampling_set_list]
+            initial_samples.append(sample)
+        counter_example_found = True
+        while counter_example_found:
+            samples = GF2(initial_samples)
+            const = samples[0].copy()
+            samples += const
+            lin_space = samples.row_space()
+            for vec in lin_space:
+                new_const = const + vec
+                if np.array(new_const, int).sum() < np.array(const, int).sum():
+                    const = new_const
+            log.info(f'gathered keys span affine space of dimension {len(lin_space)}')
+            # we now have an affine space for the possible keys:
+            # K = const + v * lin_space (for all v)
+            # we can multiply with right_kern, the right kernel of lin_space
+            # K * right_kern = const * right_kern
+            # right_kern.T * K = right_kern.T * const
+            right_kern = lin_space.T.left_null_space().T
+            assert np.all(lin_space @ right_kern == 0)
+            A = right_kern.T
+            b = right_kern.T @ const
+            extra_vars = range(self.cnf.nvars + 1, self.cnf.nvars + len(A) + 1)
+            extra_constraints = XorCNF()
+            extra_constraints.nvars = self.cnf.nvars + len(A)
+            for i, eq, rhs in zip(count(), A, b):
+                variables, = np.nonzero(eq)
+                var_idxes = sampling_set_list[variables]
+                var_names = self.describe_idx_array(var_idxes)
+                # create xors with extra variables that track whether the xor is satisfied
+                extra_constraints += XorCNF.create_xor(*var_idxes[:, np.newaxis], [extra_vars[i]], rhs=[rhs])
+            # at least one of the xors must be violated
+            extra_constraints.add_clauses(list(extra_vars) + [0])
+            try:
+                log.info('solving for counterexample')
+                raw_model = self._solve(self.cnf + extra_constraints, log_result=False)
+                log.info('found counterexample -> adding more constraints')
+                raw_model[0] = False
+                raw_model = np.array(raw_model, dtype=np.uint8)
+                sample = raw_model[sampling_set_list]
+                initial_samples.append(sample)
+                counter_example_found = True
+            except ValueError as e:
+                assert 'UNSAT' in str(e)
+                log.info('RESULT no counterexample found -> conditions on key are necessary')
+                counter_example_found = False
+                break
+        for i, eq, rhs in zip(count(), A, b):
+            variables, = np.nonzero(eq)
+            var_idxes = sampling_set_list[variables]
+            var_names = self.describe_idx_array(var_idxes)
+            str_lhs = ' ⊕ '.join(var_names)
+            log.info(f'RESULT {str_lhs} = {rhs}')
     def count_tweakey_space_sat_solver(self, trials: int, count_key: bool=True, count_tweak: bool=True, verbosity: int=2):
         """
         Use repeated SAT solving to estimate the number of tweakeys for which
@@ -316,12 +391,15 @@ class SboxCipher(IndexSet):
         count_sat = 0
         key_cnf = CNF([], nvars=self.cnf.nvars)
         prev_small_clauses_check = time.monotonic()
+        prev_keys_update = time.monotonic()
         pbar = tqdm(range(trials))
         for i in pbar:
             sampling_new = [x * (-1)**random.randint(0, 1) for x in sampling_set_list]
             is_sat, _ = solver.solve(sampling_new)
             count_sat += is_sat
-            pbar.set_description(f'valid {name}s: {count_sat}/{i + 1}')
+            if time.monotonic() - prev_keys_update >= 0.1:
+                prev_keys_update = time.monotonic()
+                pbar.set_description(f'valid {name}s: {count_sat}/{i + 1}')
             # check for learnt clauses over the sampling set if we haven't done
             # so in the last 10 seconds
             if time.monotonic() - prev_small_clauses_check <= 10:
