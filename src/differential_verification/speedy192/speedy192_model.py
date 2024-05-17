@@ -11,6 +11,27 @@ from .ddt import DDT
 from .util import SBOX, RC, do_shift_cols, update_key
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
+class Speedy192Characteristic(DifferentialCharacteristic):
+    @classmethod
+    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+        trail = []
+        with open(characteristic_path, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                assert len(line) == 64
+                line2 = [line[i:i+2] for i in range(0, len(line), 2)]
+                line_deltas = [int(l, 16) for l in line2]
+                # print(line_deltas)
+                trail.append(line_deltas)
+        trail = np.array(trail)
+        if len(trail) % 2 != 0:
+            log.error(f'expected an even number of differences in {characteristic_path!r}')
+            raise ValueError(f'expected an even number of differences in {characteristic_path!r}')
+        sbox_in = trail[0::2]
+        sbox_out = trail[1::2]
+        return cls(sbox_in, sbox_out)
 class Speedy192(SboxCipher):
     cipher_name = "SPEEDY192"
     sbox = SBOX.copy()

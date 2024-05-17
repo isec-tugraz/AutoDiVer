@@ -17,6 +17,7 @@ from .gift128.gift_model import Gift128
 from .midori64.midori64_model import Midori64, Midori64Characteristic
 from .midori128.midori128_model import Midori128
 from .warp128.warp128_model import WARP128
+from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from .ascon.ascon_model import Ascon, AsconCharacteristic
 from .skinny.skinny_model import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
 log = logging.getLogger(__name__)
@@ -38,6 +39,7 @@ def parse_slice(s: str) -> slice:
 def main():
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
         "warp128": (WARP128, DifferentialCharacteristic),
+        "Speedy192": (Speedy192, Speedy192Characteristic),
         "gift64": (Gift64, DifferentialCharacteristic),
         "gift128": (Gift128, DifferentialCharacteristic),
         "midori64": (Midori64, Midori64Characteristic),

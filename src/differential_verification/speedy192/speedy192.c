@@ -2,7 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #define   NR   7    /* Put the number of rounds here */
-/* #define CYTHON */
+#define CYTHON
 const uint8_t S[64] = { 0x08,0x00,0x09,0x03,0x38,0x10,0x29,0x13,0x0c,0x0d,0x04,0x07,0x30,0x01,0x20,0x23,
                         0x1a,0x12,0x18,0x32,0x3e,0x16,0x2c,0x36,0x1c,0x1d,0x14,0x37,0x34,0x05,0x24,0x27,
                         0x02,0x06,0x0b,0x0f,0x33,0x17,0x21,0x15,0x0a,0x1b,0x0e,0x1f,0x31,0x11,0x25,0x35,
@@ -105,7 +105,7 @@ void print_state64(StateUint input){
 }
 void print_state6(StateChar input){
     for(int i=0; i<32; i++){
-        printf("%02x", input[i]);
+        printf("0x%02x,", input[i]);
     }
     printf("\n");
 }
@@ -241,6 +241,7 @@ void Decrypt(uint8_t *Ciphertext, uint8_t *Key, int rounds) {
         AK (Ciphertext, r);
     }
 }
+/* #include "diff.h" */
 void test_convert(){
     StateUint plaintext     = {0xA13A632451070E43,0x82A27F26A40682F3,0xFE9FF68028D24FDB};
     StateChar plaintextchar;
@@ -270,6 +271,8 @@ int main() {
     print_state(plaintextchar);
     print_state6(plaintextchar);
     print_state6(keychar);
+    /* test_diff(); */
+    /* generate_naive_diff(2); */
     return 0;
 }
 #endif
