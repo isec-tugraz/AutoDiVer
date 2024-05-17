@@ -9,5 +9,6 @@ setup(
         Extension("differential_verification.midori64.midori_cipher", ["src/differential_verification/midori64/midori_cipher.pyx"]),
         Extension("differential_verification.midori128.midori_cipher", ["src/differential_verification/midori128/midori_cipher.pyx"]),
         Extension("differential_verification.warp128.warp_cipher", ["src/differential_verification/warp128/warp_cipher.pyx"]),
+        Extension("differential_verification.speedy192.speedy_cipher", ["src/differential_verification/speedy192/speedy_cipher.pyx"]),
     ]),
 )

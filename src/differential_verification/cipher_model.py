@@ -199,6 +199,8 @@ class SboxCipher(IndexSet):
             return ''.join(f'{x:01x}' for x in arr.flatten())
         if cellsize == 8:
             return ''.join(f'{x:02x}' for x in arr.flatten())
+        if cellsize == 6:
+            return ''.join(f'{x:02x}' for x in arr.flatten())
         raise ValueError(f'cellsize must be 4 or 8 not {cellsize}')
     def solve(self) -> Model:
         raw_model = self._solve()
