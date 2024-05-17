@@ -4,6 +4,7 @@ Cipher model base classes
 from __future__ import annotations
 from math import log2
 import copy
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 import os
 import logging
@@ -36,6 +37,12 @@ class CountResult:
     tweak={fmt_array(self.tweak)},
     pt={fmt_array(self.pt)}
 )'''
+def _available_cpus():
+    try:
+        # only available on Linux
+        return len(os.sched_getaffinity(0)) # type: ignore
+    except AttributeError:
+        return os.cpu_count()
 def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None) -> int:
     sampling_set_log = f" over {len(sampling_set)} variables" if sampling_set is not None else ""
     log.info(f'counting solutions to cnf with {cnf.nvars} variables, {cnf.nclauses} clauses, and {cnf.nxor_clauses} xor clauses{sampling_set_log}, {epsilon=}, {delta=}')
@@ -314,12 +321,16 @@ class SboxCipher(IndexSet):
         sampling_set = set(sampling_set_list)
         count_initial_samples = len(sampling_set)
         initial_samples = []
-        for _ in tqdm(range(count_initial_samples), desc='gathering valid keys'):
-            raw_model = self._solve(log_result=False)
-            raw_model[0] = False
-            raw_model = np.array(raw_model, dtype=np.uint8)
-            sample = raw_model[sampling_set_list]
-            initial_samples.append(sample)
+        name = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
+        with ThreadPoolExecutor(max_workers=_available_cpus()) as executor:
+            def task(_index):
+                raw_model = self._solve(log_result=False)
+                raw_model[0] = False
+                raw_model = np.array(raw_model, dtype=np.uint8)
+                return raw_model[sampling_set_list]
+            samples = executor.map(task, range(count_initial_samples))
+            for sample in tqdm(samples, total=count_initial_samples, desc=f'gathering valid {name}s'):
+                initial_samples.append(sample)
         counter_example_found = True
         while counter_example_found:
             samples = GF2(initial_samples)
@@ -330,7 +341,7 @@ class SboxCipher(IndexSet):
                 new_const = const + vec
                 if np.array(new_const, int).sum() < np.array(const, int).sum():
                     const = new_const
-            log.info(f'gathered keys span affine space of dimension {len(lin_space)}')
+            log.info(f'gathered {name}s span affine space of dimension {len(lin_space)}')
             # we now have an affine space for the possible keys:
             # K = const + v * lin_space (for all v)
             # we can multiply with right_kern, the right kernel of lin_space
@@ -362,7 +373,7 @@ class SboxCipher(IndexSet):
                 counter_example_found = True
             except ValueError as e:
                 assert 'UNSAT' in str(e)
-                log.info('RESULT no counterexample found -> conditions on key are necessary')
+                log.info(f'RESULT no counterexample found -> conditions on {name} are necessary')
                 counter_example_found = False
                 break
         for i, eq, rhs in zip(count(), A, b):

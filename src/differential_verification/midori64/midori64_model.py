@@ -4,6 +4,7 @@ model the solutions of a differential characteristic for GIFT64 and count them.
 """
 from __future__ import annotations
 import logging
+from pathlib import Path
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import XorCNF
@@ -16,6 +17,17 @@ def matrix_as_uint64(matrix: np.ndarray) -> int:
     assert matrix.shape == (4, 4)
     flat = matrix.T.ravel()
     return int(''.join(f'{x:01x}' for x in flat), 16)
+class Midori64Characteristic(DifferentialCharacteristic):
+    @classmethod
+    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+        with np.load(characteristic_path) as f:
+            sbox_in = f['sbox_in']
+            sbox_out = f['sbox_out']
+        sbox_in = np.array(sbox_in, dtype=np.int8)
+        sbox_out = np.array(sbox_out, dtype=np.int8)
+        if sbox_in.shape != sbox_out.shape:
+            raise ValueError('sbox_in and sbox_out must have the same shape')
+        return cls(sbox_in, sbox_out)
 class Midori64(SboxCipher):
     cipher_name = "MIDORI64"
     sbox = np.array([int(x, 16) for x in "cad3ebf789150246"], dtype=np.uint8)

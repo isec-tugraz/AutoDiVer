@@ -2,6 +2,9 @@
 # build solvers
 ################################################################################
 FROM debian:stable-slim as build_solvers
+ARG CRYPTOMINISAT_VERSION=5.11.21
+ARG APPROXMC_VERSION=4.1.24
+ARG ARJUN_VERSION=2.5.4
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -22,9 +25,9 @@ RUN git clone https://github.com/classabbyamp/espresso-logic.git /tmp/espresso-l
     && rm -rf /tmp/espresso-logic
 # CryptoMiniSat, Arjun, ApproxMC
 RUN mkdir /tmp/sat && cd /tmp/sat \
-    # CryptoMiniSat
     && git clone https://github.com/msoos/cryptominisat \
     && cd cryptominisat \
+    && git checkout tags/${CRYPTOMINISAT_VERSION} \
     && mkdir build && cd build \
     && cmake -DCMAKE_BUILD_TYPE=Release .. \
     && make \
@@ -35,6 +38,7 @@ RUN mkdir /tmp/sat && cd /tmp/sat \
 RUN mkdir /tmp/sat && cd /tmp/sat \
     && git clone https://github.com/meelgroup/arjun \
     && cd arjun \
+    && git checkout tags/${ARJUN_VERSION} \
     && mkdir build && cd build \
     && cmake -DCMAKE_BUILD_TYPE=Release .. \
     && make \
@@ -45,6 +49,7 @@ RUN mkdir /tmp/sat && cd /tmp/sat \
 RUN mkdir /tmp/sat && cd /tmp/sat \
     && git clone https://github.com/meelgroup/approxmc \
     && cd approxmc \
+    && git checkout tags/${APPROXMC_VERSION} \
     && mkdir build && cd build \
     && cmake -DCMAKE_BUILD_TYPE=Release .. \
     && make \
