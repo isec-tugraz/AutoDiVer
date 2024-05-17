@@ -114,14 +114,18 @@ def test_nonzero_characteristic():
     sbi0 = nibble_to_byte(sbi[0])
     sbi_delta0 = nibble_to_byte(sbi_delta[0])
     X1 = sbi0 ^ sbi_delta0
-    print_state(X1)
-    for r, round_sbi in enumerate(sbi):
+    print(f'{X1=}')
+    print(f'{sbi0 = }')
+    print(f'{key = }')
+    pt = sbi0 ^ key
+    print(f'{pt = }')
+    for r in range(1, len(sbi)):
         print(f'round: {r}')
-        ref = np.array(bytearray(midori128_enc(sbi0, key, r)))
-        sbiR = nibble_to_byte(sbi[r])
-        print(f'{sbiR = }')
-        print(f'{ref = }')
-        assert np.all(sbiR == ref)
+        ref = midori128_enc(pt, key, r)
+        ref = np.array(bytearray(ref))
+        sbiR = nibble_to_byte(sbo[r - 1])
+        out = sbiR ^ key
+        assert np.all(out == ref)
         ref_xor = midori128_enc(X1, key, r)
         # if r < midori.num_rounds - 1:
         #     sbi_deltaR = nibble_to_byte(sbi_delta[r])
