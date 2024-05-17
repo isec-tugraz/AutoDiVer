@@ -75,7 +75,7 @@ def test_zero_characteristic():
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
 def test_nonzero_characteristic():
-    # characteristic from https://doi.org/10.1109/ACCESS.2020.2995795S (Figure 3)
+    # characteristic from https://doi.org/10.1109/ACCESS.2020.2995795 (Figure 3)
     # with alpha = beta = 1
     char = (
         ("1000000000100000", "2000000000200000"),

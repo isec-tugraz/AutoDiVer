@@ -116,8 +116,11 @@ def test_nonzero_characteristic():
     X1 = sbi0 ^ sbi_delta0
     print_state(X1)
     for r, round_sbi in enumerate(sbi):
-        ref = midori128_enc(sbi0, key, r)
+        print(f'round: {r}')
+        ref = np.array(bytearray(midori128_enc(sbi0, key, r)))
         sbiR = nibble_to_byte(sbi[r])
+        print(f'{sbiR = }')
+        print(f'{ref = }')
         assert np.all(sbiR == ref)
         ref_xor = midori128_enc(X1, key, r)
         # if r < midori.num_rounds - 1:
