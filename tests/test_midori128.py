@@ -2,7 +2,7 @@ from random import seed, randint
 from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
 from differential_verification.midori128.midori128_model import Midori128
 from differential_verification.midori128.midori_cipher import midori128_enc
-from differential_verification.midori128.util import sr_mapping
+from differential_verification.midori128.util import sr_mapping, postPermute
 import numpy as np
 import pytest
 from sat_toolkit.formula import CNF
@@ -76,7 +76,7 @@ def test_zero_characteristic():
     assert num_solutions == 1
 def test_nonzero_characteristic():
     seed("test_midori128::test_nonzero_characteristic")
-    char =  (
+    Char =  (
         ('00000000000200000000400000000000', '00000000000100000000200000000000'),
         ('00012000000000000000000000000000', '00021000000000000000000000000000'),
         ('00000000100240000000000040800020', '00000000800110000000000040800040'),
@@ -88,7 +88,7 @@ def test_nonzero_characteristic():
         ('00000000000100000000100000000000', '00000000000100000000200000000000'),
         ('00012000000000000000000000000000', '00021000000000000000000000000000')
     )
-    char1 = (
+    Char1 = (
         ('00000000001000000000100000000000', '00000000000800000000080000000000'),
         ('00080800000000000000000000000000', '00104000000000000000000000000000'),
         ('00000000101010000000000040400040', '00000000080840000000000040400008'),
@@ -100,40 +100,35 @@ def test_nonzero_characteristic():
         ('00000000000800000000400000000000', '00000000000800000000080000000000'),
         ('00080800000000000000000000000000', '00104000000000000000000000000000')
     )
-    sbi_delta = np.array([[int(x, 32) for x in inp] for inp, _ in char], dtype=np.uint8)
-    sbo_delta = np.array([[int(x, 32) for x in out] for _, out in char], dtype=np.uint8)
+    sbi_delta = np.array([[int(x, 32) for x in inp] for inp, _ in Char], dtype=np.uint8)
+    sbo_delta = np.array([[int(x, 32) for x in out] for _, out in Char], dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori128(char)
     model = midori.solve()
     key = model.key # type: ignore
-    print(f'{key = }')
     key = nibble_to_byte(key[0])
     print_state(key)
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     sbi0 = nibble_to_byte(sbi[0])
-    sbi_delta0 = nibble_to_byte(sbi_delta[0])
-    X1 = sbi0 ^ sbi_delta0
-    print(f'{X1=}')
-    print(f'{sbi0 = }')
-    print(f'{key = }')
     pt = sbi0 ^ key
     print(f'{pt = }')
     for r in range(1, len(sbi)):
         print(f'round: {r}')
         ref = midori128_enc(pt, key, r)
-        ref = np.array(bytearray(ref))
+        ref = np.array(bytearray(ref)) ^ key
         sbiR = nibble_to_byte(sbo[r - 1])
-        out = sbiR ^ key
-        assert np.all(out == ref)
-        ref_xor = midori128_enc(X1, key, r)
-        # if r < midori.num_rounds - 1:
-        #     sbi_deltaR = nibble_to_byte(sbi_delta[r])
-        #     outD = sbiR ^ sbi_deltaR
-        #     print("--------------------------------------")
-        #     print_state(ref)
-        #     print_state(sbiR)
-        #     print_state(ref_xor)
-        #     print_state(outD)
-        #     print("--------------------------------------")
-        #     assert np.all(outD == ref_xor)
+        assert np.all(sbiR == ref)
+        inD = nibble_to_byte(sbi_delta[0])
+        ref_xor = midori128_enc(pt ^ postPermute(inD), key, r)
+        ref_xor = np.array(bytearray(ref_xor)) ^ key
+        print_state(ref)
+        print_state(ref_xor)
+        found_diff = ref ^ ref_xor
+        print_state(found_diff)
+        expected_diff = postPermute(nibble_to_byte(sbo_delta[r-1]))
+        print_state(expected_diff)
+        assert np.all(expected_diff == found_diff)
+if __name__ == "__main__":
+    test_zero_characteristic()
+    test_nonzero_characteristic()

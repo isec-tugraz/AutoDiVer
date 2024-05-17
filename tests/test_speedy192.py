@@ -55,7 +55,7 @@ def test_zero_characteristic():
     mco = model.mc_out # type: ignore
     assert np.all(speedy.sbox[sbi[:speedy.num_rounds]] == sbo)
     print_state(key)
-    pt = Add(sbi[0], key)
+    pt = sbi[0] ^ key
     print_state(pt)
     round_keys = prepare_round_keys(key)
     for i in range(speedy.num_rounds_full):
@@ -117,18 +117,25 @@ def test_nonzero_characteristic_sat():
     mco = model.mc_out # type: ignore
     assert np.all(speedy.sbox[sbi[:speedy.num_rounds]] == sbo)
     print_state(key, "key")
-    pt = Add(sbi[0], key)
+    pt = sbi[0] ^ key
     print_state(pt, "pt")
     round_keys = prepare_round_keys(key)
     for i in range(speedy.num_rounds_full):
         print_state(round_keys[i], "rkeys{}".format(i))
     #Note that inside the model ther is not key addition at the start and end
     ref = speedy192_enc(pt, key, numrounds)
-    ref = Add(ref, round_keys[numrounds])
+    ref = ref ^ round_keys[numrounds]
     out = sbo[2*(numrounds-1) + 1]
     print_state(ref, "ref")
     print_state(out, "sbo")
     assert np.all(ref == out)
+    ref_xor = speedy192_enc(pt ^ sbi_delta[0], key, numrounds)
+    ref_xor = ref_xor ^ round_keys[numrounds]
+    found_diff = ref ^ ref_xor
+    print_state(found_diff)
+    expected_diff = sbo_delta[2*(numrounds-1) + 1]
+    print_state(expected_diff)
+    assert np.all(expected_diff == found_diff)
 if __name__ == "__main__":
     test_zero_characteristic()
     test_nonzero_characteristic()

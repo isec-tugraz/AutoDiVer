@@ -85,3 +85,35 @@ def do_linear_layer(state):
     state = do_mix_columns(state)
     state = byte_to_nibble(state)
     return state.flatten()
+def unpackBits(cell):
+    cellBin = [0 for _ in range(8)]
+    for j in range(8):
+        cellBin[7 - j] = (cell >> j) & 0x01
+    return cellBin
+def packBits(cellBin):
+    cell = 0;
+    for j in range(8):
+        cell = (cell << 1) | cellBin[j]
+    return cell;
+def postPermuteCell(cell, i):
+    perm0 = [4,1,6,3,0,5,2,7]
+    perm1 = [1,6,7,0,5,2,3,4]
+    perm2 = [2,3,4,1,6,7,0,5]
+    perm3 = [7,4,1,2,3,0,5,6]
+    cellBinP = unpackBits(cell)
+    cellBin = [0 for _ in range(8)]
+    for j in range(8):
+        if(i == 0):
+            cellBin[perm0[j]] = cellBinP[j]
+        if(i == 1):
+            cellBin[perm1[j]] = cellBinP[j]
+        if(i == 2):
+            cellBin[perm2[j]] = cellBinP[j]
+        if(i == 3):
+            cellBin[perm3[j]] = cellBinP[j]
+    cell = packBits(cellBin)
+    return cell
+def postPermute(state):
+    for i in range(16):
+        state[i] = postPermuteCell(state[i], i%4)
+    return state
