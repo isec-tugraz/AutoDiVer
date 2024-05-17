@@ -77,34 +77,40 @@ def test_nonzero_characteristic():
              ( 0, 16,  0, 16,  0,  0,  0,  0,  0,  0,  0,  0,  0, 17,  0, 34,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 16)),
             ((16,  0, 16,  0,  0,  0,  0,  0,  1,  0,  0,  2, 16,  0,  0, 32,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0),
              ( 4,  0,  4,  0,  0,  0,  0,  0,  4,  0,  0,  4,  4,  0,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  0,  0,  0,  0)) )
-    numrounds = 1  #Number of full rounds
+    # char =(
+    #         (( 0,  4,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4),
+    #          ( 0, 16,  0, 16,  0,  0,  0,  0,  0,  0,  0,  0,  0, 17,  0, 34,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 16)),
+    #         ((16,  0, 16,  0,  0,  0,  0,  0,  1,  0,  0,  2, 16,  0,  0, 32,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,  0),
+    #          ( 4,  0,  4,  0,  0,  0,  0,  0,  4,  0,  0,  4,  4,  0,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  0,  0,  0,  0)) )
+    numrounds = 2  #Number of full rounds
     sbi_delta = np.array([[x for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[x for x in in_out[1]] for in_out in char], dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     speedy = Speedy192(char)
-    model = speedy.solve()
-    key = model.key[0] # type: ignore
-    sbi = model.sbox_in # type: ignore
-    sbo = model.sbox_out # type: ignore
-    mco = model.mc_out # type: ignore
-    assert np.all(speedy.sbox[sbi[:speedy.num_rounds]] == sbo)
-    print_state(key)
-    pt = Add(sbi[0], key)
-    print_state(pt)
-    # ref = speedy192_enc(pt, key, numrounds)
-    # for r in range(numrounds):
-    #     print_state(sbi[2*r], "sbi")
-    #     print_state(sbo[2*r], "sbo")
-    #     print_state(sbi[2*r+1],"sbi")
-    #     print_state(sbo[2*r+1],"sbo")
-    #     if r != (numrounds - 1):
-    #         print_state(mco[r],    "mco")
-    # out = sbo[2*(numrounds-1) + 1]
-    # print_state(ref, "ref")
-    # print_state(out, "sbo")
-    # assert np.all(ref == out)
-    # num_solutions = count_solutions(speedy.cnf, epsilon=0.8, delta=0.2, verbosity=0)
-    # assert num_solutions == 1
+    with pytest.raises(ValueError):
+        model = speedy.solve()
+        key = model.key[0] # type: ignore
+        sbi = model.sbox_in # type: ignore
+        sbo = model.sbox_out # type: ignore
+        mco = model.mc_out # type: ignore
+        assert np.all(speedy.sbox[sbi[:speedy.num_rounds]] == sbo)
+        print_state(key)
+        pt = Add(sbi[0], key)
+        print_state(pt)
+        ref = speedy192_enc(pt, key, numrounds)
+        for r in range(numrounds):
+            print_state(sbi[2*r], "sbi")
+            print_state(sbo[2*r], "sbo")
+            print_state(sbi[2*r+1],"sbi")
+            print_state(sbo[2*r+1],"sbo")
+            if r != (numrounds - 1):
+                print_state(mco[r],    "mco")
+        out = sbo[2*(numrounds-1) + 1]
+        print_state(ref, "ref")
+        print_state(out, "sbo")
+        assert np.all(ref == out)
+        num_solutions = count_solutions(speedy.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+        assert num_solutions == 1
 if __name__ == "__main__":
     test_zero_characteristic()
     test_nonzero_characteristic()

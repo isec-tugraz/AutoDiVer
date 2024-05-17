@@ -80,7 +80,6 @@ class Speedy192(SboxCipher):
         for r in range(self.num_rounds_full -1):
             #No need to model AddKey for first and last round
             self.cnf += self._addKey(self.mc_out[r], self.sbox_in[2*(r+1)], self._round_keys[r], RC[r])
-            # self.cnf += self._addKey(self.mc_out[r], self.sbox_in[2*(r+1)], self.key, RC[r])
     @staticmethod
     def model_mix_cols(A, B):
         alphas = [0, 1, 5, 9, 15, 21, 26]
