@@ -101,3 +101,14 @@ class Speedy192(SboxCipher):
             mc_input = do_shift_cols(self.sbox_out[2*r + 1])
             mc_output = self.mc_out[r].copy()
             self.cnf += self.model_mix_cols(mc_input, mc_output)
+    @classmethod
+    def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
+        if cellsize == 0 and len(arr) == 0:
+            return ''
+        if cellsize == 4:
+            return ''.join(f'{x:01x}' for x in arr.flatten())
+        if cellsize == 8:
+            return ''.join(f'{x:02x}' for x in arr.flatten())
+        if cellsize == 6:
+            return ''.join(f'{x:02x}' for x in arr.flatten())
+        raise ValueError(f'cellsize must be 4, 6, or 8 not {cellsize}')
