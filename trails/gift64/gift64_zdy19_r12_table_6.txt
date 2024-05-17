@@ -1,7 +1,7 @@
 # MILP-based Differential Attack on Round-reduced GIFT
 # Baoyu Zhu, Xiaoyang Dong, and Hongbo Yu
 # https://eprint.iacr.org/2018/390.pdf
-# Table 4
+# Table 6
 0000000000001010
 000000000000a0a0
 0000000a0000000a
