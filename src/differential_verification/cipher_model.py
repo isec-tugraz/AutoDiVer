@@ -60,9 +60,10 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
         log.info(f'running: {" ".join(args)}')
         with sp.Popen(args, stdout=sp.PIPE, text=True) as proc:
             model_count: int | None = None
+            assert proc.stdout is not None
             for line in proc.stdout:
                 line = line.strip()
-                if not (line.startswith('c ') or line.startswith('s ')):
+                if not (line.startswith('c ') or line.startswith('s ')) and line != 'c':
                     log.info(line)
                 elif 'ERROR' in line:
                     line = line.removeprefix('c ').removeprefix('ERROR')
@@ -75,6 +76,10 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
                 elif line.startswith('c Reduced to '):
                     log.info(line)
                 elif line.startswith('c [appmc] Number of solutions is:'):
+                    log.info(line)
+                elif line.startswith('c [appmc] threshold set to'):
+                    log.info(line)
+                elif 'round: ' in line and 'hashes: ' in line:
                     log.info(line)
                 elif line.startswith('c [appmc+arjun] Total time'):
                     log.info(line)
