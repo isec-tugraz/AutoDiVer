@@ -42,7 +42,7 @@ def test_zero_characteristic():
     assert num_solutions == 1 << 64
     for bit_var in midori.sbox_in[0].flatten():
         midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
-    model = midori.solve()
+    model = midori.solve(seed=6022)
     key = model.key # type: ignore
     print(f'{key = }')
     key0 = matrix_as_uint64(key[0])
@@ -92,7 +92,7 @@ def test_nonzero_characteristic():
     ic(sbo_delta[1])
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori64(char)
-    model = midori.solve()
+    model = midori.solve(seed=8284)
     key = model.key # type: ignore
     # print(f'{key = }')
     key0 = matrix_as_uint64(key[0])

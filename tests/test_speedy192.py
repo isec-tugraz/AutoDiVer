@@ -48,7 +48,7 @@ def test_zero_characteristic():
     for bit_var in speedy.sbox_out[0, :1].flatten():
         speedy.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
         # speedy.cnf += CNF([bit_var, 0])
-    model = speedy.solve()
+    model = speedy.solve(seed=9732)
     key = model.key[0] # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
@@ -85,7 +85,7 @@ def test_nonzero_characteristic():
     speedy = Speedy192(char)
     print(f'ddt probability: 2^{char.log2_ddt_probability(speedy.ddt):.1f}')
     with pytest.raises(ValueError):
-        model = speedy.solve()
+        model = speedy.solve(seed=5612)
 def test_nonzero_characteristic_sat():
     char =( ((0x28,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00),
              (0x1b,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00)),
@@ -110,7 +110,7 @@ def test_nonzero_characteristic_sat():
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     speedy = Speedy192(char)
     print(f'ddt probability: 2^{char.log2_ddt_probability(speedy.ddt):.1f}')
-    model = speedy.solve()
+    model = speedy.solve(seed=8291)
     key = model.key[0] # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore

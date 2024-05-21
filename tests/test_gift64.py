@@ -39,7 +39,7 @@ def test_zero_characteristic():
     assert num_solutions == 1 << 64
     for bit_var in gift.sbox_in[0].flatten():
         gift.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
-    model = gift.solve()
+    model = gift.solve(seed=1726)
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
@@ -67,7 +67,7 @@ def test_nonzero_characteristic():
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     gift = Gift64(char)
-    model = gift.solve()
+    model = gift.solve(seed=6804)
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore

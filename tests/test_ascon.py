@@ -54,7 +54,7 @@ def test_zero_characteristic():
     ascon = Ascon(char)
     ic(ascon.sbox_in[0])
     ic(ascon.sbox_in_bitsliced[0])
-    model = ascon.solve()
+    model = ascon.solve(seed=6019)
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     sbi_bitsliced = model._actual_sbox_in[:64*numrounds]# type: ignore
@@ -86,7 +86,7 @@ def test_zero_characteristic():
     # assert num_solutions == 1 << 64
     # for bit_var in gift.sbox_in[0].flatten():
     #     gift.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
-    # model = gift.solve()
+    # model = gift.solve(seed=9334)
     # key = model.key # type: ignore
     # sbi = model.sbox_in # type: ignore
     # sbo = model.sbox_out # type: ignore
@@ -123,7 +123,7 @@ def test_nonzero_characteristic():
     ddt_probs = Ascon.ddt[char.sbox_in, char.sbox_out]
     assert np.all(ddt_probs > 0)
     assert np.log2(ddt_probs / 32).sum() == -40
-    model = ascon.solve()
+    model = ascon.solve(seed=8850)
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     actual_sbi = model._actual_sbox_in.reshape(char.num_rounds, 64) # type: ignore

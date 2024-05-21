@@ -184,8 +184,8 @@ class SboxCipher(IndexSet):
         self.cnf += sbox_cnf
     def _model_linear_layer(self):
         raise NotImplementedError("this should be implemented by subclasses")
-    def _solve(self, cnf: CNF=None, log_result: bool=True):
-        seed = int.from_bytes(os.urandom(4), 'little')
+    def _solve(self, cnf: CNF=None, *, log_result: bool=True, seed: int|None=None):
+        seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
         cnf = cnf if cnf is not None else self.cnf
         if log_result:
@@ -207,8 +207,8 @@ class SboxCipher(IndexSet):
         if cellsize == 8:
             return ''.join(f'{x:02x}' for x in arr.flatten())
         raise ValueError(f'cellsize must be 4 or 8 not {cellsize}')
-    def solve(self) -> Model:
-        raw_model = self._solve()
+    def solve(self, seed: int|None=None) -> Model:
+        raw_model = self._solve(seed=seed)
         raw_model[0] = False
         raw_model = np.array(raw_model, dtype=np.uint8)
         model = self.get_model(raw_model)

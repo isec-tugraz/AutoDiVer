@@ -53,7 +53,7 @@ def test_zero_characteristic():
     for bit_var in midori.sbox_out[0, :1].flatten():
         midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
         # midori.cnf += CNF([bit_var, 0])
-    model = midori.solve()
+    model = midori.solve(seed=6405)
     key = model.key # type: ignore
     key = nibble_to_byte(key[0])
     sbi = model.sbox_in # type: ignore
@@ -104,7 +104,7 @@ def test_nonzero_characteristic():
     sbo_delta = np.array([[int(x, 32) for x in out] for _, out in Char], dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     midori = Midori128(char)
-    model = midori.solve()
+    model = midori.solve(seed=8406)
     key = model.key # type: ignore
     key = nibble_to_byte(key[0])
     print_state(key)

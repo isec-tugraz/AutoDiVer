@@ -54,7 +54,7 @@ def test_zero_characteristic():
         warp.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
     for bit_var in warp.X.flatten():
         warp.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
-    model = warp.solve()
+    model = warp.solve(seed=9399)
     key = model.key # type: ignore
     print_state(key)
     pt = model.pt # type: ignore
@@ -97,7 +97,7 @@ def test_nonzero_characteristic():
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     warp = WARP128(char)
-    model = warp.solve()
+    model = warp.solve(seed=3983)
     key = model.key # type: ignore
     print_state(key)
     pt = model.pt # type: ignore

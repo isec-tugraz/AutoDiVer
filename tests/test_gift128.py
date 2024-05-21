@@ -44,7 +44,7 @@ def test_zero_characteristic():
     assert num_solutions == 1 << 128
     for bit_var in gift.sbox_in[0].flatten():
         gift.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
-    model = gift.solve()
+    model = gift.solve(seed=8837)
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
@@ -85,7 +85,7 @@ def test_nonzero_characteristic():
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
     print(f'ddt probability: 2^{char.log2_ddt_probability(Gift128.ddt):.1f}')
     gift = Gift128(char)
-    model = gift.solve()
+    model = gift.solve(seed=4402)
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
