@@ -15,6 +15,7 @@ import time
 from pathlib import Path
 from typing import Any
 from itertools import count
+import re
 from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
@@ -43,6 +44,69 @@ def _available_cpus():
         return len(os.sched_getaffinity(0)) # type: ignore
     except AttributeError:
         return os.cpu_count()
+@dataclass
+class _ApproxMcLoggingContext:
+    pbar: tqdm|None=None
+    threshold: int|None=None
+    round_iter: int|None=None
+    num_hashes: int|None=None
+    model_count: int|None=None
+    def processs_log_line(self, line: str):
+        line = line.strip()
+        if not (line.startswith('c ') or line.startswith('s ')) and line != 'c':
+            log.info(line)
+        elif 'ERROR' in line:
+            line = line.removeprefix('c ').removeprefix('ERROR')
+            line = line.lstrip(': ')
+            log.error(f'[appmc] {line}')
+        elif 'WARN' in line:
+            line = line.removeprefix('c ').removeprefix('WARNING').removeprefix('WARN')
+            line = line.lstrip(': ')
+            log.warning(f'[appmc] {line}')
+        elif line.startswith('c Reduced to '):
+            log.info(line)
+        elif line.startswith('c [appmc] Number of solutions is:'):
+            log.info(line)
+        elif line.startswith('c [appmc] threshold set to'):
+            log.info(line)
+            self.threshold = int(line.removeprefix('c [appmc] threshold set to ').split()[0])
+        elif 'round: ' in line and 'hashes: ' in line:
+            match_round = re.search(r'round:\s+(\d+)', line)
+            match_hashes = re.search(r'hashes:\s+(\d+)', line)
+            if match_round and match_hashes:
+                round_iter = int(match_round.group(1))
+                num_hashes = int(match_hashes.group(1))
+                self.pbar = tqdm(total=self.threshold, desc=f'round {round_iter:2d}, hashes: {num_hashes:3d}')
+        elif line.startswith('c [appmc] bounded_sol_count'):
+            match_sol = re.search(r'ret:\s+l_(True|False)', line)
+            match_sol_number = re.search(r'sol no.\s+(\d+)', line)
+            if match_sol:
+                sol_found = match_sol.group(1).lower() == 'true'
+                if not sol_found and self.pbar is not None:
+                    self.pbar.close()
+                    self.pbar = None
+                if match_sol_number:
+                    sol_number = int(match_sol_number.group(1))
+                    if self.pbar is not None:
+                        self.pbar.update(sol_number - self.pbar.n)
+                        if not sol_found or sol_number == self.threshold:
+                            self.pbar.close()
+                            self.pbar = None
+        elif line.startswith('c [appmc+arjun] Total time'):
+            log.info(line)
+        elif line.startswith('s mc '):
+            log.info(line)
+            assert self.model_count is None
+            self.model_count = int(line.removeprefix('s mc '))
+        else:
+            pass
+        if self.pbar:
+            self.pbar.refresh()
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.pbar is not None:
+            self.pbar.__exit__(exc_type, exc_value, traceback)
 def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None) -> int:
     sampling_set_log = f" over {len(sampling_set)} variables" if sampling_set is not None else ""
     log.info(f'counting solutions to cnf with {cnf.nvars} variables, {cnf.nclauses} clauses, and {cnf.nxor_clauses} xor clauses{sampling_set_log}, {epsilon=}, {delta=}')
@@ -59,40 +123,15 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
         args = ['approxmc', f'--seed={seed}', f'--{epsilon=}', f'--{delta=}', '--sparse=1', f'--verb={verbosity}', f.name]
         log.info(f'running: {" ".join(args)}')
         with sp.Popen(args, stdout=sp.PIPE, text=True) as proc:
-            model_count: int | None = None
             assert proc.stdout is not None
-            for line in proc.stdout:
-                line = line.strip()
-                if not (line.startswith('c ') or line.startswith('s ')) and line != 'c':
-                    log.info(line)
-                elif 'ERROR' in line:
-                    line = line.removeprefix('c ').removeprefix('ERROR')
-                    line = line.lstrip(': ')
-                    log.error(f'[appmc] {line}')
-                elif 'WARN' in line:
-                    line = line.removeprefix('c ').removeprefix('WARNING').removeprefix('WARN')
-                    line = line.lstrip(': ')
-                    log.warning(f'[appmc] {line}')
-                elif line.startswith('c Reduced to '):
-                    log.info(line)
-                elif line.startswith('c [appmc] Number of solutions is:'):
-                    log.info(line)
-                elif line.startswith('c [appmc] threshold set to'):
-                    log.info(line)
-                elif 'round: ' in line and 'hashes: ' in line:
-                    log.info(line)
-                elif line.startswith('c [appmc+arjun] Total time'):
-                    log.info(line)
-                elif line.startswith('s mc '):
-                    log.info(line)
-                    assert model_count is None
-                    model_count = int(line.removeprefix('s mc '))
-                else:
-                    log.debug(line)
+            with _ApproxMcLoggingContext() as ctx:
+                for line in proc.stdout:
+                    ctx.processs_log_line(line)
+            model_count = ctx.model_count
+            assert model_count is not None
         retcode = proc.wait()
         if retcode != 0:
             raise sp.CalledProcessError(retcode, args)
-        assert model_count is not None
         log.info(f'model count: {fmt_log2(model_count)} == {model_count}',
                  extra={'seed': seed, 'epsilon': epsilon, 'delta': delta, 'sampling_set': sampling_set})
         return model_count

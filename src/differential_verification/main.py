@@ -82,15 +82,12 @@ def main():
     git_changed_files = git_cmd and sp.check_output([git_cmd, 'status', '--porcelain', '-uno', '-z']).decode().strip('\0').split('\0')
     log.info(f"version: {version}, git_commit: {git_commit}, git_changed_files: {git_changed_files}")
     log.info("arguments: %s", vars(args), extra={"cli_args": vars(args), "git_commit": git_commit, "git_changed_files": git_changed_files, "version": version})
-    log.info(f"reading trail from {args.trail!r}")
     Cipher, Characteristic = ciphers[args.cipher]
     char = Characteristic.load(args.trail)
-    log.info(f"loaded characteristic with {char.num_rounds} rounds from {args.trail!r}")
+    log.info(f"loaded characteristic with {char.num_rounds} rounds from {args.trail}")
     cipher = Cipher(char)
     ddt_prob = char.log2_ddt_probability(Cipher.ddt)
     log.info(f"ddt probability: 2**{ddt_prob:.1f}")
-    ddt_prob_1_plus = np.log2(cipher.ddt[char.sbox_in[1:], char.sbox_out[1:]] / len(cipher.ddt)).sum()
-    log.info(f"ddt probability r1+: 2**{ddt_prob_1_plus:.1f}")
     log.info(f"generated {cipher.cnf!r}")
     if args.cnf:
         with open(args.cnf, 'w') as f:
