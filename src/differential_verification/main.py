@@ -36,6 +36,11 @@ def parse_slice(s: str) -> slice:
     start = int(start) if start else None
     stop = int(stop) if stop else None
     return slice(start, stop)
+def FilePath(path: str) -> Path:
+    p = Path(path)
+    if not p.is_file():
+        raise argparse.ArgumentTypeError(f"{path!r} is not a file")
+    return p
 def main():
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
         "warp128": (WARP128, DifferentialCharacteristic),
@@ -69,7 +74,7 @@ def main():
     }
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('cipher', choices=ciphers.keys())
-    parser.add_argument('trail', type=Path, help='Text file containing the sbox input and output differences.\n'\
+    parser.add_argument('trail', type=FilePath, help='Text/Numpy file containing the sbox input and output differences.\n'\
                                       'Input and output differences are listed on separate lines.')
     parser.add_argument('--epsilon', type=float, default=0.8)
     parser.add_argument('--delta', type=float, default=0.2)
@@ -83,7 +88,11 @@ def main():
     log.info(f"version: {version}, git_commit: {git_commit}, git_changed_files: {git_changed_files}")
     log.info("arguments: %s", vars(args), extra={"cli_args": vars(args), "git_commit": git_commit, "git_changed_files": git_changed_files, "version": version})
     Cipher, Characteristic = ciphers[args.cipher]
-    char = Characteristic.load(args.trail)
+    try:
+        char = Characteristic.load(args.trail)
+    except OSError as e:
+        log.error(e)
+        return 1
     log.info(f"loaded characteristic with {char.num_rounds} rounds from {args.trail}")
     cipher = Cipher(char)
     ddt_prob = char.log2_ddt_probability(Cipher.ddt)
