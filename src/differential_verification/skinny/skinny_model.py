@@ -67,8 +67,8 @@ class SkinnyBase(SboxCipher):
     connection_poly: np.ndarray
     _tk2: np.ndarray
     _tk3: np.ndarray
-    def __init__(self, char: _SkinnyBaseCharacteristic):
-        super().__init__(char)
+    def __init__(self, char: _SkinnyBaseCharacteristic, **kwargs):
+        super().__init__(char, **kwargs)
         self.numrounds = len(char.sbox_in)
         self._nldtool_char = None
         self._char = None

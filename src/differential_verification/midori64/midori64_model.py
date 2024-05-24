@@ -37,8 +37,8 @@ class Midori64(SboxCipher):
     sbox_bits = 4
     key: np.ndarray[Any, np.dtype[np.int32]]
     mc_out: np.ndarray[Any, np.dtype[np.int32]]
-    def __init__(self, char: DifferentialCharacteristic):
-        super().__init__(char)
+    def __init__(self, char: DifferentialCharacteristic, **kwargs):
+        super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds
         assert self.char.sbox_in.shape == self.char.sbox_out.shape

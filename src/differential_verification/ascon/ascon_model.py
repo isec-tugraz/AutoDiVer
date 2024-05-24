@@ -66,8 +66,8 @@ class Ascon(SboxCipher):
     sbox_bits = 5
     sbox_count = 64
     key: np.ndarray[Any, np.dtype[np.int32]]
-    def __init__(self, char: AsconCharacteristic):
-        super().__init__(char)
+    def __init__(self, char: AsconCharacteristic, **kwargs):
+        super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds
         assert self.char.sbox_in.shape == self.char.sbox_out.shape == (self.num_rounds, 64)

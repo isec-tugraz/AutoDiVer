@@ -43,8 +43,8 @@ class Speedy192(SboxCipher):
     sbox_count = 32
     # key: np.ndarray[Any, np.dtype[np.int32]]
     # mc_out: np.ndarray[Any, np.dtype[np.int32]]
-    def __init__(self, char: DifferentialCharacteristic):
-        super().__init__(char)
+    def __init__(self, char: DifferentialCharacteristic, **kwargs):
+        super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds # this is actually number of sboxes
         assert char.num_rounds%2 == 0 #nimber of sbox layers should be even

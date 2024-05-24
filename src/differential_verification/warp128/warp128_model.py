@@ -18,8 +18,8 @@ class WARP128(SboxCipher):
     key_size = 128
     sbox_bits = 4
     sbox_count = 16
-    def __init__(self, char: DifferentialCharacteristic):
-        super().__init__(char)
+    def __init__(self, char: DifferentialCharacteristic, **kwargs):
+        super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds
         assert self.char.sbox_in.shape == self.char.sbox_out.shape
