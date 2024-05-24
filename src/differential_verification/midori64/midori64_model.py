@@ -27,7 +27,7 @@ class Midori64Characteristic(DifferentialCharacteristic):
         sbox_out = np.array(sbox_out, dtype=np.int8)
         if sbox_in.shape != sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
-        return cls(sbox_in, sbox_out)
+        return cls(sbox_in, sbox_out, file_path=characteristic_path)
 class Midori64(SboxCipher):
     cipher_name = "MIDORI64"
     sbox = np.array([int(x, 16) for x in "cad3ebf789150246"], dtype=np.uint8)

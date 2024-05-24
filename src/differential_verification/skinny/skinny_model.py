@@ -41,9 +41,9 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
         tweakeys = np.array(tweakeys, dtype=np.int8)[:rounds]
         if sbox_in.shape != sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
-        return cls(sbox_in, sbox_out, tweakeys)
-    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, tweakeys: npt.ArrayLike):
-        super().__init__(sbox_in, sbox_out)
+        return cls(sbox_in, sbox_out, tweakeys, file_path=characteristic_path)
+    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, tweakeys: npt.ArrayLike, **kwargs):
+        super().__init__(sbox_in, sbox_out, **kwargs)
         self.tweakeys = np.array(tweakeys, dtype=np.uint8)
         if self.tweakeys.shape != (self.num_rounds, 3, 4, 4):
             raise ValueError('tweakeys must have shape (num_rounds, 3, 4, 4)')

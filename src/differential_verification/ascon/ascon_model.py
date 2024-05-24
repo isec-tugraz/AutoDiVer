@@ -25,7 +25,7 @@ def ascon_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[
     S[4] ^= rotr(S[4],  7) ^ rotr(S[4], 41)
     return S
 class AsconCharacteristic(DifferentialCharacteristic):
-    def __init__(self, sbox_in: np.ndarray[Any, np.dtype[np.uint64]], sbox_out: np.ndarray[Any, np.dtype[np.uint64]]):
+    def __init__(self, sbox_in: np.ndarray[Any, np.dtype[np.uint64]], sbox_out: np.ndarray[Any, np.dtype[np.uint64]], **kwargs):
         # do reverse bit slicing
         assert sys.byteorder == 'little'
         assert sbox_in.dtype.byteorder in ['<', '=']
@@ -46,7 +46,7 @@ class AsconCharacteristic(DifferentialCharacteristic):
         sbox_in_unbitsliced = np.packbits(sbox_in_bits, axis=-1, bitorder='little')[..., 0]
         sbox_out_unbitsliced = np.packbits(sbox_out_bits, axis=-1, bitorder='little')[..., 0]
         assert np.all(Ascon.ddt[sbox_in_unbitsliced, sbox_out_unbitsliced] > 0)
-        super().__init__(sbox_in_unbitsliced, sbox_out_unbitsliced)
+        super().__init__(sbox_in_unbitsliced, sbox_out_unbitsliced, **kwargs)
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         with np.load(characteristic_path) as f:
@@ -56,7 +56,7 @@ class AsconCharacteristic(DifferentialCharacteristic):
         sbox_out = np.array(sbox_out, dtype=np.uint64)
         if sbox_in.shape != sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
-        return cls(sbox_in, sbox_out)
+        return cls(sbox_in, sbox_out, file_path=characteristic_path)
 class Ascon(SboxCipher):
     cipher_name = "Ascon"
     sbox = np.array(bytearray.fromhex("040b1f141a1509021b0508121d03061c1e13070e000d1118100c0119160a0f17"))

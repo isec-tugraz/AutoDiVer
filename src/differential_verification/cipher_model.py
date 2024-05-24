@@ -16,6 +16,8 @@ from pathlib import Path
 from typing import Any
 from itertools import count
 import re
+import shutil
+import sys
 from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
@@ -139,6 +141,7 @@ class DifferentialCharacteristic():
     num_rounds: int
     sbox_in: np.ndarray[Any, np.dtype[np.uint8]]
     sbox_out: np.ndarray[Any, np.dtype[np.uint8]]
+    file_path: Path|None
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         trail = []
@@ -156,10 +159,11 @@ class DifferentialCharacteristic():
             raise ValueError(f'expected an even number of differences in {characteristic_path!r}')
         sbox_in = trail[0::2]
         sbox_out = trail[1::2]
-        return cls(sbox_in, sbox_out)
-    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike):
+        return cls(sbox_in, sbox_out, file_path=characteristic_path)
+    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, file_path: Path|None=None):
         self.sbox_in = np.array(sbox_in, dtype=np.uint8)
         self.sbox_out = np.array(sbox_out, dtype=np.uint8)
+        self.file_path = file_path
         if self.sbox_in.shape != self.sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
         self.num_rounds = len(self.sbox_in)

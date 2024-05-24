@@ -31,7 +31,7 @@ class Speedy192Characteristic(DifferentialCharacteristic):
             raise ValueError(f'expected an even number of differences in {characteristic_path!r}')
         sbox_in = trail[0::2]
         sbox_out = trail[1::2]
-        return cls(sbox_in, sbox_out)
+        return cls(sbox_in, sbox_out, file_path=characteristic_path)
 class Speedy192(SboxCipher):
     cipher_name = "SPEEDY192"
     sbox = SBOX.copy()
