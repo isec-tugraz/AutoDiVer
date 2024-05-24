@@ -76,6 +76,8 @@ class IndexSet:
         varnames = self.describe_idx_array(np.abs(clause))
         desc = [n if c > 0 else f"￢{n}"for n, c in zip(varnames, clause)]
         return " ⋁ ".join(desc)
+    def format_cnf(self, cnf: np.ndarray[Any, np.dtype[np.int32]]) -> str:
+        return "\n ⋀ ".join(self.format_clause(clause) for clause in cnf)
     def get_model(self, raw_model: np.ndarray[Any, np.dtype[np.uint8]], *, bitorder: Literal['big', 'little']='little') -> Model:
         return Model(self, raw_model, bitorder=bitorder)
     def __repr__(self):
