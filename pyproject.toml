@@ -6,6 +6,7 @@ name = "differential_verification"
 dynamic = ["version"]
 dependencies = [
    "cython",
+   "galois",
    "icecream",
    "ipython",
    "pyapproxmc",
