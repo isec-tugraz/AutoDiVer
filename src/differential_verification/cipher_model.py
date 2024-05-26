@@ -110,7 +110,7 @@ class _ApproxMcLoggingContext:
     def __exit__(self, exc_type, exc_value, traceback):
         if self.pbar is not None:
             self.pbar.__exit__(exc_type, exc_value, traceback)
-def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None) -> int:
+def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None, seed: int|None=None) -> int:
     sampling_set_log = f" over {len(sampling_set)} variables" if sampling_set is not None else ""
     log.info(f'counting solutions to cnf with {cnf.nvars} variables, {cnf.nclauses} clauses, and {cnf.nxor_clauses} xor clauses{sampling_set_log}, {epsilon=}, {delta=}')
     # create temporary file for cnf
@@ -122,7 +122,8 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
         f.write(cnf.to_cnf().to_dimacs())
         f.flush()
         # run approxmc
-        seed = int.from_bytes(os.urandom(4), 'little')
+        if seed is None:
+            seed = int.from_bytes(os.urandom(4), 'little')
         args = ['approxmc', f'--seed={seed}', f'--{epsilon=}', f'--{delta=}', '--sparse=1', f'--verb={verbosity}', f.name]
         log.info(f'running: {" ".join(args)}')
         with sp.Popen(args, stdout=sp.PIPE, text=True) as proc:
@@ -301,6 +302,8 @@ class SboxCipher(IndexSet):
         raise ValueError(f'cellsize must be 4 or 8 not {cellsize}')
     def solve(self, seed: int|None=None) -> Model:
         start_time = time.monotonic()
+        if seed is None:
+            seed = int.from_bytes(os.urandom(4), 'little')
         raw_model = self._solve(seed=seed)
         end_time = time.monotonic()
         raw_model[0] = False
@@ -314,6 +317,7 @@ class SboxCipher(IndexSet):
             'tweak': tweak_str,
             'pt': pt_str,
             'time': end_time - start_time,
+            'seed': seed,
         }
         self.log_result(solve_result=solve_result)
         log.info(f'RESULT key={key_str}, tweak={tweak_str}, pt={pt_str}')
@@ -379,7 +383,8 @@ class SboxCipher(IndexSet):
         #                 + self.sbox_out[nr_half].flatten().tolist())
         sampling_set = None
         start_time = time.monotonic()
-        num_solutions = count_solutions(cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set)
+        seed = int.from_bytes(os.urandom(4), 'little')
+        num_solutions = count_solutions(cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set, seed=seed)
         end_time = time.monotonic()
         # num_inactive_sboxes = int((self.char.sbox_in == 0).sum())
         # denominator_log2 += num_inactive_sboxes * self.sbox_bits
@@ -393,6 +398,7 @@ class SboxCipher(IndexSet):
             'tweak': tweak_str,
             'pt': pt_str,
             'time': end_time - start_time,
+            'seed': seed,
         }
         self.log_result(count_result=count_result)
         return CountResult(prob, key_bits, tweak_bits)
@@ -408,7 +414,8 @@ class SboxCipher(IndexSet):
             sampling_set += self.tweak.flatten().tolist()
         name = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
         start_time = time.monotonic()
-        num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set)
+        seed = int.from_bytes(os.urandom(4), 'little')
+        num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set, seed=seed)
         end_time = time.monotonic()
         log_num_keys = log2(num_keys)
         log.info(f'RESULT {name} space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')
@@ -419,6 +426,7 @@ class SboxCipher(IndexSet):
             'count_key': count_key,
             'count_tweak': count_tweak,
             'time': end_time - start_time,
+            'seed': seed,
         }
         self.log_result(count_tweakey_result=count_tweakey_result)
     @staticmethod
