@@ -70,9 +70,9 @@ if __name__ == '__main__':
     dst_file = script_file.with_suffix('.npz')
     print(f'Writing to {dst_file}')
     np.savez(dst_file, sbox_in=sbox_in, sbox_out=sbox_out, tweakeys=tweakeys)
-    numrounds = len(sbox_in)
-    print(script_file.stem)
-    for i in range(4, numrounds):
-        dst_file = script_file.with_name(script_file.stem + f'_r{i}.npz')
-        print(f'Writing to {dst_file}')
-        np.savez(dst_file, sbox_in=sbox_in[:i], sbox_out=sbox_out[:i], tweakeys=tweakeys[:i])
+    # numrounds = len(sbox_in)
+    # print(script_file.stem)
+    # for i in range(4, numrounds):
+    #     dst_file = script_file.with_name(script_file.stem + f'_r{i}.npz')
+    #     print(f'Writing to {dst_file}')
+    #     np.savez(dst_file, sbox_in=sbox_in[:i], sbox_out=sbox_out[:i], tweakeys=tweakeys[:i])
