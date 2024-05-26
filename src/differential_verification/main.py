@@ -43,7 +43,7 @@ def FilePath(path: str) -> Path:
     return p
 def main():
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
-        "warp128": (WARP128, DifferentialCharacteristic),
+        "warp": (WARP128, DifferentialCharacteristic),
         "speedy192": (Speedy192, Speedy192Characteristic),
         "gift64": (Gift64, DifferentialCharacteristic),
         "gift128": (Gift128, DifferentialCharacteristic),
