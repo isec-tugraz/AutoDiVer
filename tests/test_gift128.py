@@ -30,7 +30,7 @@ def test_tv(pt, key, ct_ref):
 def test_zero_characteristic():
     numrounds = 2
     sbi = sbo = np.zeros((numrounds, 32), dtype=np.uint8)
-    char = DifferentialCharacteristic.__new__(DifferentialCharacteristic)
+    char = DifferentialCharacteristic(sbi, sbo)
     char.sbox_in = sbi
     char.sbox_out = sbo
     char.num_rounds = numrounds
