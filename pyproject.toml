@@ -5,13 +5,15 @@ name = "differential_verification"
 # version = "0.1"
 dynamic = ["version"]
 dependencies = [
+   "colorama",
    "cython",
    "galois",
    "icecream",
    "ipython",
    "pyapproxmc",
    "pycryptosat",
-   "sat_toolkit>=0.3.5",
+   "sat_toolkit>=0.4.3",
+   "galois",
    "setuptools",
    "tqdm",
 ]
