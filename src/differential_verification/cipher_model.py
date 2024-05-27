@@ -417,8 +417,8 @@ class SboxCipher(IndexSet):
         seed = int.from_bytes(os.urandom(4), 'little')
         num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set, seed=seed)
         end_time = time.monotonic()
-        log_num_keys = log2(num_keys)
-        log.info(f'RESULT {name} space: 2^{log_num_keys:.2f}, {epsilon=}, {delta=}')
+        log_num_keys = fmt_log2(num_keys)
+        log.info(f'RESULT {name} space: {log_num_keys}, {epsilon=}, {delta=}')
         count_tweakey_result = {
             'num_keys': num_keys,
             'epsilon': epsilon,
