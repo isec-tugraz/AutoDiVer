@@ -1,4 +1,8 @@
+from copy import copy
+import random
+import pytest
 import numpy as np
+from sat_toolkit.formula import CNF, XorCNF
 from differential_verification.skinny.skinny_model import Skinny128, Skinny128Characteristic
 from differential_verification.skinny.constants import do_mix_cols, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
 def test_zero_characteristic():
@@ -29,6 +33,31 @@ def test_zero_characteristic():
             mc_input = do_shift_rows(sbo ^ this_rtk ^ rc)
             assert np.all(mc_output == do_mix_cols(mc_input))
         rtk = update_tweakey(rtk)
+def test_unique_solution():
+    random.seed("test_skinny128::test_unique_solution")
+    numrounds = 4
+    sbox_in_delta = sbox_out_delta   = np.zeros((numrounds, 4, 4), dtype=np.uint8)
+    tweakeys = np.zeros((numrounds, 3, 4, 4), dtype=np.uint8)
+    char = Skinny128Characteristic(sbox_in_delta, sbox_out_delta, tweakeys)
+    cipher = Skinny128(char)
+    inputs = cipher.pt.flatten().tolist() + cipher.key.flatten().tolist() + cipher.tweak.flatten().tolist()
+    ct_idxes = cipher.sbox_out[-1].flatten().tolist()
+    assert len(inputs) == 128 + 128 + 256
+    for _ in range(10):
+        cnf = copy(cipher.cnf)
+        extra_clauses = np.zeros(len(inputs) * 2, np.int32)
+        for i, inp in enumerate(inputs):
+            extra_clauses[i * 2] = inp * (-1)**random.randint(0, 1)
+            extra_clauses[i * 2 + 1] = 0
+        cnf += CNF(extra_clauses)
+        is_sat, model = cnf.solve_dimacs()
+        assert(is_sat)
+        ct = model[ct_idxes]
+        extra_clause = np.zeros(len(ct) + 1, np.int32)
+        extra_clause[:-1] = ct_idxes * (-1)**(ct)
+        cnf += CNF(extra_clause)
+        is_sat, model = cnf.solve_dimacs()
+        assert(not is_sat)
 def test_nonzero_characteristic():
     sbox_in = np.array(bytearray.fromhex(
         "00000000000000000000000000000000"
@@ -122,7 +151,7 @@ def test_acns2021_characteristic():
         "00000000000000000000000000000000"
         "00000000000000000000002900000000"
         "00300000000000000030000000300000"
-    )).reshape(17, 4, 4)
+    )).reshape(-1, 4, 4)
     sbox_out = np.array(bytearray.fromhex(
         "00000800009200001800000000001010"
         "00400000000010000000000000004000"
@@ -141,7 +170,7 @@ def test_acns2021_characteristic():
         "00000000000000000000000000000000"
         "00000000000000000000003000000000"
         "00400000000000000040000000400000"
-    )).reshape(17, 4, 4)
+    )).reshape(-1, 4, 4)
     tweakeys = np.array(bytearray.fromhex(
         "0000000000BA00000000000000000000" "00000000004300000000000000000000" "00000000007300000000000000000000"
         "00000000000000000000000000BA0000" "00000000000000000000000000430000" "00000000000000000000000000730000"
@@ -160,14 +189,11 @@ def test_acns2021_characteristic():
         "000000000000BA000000000000000000" "000000000000A7000000000000000000" "00000000000034000000000000000000"
         "0000000000000000000000000000BA00" "0000000000000000000000000000A700" "00000000000000000000000000003400"
         "0000000000ba00000000000000000000" "00000000004e00000000000000000000" "00000000001a00000000000000000000"
-    )).reshape(17, 3, 4, 4)
-    # sbox_in[:] = 0
-    # sbox_out[:] = 0
-    # tweakeys[:] = 0
+    )).reshape(-1, 3, 4, 4)
     char = Skinny128Characteristic(sbox_in, sbox_out, tweakeys)
     cipher = Skinny128(char)
     numrounds = char.num_rounds
-    model = cipher.solve(seed=48)
+    model = cipher.solve(seed=1159)
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
     round_tweakeys = model.round_tweakeys #type: ignore
