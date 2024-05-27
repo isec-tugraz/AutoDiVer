@@ -65,12 +65,14 @@ def permute_byte(a, i):
     b = a[perm]
     if i == 0:
         b = b[perm0]
-    if i == 1:
+    elif i == 1:
         b = b[perm1]
-    if i == 2:
+    elif i == 2:
         b = b[perm2]
-    if i == 3:
+    elif i == 3:
         b = b[perm3]
+    else:
+        raise ValueError("Invalid i: {i}")
     b = b[perm]
     return b
 def permutation():
