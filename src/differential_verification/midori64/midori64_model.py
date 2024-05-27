@@ -23,8 +23,8 @@ class Midori64Characteristic(DifferentialCharacteristic):
         with np.load(characteristic_path) as f:
             sbox_in = f['sbox_in']
             sbox_out = f['sbox_out']
-        sbox_in = np.array(sbox_in, dtype=np.int8)
-        sbox_out = np.array(sbox_out, dtype=np.int8)
+        sbox_in = np.array(sbox_in, dtype=np.uint8)
+        sbox_out = np.array(sbox_out, dtype=np.uint8)
         if sbox_in.shape != sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
