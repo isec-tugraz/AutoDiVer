@@ -562,7 +562,7 @@ class SboxCipher(IndexSet):
         count_unsat = 0
         key_cnf = CNF([], nvars=self.cnf.nvars)
         prev_small_clauses_check = time.monotonic()
-        prev_keys_update = time.monotonic()
+        prev_keys_update = 0
         start_time = time.monotonic()
         pbar = tqdm(range(trials))
         for i in pbar:
