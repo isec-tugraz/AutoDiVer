@@ -602,7 +602,7 @@ class SboxCipher(IndexSet):
             'trials': trials,
             'count_key': count_key,
             'count_tweak': count_tweak,
-            'key_conditions': key_conditions,
+            'tweakey_conditions': key_conditions,
             'time': end_time - start_time,
         }
         self.log_result(count_tweakeys_sat_result=count_tweakeys_sat_result)
