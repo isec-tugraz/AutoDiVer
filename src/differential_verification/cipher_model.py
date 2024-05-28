@@ -563,6 +563,7 @@ class SboxCipher(IndexSet):
         key_cnf = CNF([], nvars=self.cnf.nvars)
         prev_small_clauses_check = time.monotonic()
         prev_keys_update = time.monotonic()
+        start_time = time.monotonic()
         pbar = tqdm(range(trials))
         for i in pbar:
             sampling_new = [x * (-1)**random.randint(0, 1) for x in sampling_set_list]
@@ -582,6 +583,7 @@ class SboxCipher(IndexSet):
                 if clause not in key_cnf:
                     tqdm.write(self.format_clause(clause))
                     key_cnf.add_clause(clause)
+        end_time = time.monotonic()
         log.info(f'RESULT {name} count: {count_sat}/{trials}')
         for clause in self.get_small_clauses_over_set(solver, len(sampling_set), 1<<32 - 1, sampling_set):
             clause = Clause(clause)
@@ -601,5 +603,6 @@ class SboxCipher(IndexSet):
             'count_key': count_key,
             'count_tweak': count_tweak,
             'key_conditions': key_conditions,
+            'time': end_time - start_time,
         }
         self.log_result(count_tweakeys_sat_result=count_tweakeys_sat_result)
