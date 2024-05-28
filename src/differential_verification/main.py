@@ -15,7 +15,7 @@ from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from .gift64.gift_model import Gift64
 from .gift128.gift_model import Gift128
 from .midori64.midori64_model import Midori64, Midori64Characteristic
-from .midori128.midori128_model import Midori128
+from .midori128.midori128_model import Midori128, Midori128Characteristic
 from .warp128.warp128_model import WARP128
 from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from .ascon.ascon_model import Ascon, AsconCharacteristic
@@ -48,7 +48,7 @@ def main():
         "gift64": (Gift64, DifferentialCharacteristic),
         "gift128": (Gift128, DifferentialCharacteristic),
         "midori64": (Midori64, Midori64Characteristic),
-        "midori128": (Midori128, DifferentialCharacteristic),
+        "midori128": (Midori128, Midori128Characteristic),
         "skinny128": (Skinny128, Skinny128Characteristic),
         "skinny64": (Skinny64, Skinny64Characteristic),
         "ascon": (Ascon, AsconCharacteristic),
