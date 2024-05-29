@@ -595,6 +595,7 @@ class SboxCipher(IndexSet):
         key_conditions = []
         for clause in min_key_cnf:
             formatted = self.format_clause(np.array(clause))
+            key_conditions.append(formatted)
             log.info(formatted)
         count_tweakeys_sat_result = {
             'count_sat': count_sat,
