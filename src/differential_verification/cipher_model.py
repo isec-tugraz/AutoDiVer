@@ -480,9 +480,11 @@ class SboxCipher(IndexSet):
         counter_example_found = True
         while counter_example_found:
             samples = GF2(initial_samples)
+            # describe the affine space spanned by the samples
             const = samples[0].copy()
             samples += const
             lin_space = samples.row_space()
+            # heuristically search for constant offset with lower hamming weight
             for vec in lin_space:
                 new_const = const + vec
                 if np.array(new_const, int).sum() < np.array(const, int).sum():
