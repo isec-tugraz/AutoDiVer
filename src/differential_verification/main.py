@@ -70,7 +70,6 @@ def main():
         'count-prob-fixed-pt': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True),
         'count-prob-fixed-pt-and-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True, fixed_tweak=True),
         'solve': lambda cipher, _args: cipher.solve(),
-        'embed': lambda _cipher, _args: __import__('IPython').embed(),
     }
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('cipher', choices=ciphers.keys())
@@ -79,7 +78,8 @@ def main():
     parser.add_argument('--epsilon', type=float, default=0.8)
     parser.add_argument('--delta', type=float, default=0.2)
     parser.add_argument('--cnf', type=str, help="file to save CNF in DIMACS format")
-    parser.add_argument('commands', choices=commands.keys(), nargs='+', help="commands to execute")
+    parser.add_argument('--embed', action='store_true', help="launch IPython shell after executing command")
+    parser.add_argument('commands', choices=commands.keys(), nargs=1, help="command to execute")
     args = parser.parse_args()
     setup_logging(args.trail.with_suffix('.jsonl'))
     git_cmd = shutil.which('git')
@@ -90,6 +90,9 @@ def main():
     Cipher, Characteristic = ciphers[args.cipher]
     try:
         char = Characteristic.load(args.trail)
+        if char.file_path is None:
+            log.warning(f"file path not stored in characteristic object")
+            char.file_path = args.trail
     except OSError as e:
         log.error(e)
         return 1
@@ -104,13 +107,10 @@ def main():
         log.info(f"wrote {cipher.cnf!r} to {args.cnf}")
     count_results = []
     for command in args.commands:
-        if command == 'embed':
-            sys.argv = sys.argv[:1]
-            start_ipython(user_ns=globals()|locals())
-            continue
         res = commands[command](cipher, args)
         if res is not None:
             count_results.append(res)
-    # from IPython import embed; embed()
+    if args.embed:
+        start_ipython(user_ns=globals()|locals())
 if __name__ == "__main__":
     raise SystemExit(main())
