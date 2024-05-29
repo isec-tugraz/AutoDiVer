@@ -91,6 +91,16 @@ def g(x, i, j):
     """
     m = { 0: 193, 1: 165, 2: 81, 3: 197 }
     return (x + m[j]*i) % 256
+def g_my(x, i, j):
+    """
+    dynamic part of round key (see specification)
+    x:        key part (1 byte) as integer
+    i:        round number
+    j:        part number (0 <= j <= 3)
+    returns:  new key part (1 byte) as integer
+    """
+    m = { 0: 193, 1: 165, 2: 81, 3: 197 }
+    return (x + m[j]*i) % 256
 S     = [ 0x0, 0x4, 0x8, 0xF, 0x1, 0x5, 0xE, 0x9,
           0x2, 0x7, 0xA, 0xC, 0xB, 0xD, 0x6, 0x3 ]
 S_inv = [ S.index(_i) for _i in xrange(16) ]
