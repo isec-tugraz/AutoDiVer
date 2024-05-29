@@ -464,7 +464,8 @@ class SboxCipher(IndexSet):
             sampling_set_list += self.tweak.flatten().tolist()
         sampling_set_list = np.array(sampling_set_list, dtype=np.int32)
         sampling_set = set(sampling_set_list)
-        count_initial_samples = len(sampling_set)
+        # one extra sample because the affine space has an offset as well
+        count_initial_samples = len(sampling_set) + 1
         initial_samples = []
         start_time = time.monotonic()
         name = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
