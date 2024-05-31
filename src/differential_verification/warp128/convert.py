@@ -3,8 +3,8 @@ from __future__ import annotations
 import numpy as np
 import argparse
 from typing import Literal
-from  .util import DDT, RC, perm_nibble_inv, perm_nibble_16, perm_nibble_16_inv, perm_nibble
-from  .util import get_round_in_out
+from  util import DDT, RC, perm_nibble_inv, perm_nibble_16, perm_nibble_16_inv, perm_nibble
+from  util import get_round_in_out
 def print_state(S):
     for s in S:
         print(hex(s)[2:], end = "")
