@@ -1,3 +1,10 @@
+# MILP Based Differential Attack on Round Reduced WARP
+# Manoj Kumar and Tarun Yadav
+#
+# https://doi.org/10.1007/978-3-030-95085-9_3
+# Table 8. 18-round differential characteristics (extended from 17-round)
+# p = 2^-122
+#
 0700a000a0005000
 0d00f000f0007000
 00d00000a0000000
