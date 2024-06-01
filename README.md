@@ -20,20 +20,15 @@ verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-keys
 # count the number of keys experimentally
 verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-keys-sat
 ```
+## Running the tests
+Running the tests can be done by starting `pytest` in his directory.
 ## Manual Installation
+For manual installation, install [espresso](https://github.com/classabbyamp/espresso-logic), [CryptoMiniSAT v5.11.21](), [ApproxMC v4.1.24](https://github.com/meelgroup/approxmc), and [Arjun v2.5.4](https://github.com/meelgroup/arjun).
+Please follow the guides in the README documents to do so.
+Make sure `cryptominisat5`, `approxmc`, and `espresso` are available inside your `$PATH` environment variable.
+Then, create a new virtual environment, activate it and install the current directory:
 ```bash
-# install espresso
-# create and activeate a virtual environment
 python3 -m venv venv/
 source venv/bin/activate
-# install espresso-logic
-git clone https://github.com/classabbyamp/espresso-logic.git
-cd espresso-logic/espresso-src
-make
-cd ../..
-cp espresso-logic/bin/espresso venv/bin/
-# install the tool in editable mode
-pip install -e .
-# run the tool
-verify-characteristic gift64 trails/gift64/gift64_lwzz19_r9_table_2.txt count-keys-sat embed
+pip install --editable .
 ```

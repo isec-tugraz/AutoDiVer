@@ -72,6 +72,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 RUN --mount=type=bind,source=requirements.txt,target=/tmp/requirements.txt \
     pip install --requirement /tmp/requirements.txt \
+    && pip install pytest \
     && rm -rf ~/.cache/pip
 RUN mkdir /home/user/differential-verification
 WORKDIR /home/user/differential-verification
