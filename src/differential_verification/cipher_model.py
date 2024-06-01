@@ -514,7 +514,7 @@ class SboxCipher(IndexSet):
             try:
                 log.info('solving for counterexample')
                 raw_model = self._solve(self.cnf + extra_constraints, log_result=False)
-                log.info('found counterexample -> adding more constraints')
+                log.info('found counterexample -> trying again')
                 raw_model[0] = False
                 raw_model = np.array(raw_model, dtype=np.uint8)
                 sample = raw_model[sampling_set_list]

@@ -77,7 +77,7 @@ RUN mkdir /home/user/differential-verification
 WORKDIR /home/user/differential-verification
 COPY --chown=user . .
 ARG APP_VERSION
-RUN SETUPTOOLS_SCM_PRETEND_VERSION="$APP_VERSION" pip install . \
+RUN pip install . \
     && rm -rf ~/.cache/pip
 ################################################################################
 # main image
@@ -112,5 +112,5 @@ USER user
 WORKDIR /home/user
 COPY --from=build_venv /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
-ENTRYPOINT ["verify-characteristic"]
+# ENTRYPOINT ["verify-characteristic"]
 CMD ["--help"]

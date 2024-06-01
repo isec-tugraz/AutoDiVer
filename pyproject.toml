@@ -1,9 +1,9 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8.0", "wheel", "Cython"]
+requires = ["setuptools>=64", "wheel", "Cython"]
 [project]
 name = "differential_verification"
-# version = "0.1"
-dynamic = ["version"]
+version = "0.4"
+# dynamic = ["version"]
 dependencies = [
    "colorama",
    "cython",
@@ -19,8 +19,6 @@ dependencies = [
 ]
 requires-python = ">=3.9"
 authors = [
-  {name = "Marcel Nageler", email = "marcel.nageler@iaik.tugraz.at"},
-  {name = "Shibam Ghosh", email = "shibam.math@gmail.com"},
 ]
 description = "A tool for verifying differential characteristics in block ciphers"
 readme = "README.md"
@@ -38,6 +36,3 @@ classifiers = [
 differential_verification = ["**/log_config.json"]
 [project.scripts]
 verify-characteristic = "differential_verification.main:main"
-[tool.setuptools_scm]
-root = ".."
-version_file = "src/differential_verification/_version.py"
