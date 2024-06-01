@@ -1,5 +1,9 @@
-# characteristic used by Time (first two rounds)
+# Better Steady than Speedy: Full Break of SPEEDY-7-192
+# Christina Boura, Nicolas David, Rachelle Heim Boissier, and María Naya-Plasencia
 #
+# Second and third round (4x S-boxes) of
+# https://doi.org/10.1007/978-3-031-30634-1_2
+# Figure 4. 5.5-round differential trail used to attack SPEEDY-7-192.
 0100000001010000000000010000000001000000000001000000000001000000
 1000000010100000000000100000000010000000000010000000000010000000
 0000001010000000000010000000001000000000001000000000001000000010
