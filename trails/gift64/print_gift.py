@@ -1,11 +1,4 @@
 #!/usr/bin/env python3
-def state2tex(S, nb=1):
-    res = ""
-    for row in range(4):
-        for col in range(4):
-            if S[row][col]:
-                res += r"\Cell{ss" + str(row) + str(col) + "}{" + hex(S[row][col])[2:].zfill(nb) + "}"
-    return res
 if __name__ == '__main__':
     char = """
 000000c000000060
