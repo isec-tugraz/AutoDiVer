@@ -2,7 +2,6 @@
 GIFT-64-128 implementation
 Date: 06 March 2017
 Done by: Siang Meng Sim
-Modified by: Marcel Nageler
 MIT License
 Copyright (c) 2019 giftcipher
 Permission is hereby granted, free of charge, to any person obtaining a copy
