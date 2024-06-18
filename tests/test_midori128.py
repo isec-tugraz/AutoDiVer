@@ -1,8 +1,8 @@
 from random import seed, randint
-from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
-from differential_verification.midori128.midori128_model import Midori128, Midori128Characteristic
-from differential_verification.midori128.midori_cipher import midori128_enc
-from differential_verification.midori128.util import sr_mapping, postPermute
+from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
+from autodiver.midori128.midori128_model import Midori128, Midori128Characteristic
+from autodiver.midori128.midori_cipher import midori128_enc
+from autodiver.midori128.util import sr_mapping, postPermute
 import numpy as np
 import pytest
 from sat_toolkit.formula import CNF

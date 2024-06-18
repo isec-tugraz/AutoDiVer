@@ -1,7 +1,7 @@
 [build-system]
 requires = ["setuptools>=64", "wheel", "Cython"]
 [project]
-name = "differential_verification"
+name = "autodiver"
 version = "0.4"
 # dynamic = ["version"]
 dependencies = [
@@ -33,6 +33,6 @@ classifiers = [
    "Framework :: Pytest",
 ]
 [tool.setuptools.package-data]
-differential_verification = ["**/log_config.json"]
+autodiver = ["**/log_config.json"]
 [project.scripts]
-verify-characteristic = "differential_verification.main:main"
+verify-characteristic = "autodiver.main:main"

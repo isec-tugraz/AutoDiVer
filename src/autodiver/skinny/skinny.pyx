@@ -1,6 +1,6 @@
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = src/differential_verification/skinny/skinny-c/src/skinny128-cipher.c
-#distutils: include_dirs = src/differential_verification/skinny/skinny-c/include/
+#distutils: sources = src/autodiver/skinny/skinny-c/src/skinny128-cipher.c
+#distutils: include_dirs = src/autodiver/skinny/skinny-c/include/
 cimport cython
 from libc.stdint cimport uint8_t, uint32_t, uint64_t
 cdef extern from "skinny-c/include/skinny128-cipher.h":

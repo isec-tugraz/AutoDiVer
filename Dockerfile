@@ -74,8 +74,8 @@ RUN --mount=type=bind,source=requirements.txt,target=/tmp/requirements.txt \
     pip install --requirement /tmp/requirements.txt \
     && pip install pytest \
     && rm -rf ~/.cache/pip
-RUN mkdir /home/user/differential-verification
-WORKDIR /home/user/differential-verification
+RUN mkdir /home/user/autodiver
+WORKDIR /home/user/autodiver
 COPY --chown=user . .
 ARG APP_VERSION
 RUN pip install . \

@@ -1,8 +1,8 @@
 from random import seed, randint
-from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
-from differential_verification.speedy192.speedy192_model import Speedy192
-from differential_verification.speedy192.speedy_cipher import speedy192_enc
-from differential_verification.speedy192.util import Add, prepare_round_keys
+from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
+from autodiver.speedy192.speedy192_model import Speedy192
+from autodiver.speedy192.speedy_cipher import speedy192_enc
+from autodiver.speedy192.util import Add, prepare_round_keys
 import numpy as np
 import pytest
 from sat_toolkit.formula import CNF

@@ -11,7 +11,7 @@
       "datefmt": "%Y-%m-%d %H:%M:%S"
     },
     "json_formatter": {
-      "()": "differential_verification.mylogger.JsonLogFormatter",
+      "()": "autodiver.mylogger.JsonLogFormatter",
       "fmt_keys": {
         "level": "levelname",
         "message": "message",

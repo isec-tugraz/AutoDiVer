@@ -3,8 +3,8 @@ import random
 import pytest
 import numpy as np
 from sat_toolkit.formula import CNF, XorCNF
-from differential_verification.skinny.skinny_model import Skinny128, Skinny128Characteristic
-from differential_verification.skinny.constants import do_mix_cols, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
+from autodiver.skinny.skinny_model import Skinny128, Skinny128Characteristic
+from autodiver.skinny.constants import do_mix_cols, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
 def test_zero_characteristic():
     numrounds = 4
     sbox_in_delta = sbox_out_delta   = np.zeros((numrounds, 4, 4), dtype=np.uint8)

@@ -2,9 +2,9 @@ from __future__ import annotations
 from random import randint
 from typing import Any
 import numpy as np
-from differential_verification.ascon.ascon_model import Ascon, AsconCharacteristic
-from differential_verification.cipher_model import count_solutions
-from differential_verification.ascon.pyascon import ascon_permutation
+from autodiver.ascon.ascon_model import Ascon, AsconCharacteristic
+from autodiver.cipher_model import count_solutions
+from autodiver.ascon.pyascon import ascon_permutation
 from icecream import ic
 def rotr(val: np.uint64, r: int):
     val_int = int(val)

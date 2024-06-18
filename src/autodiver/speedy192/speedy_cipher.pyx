@@ -1,5 +1,5 @@
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = src/differential_verification/speedy192/speedy192.c
+#distutils: sources = src/autodiver/speedy192/speedy192.c
 cimport cython
 from libc.stdio cimport printf
 from libc.string cimport memcpy, memset

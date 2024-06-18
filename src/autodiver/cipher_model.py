@@ -24,7 +24,7 @@ import numpy.typing as npt
 from galois import GF2
 from sat_toolkit.formula import XorCNF, CNF, XorClauseList, Truthtable, Clause
 from pycryptosat import Solver
-from differential_verification import version
+from autodiver import version
 from .util import IndexSet, Model, fmt_log2
 log = logging.getLogger(__name__)
 @dataclass

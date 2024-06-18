@@ -1,5 +1,5 @@
 [submodule "code/skinny/skinny-c"]
-	path = src/differential_verification/skinny/skinny-c
+	path = src/autodiver/skinny/skinny-c
 	url = https://github.com/fanosta/skinny-c
 [submodule "skinny-c/"]
 	url = https://github.com/fanosta/skinny-c.git

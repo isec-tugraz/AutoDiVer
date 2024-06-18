@@ -1,9 +1,9 @@
 from random import randint
 import pytest
 import numpy as np
-from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
-from differential_verification.gift128.gift_model import Gift128
-from differential_verification.gift128.gift_cipher import gift128_enc
+from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
+from autodiver.gift128.gift_model import Gift128
+from autodiver.gift128.gift_cipher import gift128_enc
 from sat_toolkit.formula import CNF
 def print_state(S, state = "s"):
     print(state, ":", end = " ")

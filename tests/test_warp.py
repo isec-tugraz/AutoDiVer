@@ -1,10 +1,10 @@
 from random import randint
 import numpy as np
 import pytest
-from differential_verification.cipher_model import DifferentialCharacteristic, count_solutions
-from differential_verification.warp128.warp128_model import WARP128
-from differential_verification.warp128.warp_cipher import warp_enc
-from differential_verification.warp128.util import get_round_in_out, perm_nibble_inv
+from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
+from autodiver.warp128.warp128_model import WARP128
+from autodiver.warp128.warp_cipher import warp_enc
+from autodiver.warp128.util import get_round_in_out, perm_nibble_inv
 from sat_toolkit.formula import CNF
 from icecream import ic
 def print_state(S, state = "s"):

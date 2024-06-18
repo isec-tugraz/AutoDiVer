@@ -3,12 +3,12 @@ from setuptools import Extension, setup, find_packages
 from Cython.Build import cythonize
 setup(
     ext_modules = cythonize([
-        Extension("differential_verification.skinny.skinny", ["src/differential_verification/skinny/skinny.pyx"]),
-        Extension("differential_verification.gift64.gift_cipher", ["src/differential_verification/gift64/gift_cipher.pyx"]),
-        Extension("differential_verification.gift128.gift_cipher", ["src/differential_verification/gift128/gift_cipher.pyx"]),
-        Extension("differential_verification.midori64.midori_cipher", ["src/differential_verification/midori64/midori_cipher.pyx"]),
-        Extension("differential_verification.midori128.midori_cipher", ["src/differential_verification/midori128/midori_cipher.pyx"]),
-        Extension("differential_verification.warp128.warp_cipher", ["src/differential_verification/warp128/warp_cipher.pyx"]),
-        Extension("differential_verification.speedy192.speedy_cipher", ["src/differential_verification/speedy192/speedy_cipher.pyx"]),
+        Extension("autodiver.skinny.skinny", ["src/autodiver/skinny/skinny.pyx"]),
+        Extension("autodiver.gift64.gift_cipher", ["src/autodiver/gift64/gift_cipher.pyx"]),
+        Extension("autodiver.gift128.gift_cipher", ["src/autodiver/gift128/gift_cipher.pyx"]),
+        Extension("autodiver.midori64.midori_cipher", ["src/autodiver/midori64/midori_cipher.pyx"]),
+        Extension("autodiver.midori128.midori_cipher", ["src/autodiver/midori128/midori_cipher.pyx"]),
+        Extension("autodiver.warp128.warp_cipher", ["src/autodiver/warp128/warp_cipher.pyx"]),
+        Extension("autodiver.speedy192.speedy_cipher", ["src/autodiver/speedy192/speedy_cipher.pyx"]),
     ]),
 )
