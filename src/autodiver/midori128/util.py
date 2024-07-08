@@ -1,4 +1,5 @@
 import numpy as np
+
 DDT  = np.array([[16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                   [0, 2, 4, 0, 2, 0, 2, 2, 2, 0, 0, 0, 2, 0, 0, 0],
                   [0, 4, 0, 2, 4, 2, 0, 0, 2, 0, 0, 0, 0, 0, 2, 0],
@@ -35,6 +36,8 @@ RC = np.array([[0,0,0,1,0,1,0,1,1,0,1,1,0,0,1,1],
                [0,0,1,0,0,0,1,1,1,0,1,1,0,1,0,0],
                [0,1,1,0,0,0,1,0,1,0,0,0,1,0,1,0]],
                dtype=np.uint8)
+
+
 def nibble_to_byte(state):
     out_state = []
     for i in range(16):
@@ -42,6 +45,7 @@ def nibble_to_byte(state):
         out_state.append(a)
     out_state = np.asarray(out_state, dtype = np.uint8)
     return out_state
+
 def byte_to_nibble(state):
     out_state = [0 for _ in range(32)]
     for i in range(16):
@@ -64,12 +68,15 @@ mixing_mat = np.array([
             [1, 0, 1, 1],
             [1, 1, 0, 1],
             [1, 1, 1, 0],])
+
 def do_shift_rows(state):
     assert state.shape[:2] == (4, 4)
     return state.swapaxes(0, 1).reshape(16, *state.shape[2:])[sr_mapping]
+
 def do_shift_rows_inv(state):
     assert state.shape[:2] == (4, 4)
     return state.swapaxes(0, 1).reshape(16, *state.shape[2:])[sri_mapping]
+
 def do_mix_columns(state):
     assert state.shape in [(4, 4), (16,)]
     in_shape = state.shape
@@ -81,20 +88,24 @@ def do_mix_columns(state):
         for r in range(4):
             col_out[r] = np.bitwise_xor.reduce(col_in[mixing_mat[r] != 0])
     return out_state.reshape(in_shape)
+
 def do_linear_layer(state):
     state = do_shift_rows(state)
     state = do_mix_columns(state)
     return state.flatten()
+
 def unpackBits(cell):
     cellBin = [0 for _ in range(8)]
     for j in range(8):
         cellBin[7 - j] = (cell >> j) & 0x01
     return cellBin
+
 def packBits(cellBin):
     cell = 0;
     for j in range(8):
         cell = (cell << 1) | cellBin[j]
     return cell;
+
 def postPermuteCell(cell, i):
     perm0 = [4,1,6,3,0,5,2,7]
     perm1 = [1,6,7,0,5,2,3,4]
@@ -113,6 +124,7 @@ def postPermuteCell(cell, i):
             cellBin[perm3[j]] = cellBinP[j]
     cell = packBits(cellBin)
     return cell
+
 def postPermute(state):
     for i in range(16):
         state[i] = postPermuteCell(state[i], i%4)

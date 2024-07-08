@@ -6,22 +6,32 @@ from typing import Literal
 from  .util import DDT, RC, do_shift_rows, do_shift_rows_inv, do_mix_columns
 from  .util import nibble_to_byte, byte_to_nibble
 from .generate_perm import permutation
+
+
 P128 = permutation()
+
+
 def unpack_bits(cell):
     cellBin = [0 for _ in range(4)]
     for j in range(4):
         cellBin[j] = (cell >> j) & 0x01
     return cellBin
+
+
 def pack_bits(cellBin):
     cell = 0;
     for j in range(4):
         cell = (cell << 1) | cellBin[3 - j];
     return cell
+
+
 def unpack_bits_arr(A):
     B = []
     for a in A:
         B = B + unpack_bits(a)
     return B
+
+
 def pack_bits_arr(A):
     B = []
     for i in range(len(A)//4):
@@ -30,6 +40,8 @@ def pack_bits_arr(A):
         B.append(pack_bits(b))
     B = np.asarray(B, dtype = np.uint8)
     return B
+
+
 def bit_perm(arr_in):
     arr_out = []
     for A in arr_in:
@@ -41,6 +53,8 @@ def bit_perm(arr_in):
         arr_out.append(B)
     arr_out = np.asarray(arr_out)
     return arr_out
+
+
 def get_bytes(L):
     # print(len(L))
     I = []
@@ -51,6 +65,8 @@ def get_bytes(L):
         l = int(l, 16)
         I.append(l)
     return I
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('filename')

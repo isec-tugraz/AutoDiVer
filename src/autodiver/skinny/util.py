@@ -7,6 +7,8 @@ from os import path
 from .constants import *
 from .read_sol import *
 from ..sat_util import XorClause
+
+
 class LfsrState:
     def __init__(self, name: str, connection_poly: list[int], vars:np.ndarray[Any, np.dtype[np.int32]]):
         """
@@ -18,8 +20,11 @@ class LfsrState:
         self.degree = len(connection_poly) - 1
         self.poly = np.array(connection_poly)
         self.constraints_generated = False
+
+
     def __repr__(self):
         return f'LfsrState({self.name!r}, {self.poly!r})'
+
     def get_constraints(self, ref_indices: range|None = None):
         if ref_indices is None:
             start = (len(self.vars) - self.degree) // 2
@@ -40,15 +45,19 @@ class LfsrState:
                 clause ^= var
             constraints.append(clause)
         return constraints
+
     def get_bit(self, index: int) -> np.int32:
         assert index in range(len(self.vars)), f'index {index} out of range(0, {len(self.vars)})'
         return self.vars[index]
+
     def get_bit_range(self, start_idx, numbits=8) -> np.ndarray[Any, np.dtype[np.int32]]:
         assert start_idx in range(len(self.vars))
         assert start_idx + numbits - 1 in range(len(self.vars))
         return self.vars[start_idx:start_idx + numbits]
+
     def __getitem__(self, index):
         return self.vars[index]
+
     @lru_cache(maxsize=None)
     def get_bit_mask(self, index: int) -> np.ndarray:
         """
@@ -72,10 +81,14 @@ class LfsrState:
                     result ^= self.get_bit_mask(index + i)
             return result
         raise AssertionError('unreachable')
+
+
 def get_solution_set(sbox: np.ndarray, in_delta, out_delta):
     in_vals = np.arange(len(sbox), dtype=np.uint8)
     in_vals = in_vals[sbox[in_vals] ^ sbox[in_vals ^ in_delta] == out_delta]
     return in_vals
+
+
 def precisedelta(time_range: float):
     res = ''
     days = int(time_range / 86_400)

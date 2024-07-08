@@ -26,7 +26,11 @@ from sat_toolkit.formula import XorCNF, CNF, XorClauseList, Truthtable, Clause
 from pycryptosat import Solver
 from autodiver import version
 from .util import IndexSet, Model, fmt_log2
+
+
 log = logging.getLogger(__name__)
+
+
 @dataclass
 class CountResult:
     probability: float
@@ -41,12 +45,16 @@ class CountResult:
     tweak={fmt_array(self.tweak)},
     pt={fmt_array(self.pt)}
 )'''
+
+
 def _available_cpus():
     try:
         # only available on Linux
         return len(os.sched_getaffinity(0)) # type: ignore
     except AttributeError:
         return os.cpu_count()
+
+
 @dataclass
 class _ApproxMcLoggingContext:
     pbar: tqdm|None=None
@@ -54,6 +62,7 @@ class _ApproxMcLoggingContext:
     round_iter: int|None=None
     num_hashes: int|None=None
     model_count: int|None=None
+
     def processs_log_line(self, line: str):
         line = line.strip()
         if not (line.startswith('c ') or line.startswith('s ')) and line != 'c':
@@ -105,11 +114,15 @@ class _ApproxMcLoggingContext:
             pass
         if self.pbar:
             self.pbar.refresh()
+
     def __enter__(self):
         return self
+
     def __exit__(self, exc_type, exc_value, traceback):
         if self.pbar is not None:
             self.pbar.__exit__(exc_type, exc_value, traceback)
+
+
 def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None, seed: int|None=None) -> int:
     sampling_set_log = f" over {len(sampling_set)} variables" if sampling_set is not None else ""
     log.info(f'counting solutions to cnf with {cnf.nvars} variables, {cnf.nclauses} clauses, and {cnf.nxor_clauses} xor clauses{sampling_set_log}, {epsilon=}, {delta=}')
@@ -139,11 +152,15 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
         log.info(f'model count: {fmt_log2(model_count)} == {model_count}',
                  extra={'seed': seed, 'epsilon': epsilon, 'delta': delta, 'sampling_set': sampling_set})
         return model_count
+
+
+
 class DifferentialCharacteristic():
     num_rounds: int
     sbox_in: np.ndarray[Any, np.dtype[np.uint8]]
     sbox_out: np.ndarray[Any, np.dtype[np.uint8]]
     file_path: Path|None
+
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         trail = []
@@ -162,6 +179,7 @@ class DifferentialCharacteristic():
         sbox_in = trail[0::2]
         sbox_out = trail[1::2]
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
+
     def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, file_path: Path|None=None):
         self.sbox_in = np.array(sbox_in, dtype=np.uint8)
         self.sbox_out = np.array(sbox_out, dtype=np.uint8)
@@ -169,9 +187,12 @@ class DifferentialCharacteristic():
         if self.sbox_in.shape != self.sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
         self.num_rounds = len(self.sbox_in)
+
     def log2_ddt_probability(self, ddt: np.ndarray):
         ddt_prob = np.log2(ddt[self.sbox_in, self.sbox_out] / len(ddt)).sum()
         return ddt_prob
+
+
 class SboxCipher(IndexSet):
     cipher_name: str
     sbox: np.ndarray[Any, np.dtype[np.uint8]]
@@ -189,6 +210,7 @@ class SboxCipher(IndexSet):
     cnf: CNF
     model_type: Literal['solution_set', 'split_solution_set']
     _cnf_cache: dict[bytes, CNF] = {}
+
     def __init__(self, char: DifferentialCharacteristic, *, model_type: Literal['solution_set', 'split_solution_set'] = 'solution_set'):
         super().__init__()
         if model_type not in ('solution_set', 'split_solution_set'):
@@ -197,6 +219,7 @@ class SboxCipher(IndexSet):
         self.num_rounds = char.num_rounds
         self.cnf = XorCNF()
         self.model_type = model_type
+
     @classmethod
     def _lut_to_cnf(cls, lut: np.ndarray) -> CNF:
         dnf = Truthtable.from_lut(lut.T.flatten())
@@ -210,6 +233,7 @@ class SboxCipher(IndexSet):
         cls._cnf_cache[cache_key] = cnf
         # don't return the original, because it's mutable
         return CNF(cnf)
+
     @classmethod
     def _get_cnf(cls, sbox, x_set, *, model_type: Literal['solution_set', 'split_solution_set']):
         lut = np.zeros((len(sbox), len(sbox)), dtype=np.uint8)
@@ -222,6 +246,7 @@ class SboxCipher(IndexSet):
         else:
             raise ValueError(f'unknown model_type {model_type}')
         return cls._lut_to_cnf(lut)
+
     def log_result(self, **kwargs):
         # log results in a machine readable format
         # gather results
@@ -252,10 +277,12 @@ class SboxCipher(IndexSet):
             **kwargs,
         }
         log.debug(f'RESULT', extra=extra)
+
     def _get_sbox_cnf(self, delta_in, delta_out):
         x = np.arange(len(self.sbox), dtype=np.uint8)
         x_set, = np.where(self.sbox[x] ^ self.sbox[x ^ delta_in] == delta_out)
         return self._get_cnf(self.sbox, x_set, model_type=self.model_type)
+
     def _model_sboxes(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
         sbox_in = sbox_in if sbox_in is not None else self.sbox_in
         sbox_out = sbox_out if sbox_out is not None else self.sbox_out
@@ -275,8 +302,10 @@ class SboxCipher(IndexSet):
             cnf = self._get_sbox_cnf(delta_in, delta_out).translate(mapping)
             sbox_cnf += cnf
         self.cnf += sbox_cnf
+
     def _model_linear_layer(self):
         raise NotImplementedError("this should be implemented by subclasses")
+
     def _solve(self, cnf: CNF=None, *, log_result: bool=True, seed: int|None=None):
         seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
@@ -291,6 +320,7 @@ class SboxCipher(IndexSet):
         if log_result:
             log.info('RESULT cnf is SAT')
         return list(model)
+
     @classmethod
     def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
         if cellsize == 0 and len(arr) == 0:
@@ -300,6 +330,7 @@ class SboxCipher(IndexSet):
         if cellsize == 8:
             return ''.join(f'{x:02x}' for x in arr.flatten())
         raise ValueError(f'cellsize must be 4 or 8 not {cellsize}')
+
     def solve(self, seed: int|None=None) -> Model:
         start_time = time.monotonic()
         if seed is None:
@@ -322,6 +353,7 @@ class SboxCipher(IndexSet):
         self.log_result(solve_result=solve_result)
         log.info(f'RESULT key={key_str}, tweak={tweak_str}, pt={pt_str}')
         return model
+
     def _fmt_tweak_or_key(self, key_bits: np.ndarray):
         if self.key.shape[-1] == 4:
             key_nibbles = np.packbits(key_bits, axis=-1, bitorder='little')[..., 0]
@@ -332,8 +364,10 @@ class SboxCipher(IndexSet):
         else:
             raise ValueError('key must be composed of bytes or nibbles')
         return key_str
+
     def _get_random_pt(self):
         return np.unpackbits(np.array(bytearray(os.urandom(self.block_size // 8))))
+
     def count_probability(self, epsilon: float, delta: float, fixed_key: bool=False, fixed_tweak: bool=False, fixed_pt: bool=False,verbosity: int=2) -> CountResult:
         assert self.key_size % 8 == 0
         assert self.tweak_size % 8 == 0
@@ -402,6 +436,7 @@ class SboxCipher(IndexSet):
         }
         self.log_result(count_result=count_result)
         return CountResult(prob, key_bits, tweak_bits)
+
     def count_tweakey_space(self, epsilon, delta, count_key: bool=True, count_tweak: bool=True, verbosity: int=2):
         """
         Use model counting to count the number of tweakeys for which the
@@ -429,6 +464,7 @@ class SboxCipher(IndexSet):
             'seed': seed,
         }
         self.log_result(count_tweakey_result=count_tweakey_result)
+
     @staticmethod
     def get_small_clauses(solver: Solver, max_len: int, max_glue: int):
         try:
@@ -440,6 +476,7 @@ class SboxCipher(IndexSet):
                 yield clause
         finally:
             solver.end_getting_small_clauses()
+
     @staticmethod
     def get_small_clauses_over_set(solver: Solver, max_len: int, max_glue: int, sampling_set: set[int]):
         min_var = min(sampling_set)
@@ -453,6 +490,7 @@ class SboxCipher(IndexSet):
             if any(variable not in sampling_set for variable in variables):
                 continue
             yield clause
+
     def count_lin_tweakey_space(self, count_key: bool=True, count_tweak: bool=True):
         """
         count the size of the tweakey space under the assumption that it is a vector space
@@ -542,6 +580,7 @@ class SboxCipher(IndexSet):
             'time': end_time - start_time,
         }
         self.log_result(count_tweakey_lin_result=count_tweakey_lin_result)
+
     def count_tweakey_space_sat_solver(self, trials: int, count_key: bool=True, count_tweak: bool=True, verbosity: int=2):
         """
         Use repeated SAT solving to estimate the number of tweakeys for which

@@ -10,6 +10,8 @@ from sat_toolkit.formula import XorCNF
 from .util import DDT, RC, perm_nibble_16, perm_nibble_16_inv, perm_nibble_inv
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
+
+
 class WARP128(SboxCipher):
     cipher_name = "WARP128"
     sbox = np.array([int(x, 16) for x in "cad3ebf789150246"], dtype=np.uint8)
@@ -18,6 +20,8 @@ class WARP128(SboxCipher):
     key_size = 128
     sbox_bits = 4
     sbox_count = 16
+
+
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
@@ -36,6 +40,7 @@ class WARP128(SboxCipher):
         self._create_vars()
         self._model_sboxes()
         self._model_linear_layer()
+
     def _create_vars(self):
         self.add_index_array('key', (2*self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_in', (self.num_rounds, self.sbox_count, self.sbox_bits))
@@ -61,12 +66,14 @@ class WARP128(SboxCipher):
         # print(self.sbox_in[0])
         # print(self.X)
         # print(self.pt)
+
     def get_round_var(self, a, b):
         v = np.empty((2*self.sbox_count, 4), dtype=np.uint32)
         for i in range(self.sbox_count):
             v[2*i] = a[i]
             v[2*i+1] = b[i]
         return v
+
     def linear_layer(self, sbox_out, key, xor_in, xor_out, RC0, RC1):
         temp = xor_in.copy()
         xor_in_flat = temp.reshape(-1) # don't use .flatten() here because it creates a copy
@@ -82,6 +89,7 @@ class WARP128(SboxCipher):
         lin_cnf = XorCNF()
         lin_cnf += XorCNF.create_xor(xor_in_flat, xor_out.flatten(), sbox_out.flatten(), key.flatten())
         self.cnf += lin_cnf
+
     def _model_linear_layer(self):
         key = self.key.copy().reshape(2, 16, 4)
         for r in range(self.num_rounds):

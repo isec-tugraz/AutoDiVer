@@ -2,6 +2,8 @@
 In the model if a byte is represented by 0,1,2,3,4,5,6,7 then
 the byte representation will be =>> 3210 7654 <<=
 """
+
+
 import numpy as np
 # def Perm(state, perm):
 #     temp = state[:]
@@ -56,6 +58,8 @@ import numpy as np
 #     B = np.asarray(B).flatten()
 #     print(B)
 #     return B
+
+
 def permute_byte(a, i):
     perm  = np.array((3,2,1,0, 7,6,5,4))
     perm0 = np.array((4,1,6,3, 0,5,2,7))
@@ -75,6 +79,8 @@ def permute_byte(a, i):
         raise ValueError("Invalid i: {i}")
     b = b[perm]
     return b
+
+
 def permutation():
     A = [[8*j + i for i in range(8)] for j in range(16)]
     B = []

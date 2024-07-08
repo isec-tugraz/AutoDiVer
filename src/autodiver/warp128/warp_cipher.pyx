@@ -5,11 +5,15 @@ from libc.stdio cimport printf
 from libc.string cimport memcpy, memset
 from libc.stdint cimport uint8_t, uint64_t
 import numpy as np
+
+
 cdef extern from *:
     """
     void enc(uint8_t *m, uint8_t *k, int rounds);
     """
     void enc(uint8_t *m, uint8_t *k, int rounds) nogil;
+
+
 def warp_enc(const uint8_t[:] pt not None, uint8_t[:] key not None, int rounds)-> uint8_t[:]:
     cdef ssize_t i
     ct = bytearray(pt)

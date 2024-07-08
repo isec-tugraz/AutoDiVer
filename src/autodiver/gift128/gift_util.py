@@ -1,4 +1,6 @@
 import numpy as np
+
+
 P128 = np.array((0, 33, 66, 99, 96, 1, 34, 67, 64, 97, 2, 35, 32, 65, 98, 3, 4, 37, 70,
                 103, 100, 5, 38, 71, 68, 101, 6, 39, 36, 69, 102, 7, 8, 41, 74, 107,
                 104, 9, 42, 75, 72, 105, 10, 43, 40, 73, 106, 11, 12, 45, 78, 111, 108,
@@ -32,21 +34,29 @@ GIFT_RC = bytearray.fromhex(
     "18302102050b172e1c383123060d1b362d1a34291224"
     "081122040913260c1932250a152a14281020"
 )
+
+
 def unpack_bits(cell):
     cellBin = [0 for _ in range(4)]
     for j in range(4):
         cellBin[j] = (cell >> j) & 0x01
     return cellBin
+
+
 def pack_bits(cellBin):
     cell = 0;
     for j in range(4):
         cell = (cell << 1) | cellBin[3 - j];
     return cell
+
+
 def unpack_bits_arr(A):
     B = []
     for a in A:
         B = B + unpack_bits(a)
     return B
+
+
 def pack_bits_arr(A):
     B = []
     for i in range(len(A)//4):
@@ -55,11 +65,15 @@ def pack_bits_arr(A):
         B.append(pack_bits(b))
     B = np.asarray(B, dtype = np.uint8)
     return B
+
+
 def bit_perm(arr):
     res = np.asarray(unpack_bits_arr(arr))
     permuted = res[P128]
     res = pack_bits_arr(permuted)
     return res
+
+
 # def bit_perm(arr):
 #     bits = unpack_bits(arr)
 #     pemuted = bits[..., P128]

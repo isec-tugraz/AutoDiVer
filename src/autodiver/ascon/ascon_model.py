@@ -47,6 +47,7 @@ class AsconCharacteristic(DifferentialCharacteristic):
         sbox_out_unbitsliced = np.packbits(sbox_out_bits, axis=-1, bitorder='little')[..., 0]
         assert np.all(Ascon.ddt[sbox_in_unbitsliced, sbox_out_unbitsliced] > 0)
         super().__init__(sbox_in_unbitsliced, sbox_out_unbitsliced, **kwargs)
+
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         with np.load(characteristic_path) as f:
@@ -66,6 +67,7 @@ class Ascon(SboxCipher):
     sbox_bits = 5
     sbox_count = 64
     key: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: AsconCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
@@ -82,6 +84,7 @@ class Ascon(SboxCipher):
         self._fieldnames.add('pt')
         self._model_sboxes()
         self._model_linear_layer()
+
     @classmethod
     def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
         if cellsize == 0 and len(arr) == 0:
@@ -93,6 +96,7 @@ class Ascon(SboxCipher):
         if arr.dtype == np.uint64 and arr.ndim == 1:
             return ' '.join(f'{x:016x}' for x in arr)
         raise ValueError(f'cellsize must be 4 or 8 not {cellsize} -- (shape: {arr.shape})')
+
     def _model_sboxes(self, sbox_in: None|np.ndarray=None, sbox_out: None|np.ndarray=None) -> None:
         sbox_in = sbox_in.copy() if sbox_in is not None else self.sbox_in.copy()
         sbox_out = sbox_out.copy() if sbox_out is not None else self.sbox_out.copy()
@@ -109,6 +113,7 @@ class Ascon(SboxCipher):
         self._fieldnames.add('sbox_in_bitsliced')
         self._fieldnames.add('sbox_out_bitsliced')
         super()._model_sboxes(self.sbox_in_bitsliced, self.sbox_out_bitsliced)
+
     def _model_linear_layer(self) -> None:
         cnf = XorCNF()
         for r in range(self.num_rounds - 1):

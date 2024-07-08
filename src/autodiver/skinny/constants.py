@@ -2,6 +2,8 @@ from __future__ import annotations
 import numpy as np
 from pathlib import Path
 from ..util import get_ddt
+
+
 connection_poly_8 = np.array([0] * 9)
 connection_poly_8[[0, 2, 8]] = 1
 connection_poly_4 = np.array([0] * 5)
@@ -64,6 +66,8 @@ inv_mixing_mat = np.array([
     [1, 0, 0, 1],
 ])
 ddt8 = get_ddt(sbox8)
+
+
 def apply_perm(vec: list, perm: list[int], repeats: int):
     for _ in range(repeats):
         new_vec = [None] * len(vec)
@@ -71,20 +75,30 @@ def apply_perm(vec: list, perm: list[int], repeats: int):
             new_vec[i] = vec[e]
         vec = new_vec
     return vec
+
+
 def do_inv_shift_rows(state):
     return state.flatten()[isr_mapping]
+
+
 def do_shift_rows(state):
     return state.flatten()[sr_mapping]
+
+
 def do_inv_mix_cols(state):
     result = np.zeros_like(state)
     for col in range(4):
         result[:, col] = np.bitwise_xor.reduce(inv_mixing_mat * state[:, col], axis=-1)
     return result
+
+
 def do_mix_cols(state):
     result = np.zeros_like(state)
     for col in range(4):
         result[:, col] = np.bitwise_xor.reduce(mixing_mat * state[:, col], axis=-1)
     return result
+
+
 def update_tweakey(tweakeys: list[np.ndarray], block_size: int = 128):
     tweakeys: np.ndarray = np.array(tweakeys, dtype=np.uint8).reshape(3, 16)
     # permute
@@ -100,6 +114,8 @@ def update_tweakey(tweakeys: list[np.ndarray], block_size: int = 128):
     else:
         raise ValueError(f'unsupported block size: {block_size}')
     return tweakeys.reshape(3, 4, 4)
+
+
 def skinny_verbose(pt: np.ndarray, tk: np.ndarray, numrounds: int):
     states = np.zeros((numrounds + 1, 4, 4), np.uint8)
     tweakeys = np.zeros((numrounds, 3, 4, 4), np.uint8)

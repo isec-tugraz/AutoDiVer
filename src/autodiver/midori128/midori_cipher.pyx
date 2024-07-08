@@ -5,11 +5,15 @@ from libc.stdio cimport printf
 from libc.string cimport memcpy, memset
 from libc.stdint cimport uint8_t, uint64_t
 import numpy as np
+
+
 cdef extern from *:
     """
     void enc_midori128(uint8_t *msg, uint8_t *key, int rounds);
     """
     void enc_midori128(uint8_t *msg, uint8_t *key, int rounds) nogil;
+
+
 def midori128_enc(const uint8_t[:] pt not None, const uint8_t[:] key not None, int rounds)-> uint8_t[:]:
     cdef ssize_t i
     ct = bytearray(pt)
