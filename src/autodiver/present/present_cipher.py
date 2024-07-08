@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-# coding: utf-8
 from __future__ import print_function
 
 s_box = (0xC, 0x5, 0x6, 0xB, 0x9, 0x0, 0xA, 0xD, 0x3, 0xE, 0xF, 0x8, 0x4, 0x7, 0x1, 0x2)
@@ -69,152 +68,97 @@ def round_function(state, key):
 
 
 def key_function_80(key, round_count):
-    # print('Start: ', hex(key))
-    # print('')
-
-    r = [1 if t == '1'else 0 for t in format(key, '080b')[::-1]]
-
-    # print('k bits:', r)
-    # print('')
-
-    h = r[-61:] + r[:-61]
-
-    # print('s bits:', h)
-    # print('')
-
-    round_key_int = 0
-    # print('init round int:', hex(round_key_int))
-    for index, ind_bit in enumerate(h):
-        round_key_int += (ind_bit << index)
-        # print('round:',index, '-', hex(round_key_int))
-
-    # print('round_key_int', hex(round_key_int))
-    # print('')
-
-    upper_nibble = round_key_int >> 76
-
-    # print('upper_nibble:', upper_nibble)
-
+    key = ((key << 61) ^ (key >> 19)) & 0xFFFFFFFFFFFFFFFFFFFF
+    upper_nibble = key >> 76
     upper_nibble = s_box[upper_nibble]
+    key = (key & 0x0FFFFFFFFFFFFFFFFFFF) ^ (upper_nibble << 76) ^ (round_count << 15)
 
-    # print('upper_nibble sboxed', hex(upper_nibble))
-
-    xor_portion = ((round_key_int >> 15) & 0x1F) ^ round_count
-    # print('Count:', round_count)
-    # print('XOR Value:', xor_portion)
-
-    # print('Before:', hex(round_key_int))
-    round_key_int = (round_key_int & 0x0FFFFFFFFFFFFFF07FFF) + (upper_nibble << 76) + (xor_portion << 15)
-    # print('After: ', hex(round_key_int))
-
-    return round_key_int
+    return key
 
 
 def key_function_128(key, round_count):
-    # print('Start: ', hex(key))
-    # print('')
-
-    r = [1 if t == '1'else 0 for t in format(key, '0128b')[::-1]]
-
-    # print('k bits:', r)
-    # print('')
-
-    h = r[-61:] + r[:-61]
-
-    # print('s bits:', h)
-    # print('')
-
-    round_key_int = 0
-    # print('init round int:', hex(round_key_int))
-    for index, ind_bit in enumerate(h):
-        round_key_int += (ind_bit << index)
-        # print('round:',index, '-', hex(round_key_int))
-
-    # print('round_key_int', hex(round_key_int))
-    # print('')
-
-    upper_nibble = (round_key_int >> 124) & 0xF
-    second_nibble = (round_key_int >> 120) & 0xF
-    # print('upper_nibble:', upper_nibble)
-
-    upper_nibble = s_box[upper_nibble]
-    second_nibble = s_box[second_nibble]
-
-    # print('upper_nibble sboxed', hex(upper_nibble))
-
-    xor_portion = ((round_key_int >> 62) & 0x1F) ^ round_count
-    # print('Count:', round_count)
-    # print('XOR Value:', xor_portion)
-
-    # print('Before:', hex(round_key_int))
-    round_key_int = (round_key_int & 0x00FFFFFFFFFFFFF83FFFFFFFFFFFFFFF) + (upper_nibble << 124) + (second_nibble << 120) + (xor_portion << 62)
-    # print('After: ', hex(round_key_int))
-
-    return round_key_int
+    key = ((key << 61) ^ (key >> 67)) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+    upper_nibble_1 = key >> 124
+    upper_nibble_2 = (key >> 120) & 0xF
+    upper_nibble_1 = s_box[upper_nibble_1]
+    upper_nibble_2 = s_box[upper_nibble_2]
+    key = (key & 0x00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFF) ^ (upper_nibble_1 << 124) ^ (upper_nibble_2 << 120) ^ (round_count << 62)
+    return key
 
 
-
-test_vectors_80 = {1:(0x00000000000000000000, 0x0000000000000000, 0x5579C1387B228445),
-                2:(0xFFFFFFFFFFFFFFFFFFFF, 0x0000000000000000, 0xE72C46C0F5945049),
-                3:(0x00000000000000000000, 0xFFFFFFFFFFFFFFFF, 0xA112FFC72F68417B),
-                4:(0xFFFFFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0x3333DCD3213210D2)}
-
-test_vectors_128 = {1:(0x00000000000000000000000000000000, 0x0000000000000000, 0x96db702a2e6900af),
-                2:(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0x0000000000000000, 0x13238c710272a5d8),
-                3:(0x00000000000000000000000000000000, 0xFFFFFFFFFFFFFFFF, 0x3c6019e5e5edd563),
-                4:(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0x628d9fbd4218e5b4)}
-
-print('Testing 80-bit Key Vectors:')
-for test_case in test_vectors_80:
-
+def present_enc80(plaintext: int, key: int, num_rounds: int = 31, *, do_final_key_xor=True):
     key_schedule = []
-    current_round_key = test_vectors_80[test_case][0]
-    round_state = test_vectors_80[test_case][1]
+    round_state = plaintext
+    current_round_key = key
 
     # Key schedule
-    for rnd_cnt in range(ROUND_LIMIT):
+    for rnd_cnt in range(num_rounds + 1):
         # print(format(round_key, '020X'))
         # print(format(round_key >> 16, '016X'))
         key_schedule.append(current_round_key >> 16)
         current_round_key = key_function_80(current_round_key, rnd_cnt + 1)
 
-    for rnd in range(ROUND_LIMIT - 1):
+    for rnd in range(num_rounds):
         # print('Round:', rnd)
         # print('State:', format(round_state, '016X'))
         # print('R_Key:', format(key_schedule[rnd], '016X'))
         round_state = round_function(round_state, key_schedule[rnd])
 
-    round_state ^= key_schedule[31]
+    if do_final_key_xor:
+        round_state ^= key_schedule[num_rounds]
+    return round_state
 
-    if round_state == test_vectors_80[test_case][2]:
-        print('Success', hex(round_state))
-    else:
-        print('Failure', hex(round_state))
 
-print('')
-print('Testing 128-bit Key Vectors:')
-for test_case in test_vectors_128:
-
+def present_enc128(plaintext: int, key: int, num_rounds=31, *, do_final_key_xor=True):
     key_schedule = []
-    current_round_key = test_vectors_128[test_case][0]
-    round_state = test_vectors_128[test_case][1]
+    round_state = plaintext
+    current_round_key = key
 
     # Key schedule
-    for rnd_cnt in range(ROUND_LIMIT):
+    for rnd_cnt in range(num_rounds + 1):
         # print(format(round_key, '020X'))
         # print(format(round_key >> 16, '016X'))
         key_schedule.append(current_round_key >> 64)
         current_round_key = key_function_128(current_round_key, rnd_cnt + 1)
 
-    for rnd in range(ROUND_LIMIT - 1):
+    for rnd in range(num_rounds):
         # print('Round:', rnd)
         # print('State:', format(round_state, '016X'))
         # print('R_Key:', format(key_schedule[rnd], '016X'))
         round_state = round_function(round_state, key_schedule[rnd])
 
-    round_state ^= key_schedule[31]
+    if do_final_key_xor:
+        round_state ^= key_schedule[num_rounds]
 
-    if round_state == test_vectors_128[test_case][2]:
-        print('Success', hex(round_state))
-    else:
-        print('Failure', hex(round_state))
+    return round_state
+
+
+if __name__ == '__main__':
+    test_vectors_80 = [(0x00000000000000000000, 0x0000000000000000, 0x5579C1387B228445),
+                       (0xFFFFFFFFFFFFFFFFFFFF, 0x0000000000000000, 0xE72C46C0F5945049),
+                       (0x00000000000000000000, 0xFFFFFFFFFFFFFFFF, 0xA112FFC72F68417B),
+                       (0xFFFFFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0x3333DCD3213210D2)]
+
+    test_vectors_128 = [(0x00000000000000000000000000000000, 0x0000000000000000, 0x96db702a2e6900af),
+                        (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0x0000000000000000, 0x13238c710272a5d8),
+                        (0x00000000000000000000000000000000, 0xFFFFFFFFFFFFFFFF, 0x3c6019e5e5edd563),
+                        (0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 0x628d9fbd4218e5b4)]
+
+    print('Testing 80-bit Key Vectors:')
+    for test_case in test_vectors_80:
+        ct = present_enc80(test_case[1], test_case[0])
+
+        if ct == test_case[2]:
+            print('Success', hex(ct))
+        else:
+            print('Failure', hex(ct))
+
+    print('')
+    print('Testing 128-bit Key Vectors:')
+    for test_case in test_vectors_128:
+        ct = present_enc128(test_case[1], test_case[0])
+
+        if ct == test_case[2]:
+            print('Success', hex(ct))
+        else:
+            print('Failure', hex(ct))
