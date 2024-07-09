@@ -98,3 +98,8 @@ if __name__ == '__main__':
         dst_file = script_file.with_name(script_file.stem.replace('r14', f'r{i}.npz'))
         print(f'Writing to {dst_file}')
         np.savez(dst_file, sbox_in=sbox_in[:i], sbox_out=sbox_out[:i])
+
+    for i in [8, 10, 12]:
+        dst_file = script_file.with_name(script_file.stem.replace('r14', f'r{i}_last.npz'))
+        print(f'Writing to {dst_file}')
+        np.savez(dst_file, sbox_in=sbox_in[-i:], sbox_out=sbox_out[-i:])
