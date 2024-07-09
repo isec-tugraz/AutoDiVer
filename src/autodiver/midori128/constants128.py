@@ -1,4 +1,6 @@
 import numpy as np
+
+
 RC128 = [
     np.matrix([
         [0, 0, 1, 0],
@@ -115,6 +117,8 @@ RC128 = [
         [0, 0, 0, 0],
     ])
 ]
+
+
 def print_c_format():
     s = "beta[ROUNDS][16] = {\n"
     temp = []
@@ -124,4 +128,6 @@ def print_c_format():
         temp.append(c_str)
     s = s + ",\n".join(temp) + "};"
     print(s)
-print_c_format()
+
+if __name__ == '__main__':
+    print_c_format()

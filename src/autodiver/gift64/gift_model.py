@@ -9,7 +9,11 @@ from typing import Any
 from sat_toolkit.formula import XorCNF
 from .gift_util import bit_perm, P64, DDT as GIFT_DDT, GIFT_RC
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
+
+
 log = logging.getLogger(__name__)
+
+
 class Gift64(SboxCipher):
     cipher_name = "GIFT64"
     sbox = np.array([int(x, 16) for x in "1a4c6f392db7508e"], dtype=np.uint8)
@@ -19,6 +23,7 @@ class Gift64(SboxCipher):
     sbox_bits = 4
     sbox_count = 16
     key: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
@@ -42,11 +47,13 @@ class Gift64(SboxCipher):
         self._model_sboxes()
         self._model_key_schedule()
         self._model_linear_layer()
+
     def applyPerm(self, array: np.ndarray[Any, np.dtype[np.int32]]) -> np.ndarray[Any, np.dtype[np.int32]]:
         arrayFlat = array.flatten()
         arrayPermuted = arrayFlat[P64]
         arrayOut = arrayPermuted.reshape(16, 4)
         return arrayOut
+
     def _model_key_schedule(self) -> None:
         keyWords = self.key.copy().reshape(8, 16)
         RK = []
@@ -61,6 +68,7 @@ class Gift64(SboxCipher):
             rk = rk.reshape(16, 2)
             RK.append(rk)
         self._round_keys = np.array(RK)
+
     def _addKey(self, Y, X, K, RC: int) -> None:
         """
         Y = addKey(X, K)
@@ -79,6 +87,7 @@ class Gift64(SboxCipher):
         key_xor_cnf += XorCNF.create_xor(X[:, 2:].flatten(), Y[:, 2:].flatten())
         key_xor_cnf += XorCNF.create_xor(X[:, :2].flatten(), Y[:, :2].flatten(), K.flatten())
         self.cnf += key_xor_cnf
+
     def _model_linear_layer(self) -> None:
         for r in range(self.num_rounds):
             permOut = self.applyPerm(self.sbox_out[r])

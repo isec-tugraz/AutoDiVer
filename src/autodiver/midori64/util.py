@@ -1,4 +1,6 @@
 import numpy as np
+
+
 DDT  = np.array([[16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                  [0, 2, 4, 0, 2, 2, 2, 0, 2, 0, 0, 0, 0, 0, 2, 0],
                  [0, 4, 0, 0, 4, 0, 0, 0, 0, 4, 0, 0, 4, 0, 0, 0],
@@ -49,12 +51,18 @@ mixing_mat = np.array([
             [1, 0, 1, 1],
             [1, 1, 0, 1],
             [1, 1, 1, 0],])
+
+
 def do_shift_rows(state):
     assert state.shape == (4, 4, 4)
     return state.swapaxes(0, 1).reshape(-1, 4)[sr_mapping]
+
+
 def do_shift_rows_inv(state):
     assert state.shape[:2] == (4, 4)
     return state.swapaxes(0, 1).reshape(-1, 4)[sri_mapping]
+
+
 def do_mix_columns(state):
     out_state = [0 for i in range(16)]
     for c in range(4):
@@ -64,6 +72,8 @@ def do_mix_columns(state):
             out_state[4*c + r] = np.bitwise_xor.reduce(colA_red)
     out_state = np.asarray(out_state, dtype = np.uint8)
     return out_state
+
+
 def do_linear_layer(state):
     state = state.flatten()
     state = do_shift_rows(state)

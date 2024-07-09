@@ -11,12 +11,18 @@ from sat_toolkit.formula import XorCNF
 from .util import DDT, RC, do_shift_rows, mixing_mat, do_linear_layer
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 from .midori_cipher import midori64_mc, midori64_sr
+
+
 log = logging.getLogger(__name__)
+
+
 def matrix_as_uint64(matrix: np.ndarray) -> int:
     assert np.all(matrix >= 0) and np.all(matrix < 16)
     assert matrix.shape == (4, 4)
     flat = matrix.T.ravel()
     return int(''.join(f'{x:01x}' for x in flat), 16)
+
+
 class Midori64Characteristic(DifferentialCharacteristic):
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
@@ -28,6 +34,8 @@ class Midori64Characteristic(DifferentialCharacteristic):
         if sbox_in.shape != sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
+
+
 class Midori64(SboxCipher):
     cipher_name = "MIDORI64"
     sbox = np.array([int(x, 16) for x in "cad3ebf789150246"], dtype=np.uint8)
@@ -37,6 +45,7 @@ class Midori64(SboxCipher):
     sbox_bits = 4
     key: np.ndarray[Any, np.dtype[np.int32]]
     mc_out: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
@@ -54,6 +63,7 @@ class Midori64(SboxCipher):
         self._model_sboxes()
         self._model_linear_layer()
         self._model_add_key()
+
     def _create_vars(self):
         self.add_index_array('key', (2, 4, 4, self.sbox_bits))
         self.add_index_array('sbox_in', (self.num_rounds+1, 4, 4, self.sbox_bits))
@@ -62,6 +72,7 @@ class Midori64(SboxCipher):
         self.add_index_array('tweak', (0,))
         self.pt = self.sbox_in[0]
         self._fieldnames.add('pt')
+
     def _model_add_key(self):
         # we omit the round key addition at the first and last round
         # as the do not influence the number of solutions and the corresponding
@@ -79,6 +90,7 @@ class Midori64(SboxCipher):
             else:
                 # all equal
                 self.cnf += XorCNF.create_xor(inp, out)
+
     @staticmethod
     def model_mix_cols(A, B):
         mc_cnf = XorCNF()
@@ -91,6 +103,7 @@ class Midori64(SboxCipher):
                 # print(f'{colB[r]}', "===>", f'{colA_red}')
                 mc_cnf += XorCNF.create_xor(colB[r], *colA_red)
         return mc_cnf
+
     def _model_linear_layer(self):
         for r in range(self.num_rounds):
             # print(f'{self.sbox_out[r] = }')

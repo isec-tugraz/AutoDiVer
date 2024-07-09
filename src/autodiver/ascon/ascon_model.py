@@ -12,10 +12,14 @@ import sys
 from ..util import get_ddt
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
+
+
 def rotr(val: np.uint64, r: int):
     val_int = int(val)
     res_int = (val_int >> r) | ((val_int & (1<<r)-1) << (64-r))
     return np.uint64(res_int)
+
+
 def ascon_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[Any, np.dtype[np.uint64]]:
     S = inp.copy()
     S[0] ^= rotr(S[0], 19) ^ rotr(S[0], 28)
@@ -24,6 +28,7 @@ def ascon_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[
     S[3] ^= rotr(S[3], 10) ^ rotr(S[3], 17)
     S[4] ^= rotr(S[4],  7) ^ rotr(S[4], 41)
     return S
+
 class AsconCharacteristic(DifferentialCharacteristic):
     def __init__(self, sbox_in: np.ndarray[Any, np.dtype[np.uint64]], sbox_out: np.ndarray[Any, np.dtype[np.uint64]], **kwargs):
         # do reverse bit slicing
@@ -31,22 +36,29 @@ class AsconCharacteristic(DifferentialCharacteristic):
         assert sbox_in.dtype.byteorder in ['<', '=']
         assert sbox_out.dtype.byteorder in ['<', '=']
         assert sbox_in.dtype == sbox_out.dtype == np.uint64
+
         for i in range(len(sbox_in) - 1):
             assert np.all(ascon_linear_layer(sbox_out[i]) == sbox_in[i + 1])
+
         # unpack bits
         sbox_in_bits = np.unpackbits(sbox_in.view(np.uint8), axis=-1, bitorder='little').reshape(-1, 5, 64)
         sbox_out_bits = np.unpackbits(sbox_out.view(np.uint8), axis=-1, bitorder='little').reshape(-1, 5, 64)
+
         # bit slice
         sbox_in_bits = sbox_in_bits.swapaxes(-1, -2)
         sbox_out_bits = sbox_out_bits.swapaxes(-1, -2)
+
         # swap order because x0 is MSB and x4 is LSB
         sbox_in_bits = sbox_in_bits[..., ::-1]
         sbox_out_bits = sbox_out_bits[..., ::-1]
+
         # pack bits
         sbox_in_unbitsliced = np.packbits(sbox_in_bits, axis=-1, bitorder='little')[..., 0]
         sbox_out_unbitsliced = np.packbits(sbox_out_bits, axis=-1, bitorder='little')[..., 0]
+
         assert np.all(Ascon.ddt[sbox_in_unbitsliced, sbox_out_unbitsliced] > 0)
         super().__init__(sbox_in_unbitsliced, sbox_out_unbitsliced, **kwargs)
+
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         with np.load(characteristic_path) as f:
@@ -57,6 +69,8 @@ class AsconCharacteristic(DifferentialCharacteristic):
         if sbox_in.shape != sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
+
+
 class Ascon(SboxCipher):
     cipher_name = "Ascon"
     sbox = np.array(bytearray.fromhex("040b1f141a1509021b0508121d03061c1e13070e000d1118100c0119160a0f17"))
@@ -66,6 +80,7 @@ class Ascon(SboxCipher):
     sbox_bits = 5
     sbox_count = 64
     key: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: AsconCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
@@ -82,6 +97,7 @@ class Ascon(SboxCipher):
         self._fieldnames.add('pt')
         self._model_sboxes()
         self._model_linear_layer()
+
     @classmethod
     def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
         if cellsize == 0 and len(arr) == 0:
@@ -93,6 +109,7 @@ class Ascon(SboxCipher):
         if arr.dtype == np.uint64 and arr.ndim == 1:
             return ' '.join(f'{x:016x}' for x in arr)
         raise ValueError(f'cellsize must be 4 or 8 not {cellsize} -- (shape: {arr.shape})')
+
     def _model_sboxes(self, sbox_in: None|np.ndarray=None, sbox_out: None|np.ndarray=None) -> None:
         sbox_in = sbox_in.copy() if sbox_in is not None else self.sbox_in.copy()
         sbox_out = sbox_out.copy() if sbox_out is not None else self.sbox_out.copy()
@@ -109,6 +126,7 @@ class Ascon(SboxCipher):
         self._fieldnames.add('sbox_in_bitsliced')
         self._fieldnames.add('sbox_out_bitsliced')
         super()._model_sboxes(self.sbox_in_bitsliced, self.sbox_out_bitsliced)
+
     def _model_linear_layer(self) -> None:
         cnf = XorCNF()
         for r in range(self.num_rounds - 1):

@@ -9,7 +9,11 @@ from typing import Any
 from sat_toolkit.formula import XorCNF
 from .gift_util import bit_perm, P128, DDT as GIFT_DDT, GIFT_RC
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
+
+
 log = logging.getLogger(__name__)
+
+
 class Gift128(SboxCipher):
     cipher_name = "GIFT128"
     sbox = np.array([int(x, 16) for x in "1a4c6f392db7508e"], dtype=np.uint8)
@@ -19,6 +23,7 @@ class Gift128(SboxCipher):
     sbox_bits = 4
     sbox_count = 32
     key: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
@@ -46,11 +51,13 @@ class Gift128(SboxCipher):
         self._model_key_schedule()
         self._model_linear_layer()
         self.cnf.nvars = self.numvars
+
     def applyPerm(self, array: np.ndarray[Any, np.dtype[np.int32]]) -> np.ndarray[Any, np.dtype[np.int32]]:
         arrayFlat = array.flatten()
         arrayPermuted = arrayFlat[P128]
         arrayOut = arrayPermuted.reshape(32, 4)
         return arrayOut
+
     def _model_key_schedule(self) -> None:
        keyWords = self.key.copy().reshape(8, 16)
        RK = []
@@ -70,6 +77,7 @@ class Gift128(SboxCipher):
            rk = rk.reshape(32, 2)
            RK.append(rk)
        self._round_keys = np.array(RK)
+
     def _addKey(self, Y, X, K, RC: int) -> None:
         """
         Y = addKey(X, K)
@@ -89,6 +97,7 @@ class Gift128(SboxCipher):
         key_xor_cnf += XorCNF.create_xor(X[:, 3:].flatten(), Y[:, 3:].flatten())
         key_xor_cnf += XorCNF.create_xor(X[:, 1:3].flatten(), Y[:, 1:3].flatten(), K.flatten())
         self.cnf += key_xor_cnf
+
     def _model_linear_layer(self) -> None:
         for r in range(self.num_rounds):
             permOut = self.applyPerm(self.sbox_out[r])
