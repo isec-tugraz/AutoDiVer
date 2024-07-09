@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import XorCNF
-from .util import DDT, RC as DDT, RC
+from .util import DDT, RC
 from .util import rotate_left, rotate_column_down, get_col, add_round_constants
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 

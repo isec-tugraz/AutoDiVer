@@ -8,10 +8,14 @@ import pytest
 from sat_toolkit.formula import CNF
 from icecream import ic
 #0th bit is the LSB
+
+
 def print_state(key):
     for k in key:
         print(hex(k)[2:], end = " ")
     print("")
+
+
 midori128_testvectors = [
     ("00000000000000000000000000000000", "00000000000000000000000000000000", "c055cbb95996d14902b60574d5e728d6"),
     ("51084ce6e73a5ca2ec87d7babc297543", "687ded3b3c85b3f35b1009863e2a8cbf", "1e0ac4fddff71b4c1801b73ee4afc83d"),
@@ -19,10 +23,13 @@ midori128_testvectors = [
 midori128_testvectors = [
     (bytes.fromhex(pt), bytes.fromhex(key), bytes.fromhex(ct_ref)) for pt, key, ct_ref in midori128_testvectors
 ]
+
 @pytest.mark.parametrize("pt,key,ct_ref", midori128_testvectors)
 def test_tv(pt: bytes, key: bytes, ct_ref: bytes):
     ct = midori128_enc(pt, key, 20)
     assert ct == ct_ref
+
+
 def nibble_to_byte(key_arr):
     key = []
     key_arr_str = [str(hex(x)[2:]) for x in key_arr]
@@ -33,6 +40,8 @@ def nibble_to_byte(key_arr):
         key.append(kk)
     key = np.asarray(key, dtype=np.uint8)
     return key
+
+
 def test_zero_characteristic():
     seed("test_midori128::test_zero_characteristic")
     numrounds = 3
@@ -74,6 +83,8 @@ def test_zero_characteristic():
         print("--------------------------------------")
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
+
+
 def test_nonzero_characteristic():
     seed("test_midori128::test_nonzero_characteristic")
     sbi_delta = np.array(bytearray.fromhex(

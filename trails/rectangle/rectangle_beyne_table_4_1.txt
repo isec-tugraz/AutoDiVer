@@ -1,0 +1,36 @@
+# @article{chinaf/ZhangBLR0V15,
+#     author = {Wentao Zhang and Zhenzhen Bao and Dongdai Lin and Vincent Rijmen and Bohan Yang and Ingrid Verbauwhede},
+#     title = {{RECTANGLE:} a bit-slice lightweight block cipher suitable for multiple platforms},
+#     journal = {Sci. China Inf. Sci.},
+#     number = {12},
+#     volume = {58},
+#     pages = {1--15},
+#     year = {2015},
+#     doi = {10.1007/S11432-015-5459-7},
+#     biburl = {https://dblp.org/rec/journals/chinaf/ZhangBLR0V15.bib},
+# }
+#
+# The first differential trail with probability 2^−63 (Appendix E)
+# (rounds 9 -- 12)
+
+# @article{iacr/BeyneR22,
+#     author = {Tim Beyne and Vincent Rijmen},
+#     title = {Differential Cryptanalysis in the Fixed-Key Model},
+#     journal = {{IACR} Cryptol. ePrint Arch.},
+#     pages = {837},
+#     year = {2022},
+#     url = {https://eprint.iacr.org/2022/837},
+#     biburl = {https://dblp.org/rec/journals/iacr/BeyneR22.bib},
+# }
+#
+# Table 4: Differences and masks for two three-round quasidifferential trails with absolute correlation 2^−13 and 2^−19. The masks are the same for both trails.
+# (first diff. char.)
+
+0000000002000060
+000000000c000020
+
+0000000000008600
+0000000000001200
+
+0000000000003000
+0000000000008000
