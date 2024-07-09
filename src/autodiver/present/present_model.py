@@ -130,7 +130,7 @@ class Present(SboxCipher):
             int_val = sum(int(x) << i * 4 for i, x in enumerate(arr))
             return f'0x{int_val:016x}'
 
-        assert np.all(arr < 256) and np.all(arr > 0)
+        assert np.all(arr < 256) and np.all(arr >= 0)
         int_val = sum(int(x) << i * 8 for i, x in enumerate(arr))
         if cellsize == 80:
             return f'0x{int_val:020x}'
