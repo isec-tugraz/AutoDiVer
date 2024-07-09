@@ -40,7 +40,7 @@ class Rectangle(SboxCipher):
             lin_output = self.char.sbox_in[i]
             # print(lin_input, lin_output)
             permuted = self.apply_perm_nibble(lin_input)
-            print(permuted, lin_output)
+            # print(permuted, lin_output)
             if not np.all(permuted == lin_output):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}]->sbox_in[{i}]')
 
