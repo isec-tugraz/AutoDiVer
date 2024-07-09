@@ -10,5 +10,6 @@ setup(
         Extension("autodiver.midori128.midori_cipher", ["src/autodiver/midori128/midori_cipher.pyx"]),
         Extension("autodiver.warp128.warp_cipher", ["src/autodiver/warp128/warp_cipher.pyx"]),
         Extension("autodiver.speedy192.speedy_cipher", ["src/autodiver/speedy192/speedy_cipher.pyx"]),
+        Extension("autodiver.rectangle128.rectangle_cipher", ["src/autodiver/rectangle128/rectangle_cipher.pyx"]),
     ]),
 )
