@@ -74,7 +74,6 @@ class Present(SboxCipher):
     sbox_bits = 4
     sbox_count = 16
 
-    long_round_keys: np.ndarray[Any, np.dtype[np.int32]]
     round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
@@ -90,35 +89,18 @@ class Present(SboxCipher):
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
-        # for i in range(1, self.num_rounds):
-        #     lin_input = self.char.sbox_out[i - 1]
-        #     lin_output = self.char.sbox_in[i]
-        #     permuted = PERM[lin_input]
-        #     if not np.all(permuted == lin_output):
-        #         raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
-
         #generate Variables
         self.add_index_array('sbox_in', (self.num_rounds + 1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
 
-        self.add_index_array('long_round_keys', (self.num_rounds + 1, self.key_size))
-        self._fieldnames.add('round_keys')
-        self._fieldnames.add('key')
-        self.round_keys = self.long_round_keys[:, self.key_size-self.block_size:]
-        self.key = self.long_round_keys[0]
+        # key schedule vars are added by subclasses in _model_key_schedule
 
         self.add_index_array('tweak', (0,))
 
-        self.pt = self.sbox_in[0]
-        self._fieldnames.add('pt')
+        self.add_index_array('pt', (self.sbox_count, self.sbox_bits))
 
         self._model_sboxes()
-        if self.key_size == 80:
-            self._model_key_schedule80()
-        elif self.key_size == 128:
-            self._model_key_schedule128()
-        else:
-            raise ValueError('key_size must be 80 or 128')
+        self._model_key_schedule()
         self._model_linear_layer()
 
     @classmethod
@@ -147,7 +129,34 @@ class Present(SboxCipher):
         arrayOut = arrayPermuted.reshape(16, 4)
         return arrayOut
 
-    def _model_key_schedule80(self) -> None:
+    def _model_key_schedule(self) -> None:
+        raise NotImplementedError("Subclasses must implement _model_key_schedule")
+
+    def _addKey(self, inp, out, key) -> None:
+        key_xor_cnf = XorCNF()
+        key_xor_cnf += XorCNF.create_xor(inp.flatten(), out.flatten(), key)
+        self.cnf += key_xor_cnf
+
+    def _model_linear_layer(self) -> None:
+        self.cnf += XorCNF.create_xor(self.pt.flatten(), self.sbox_in[0].flatten(), self.round_keys[0])
+        for r in range(self.num_rounds):
+            permOut = self.applyPerm(self.sbox_out[r])
+            self._addKey(permOut, self.sbox_in[r+1], self.round_keys[r + 1])
+
+class Present80(Present):
+    cipher_name = 'PRESENT-80'
+    key_size = 80
+
+    long_round_keys: np.ndarray[Any, np.dtype[np.int32]]
+
+    def _model_key_schedule(self):
+        self.add_index_array('long_round_keys', (self.num_rounds + 1, self.key_size))
+        self.round_keys = self.long_round_keys[:, self.key_size-self.block_size:]
+        self.key = self.long_round_keys[0]
+
+        self._fieldnames.add('round_keys')
+        self._fieldnames.add('key')
+
         key_schedule_cnf = XorCNF()
         for rnd in range(self.num_rounds):
             in_key = self.long_round_keys[rnd]
@@ -164,24 +173,16 @@ class Present(SboxCipher):
             key_schedule_cnf += self._get_sbox_cnf(0, 0).translate(mapping)
         self.cnf += key_schedule_cnf
 
-
-    def _model_key_schedule128(self) -> None:
-        raise NotImplementedError
-
-    def _addKey(self, inp, out, key) -> None:
-        key_xor_cnf = XorCNF()
-        key_xor_cnf += XorCNF.create_xor(inp.flatten(), out.flatten(), key)
-        self.cnf += key_xor_cnf
-
-    def _model_linear_layer(self) -> None:
-        for r in range(self.num_rounds):
-            permOut = self.applyPerm(self.sbox_out[r])
-            self._addKey(permOut, self.sbox_in[r+1], self.round_keys[r + 1])
-
-class Present80(Present):
-    cipher_name = 'PRESENT-80'
-    key_size = 80
-
 class Present128(Present):
     cipher_name = 'PRESENT-128'
     key_size = 128
+
+class PresentLongKey(Present):
+    cipher_name = 'PRESENT-long-key'
+
+    def _model_key_schedule(self):
+        self.key_size = (self.num_rounds + 1) * self.block_size
+        self.add_index_array('round_keys', (self.num_rounds + 1, self.block_size))
+        assert self.key_size == self.round_keys.size
+
+        self.key = self.round_keys

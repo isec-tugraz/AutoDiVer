@@ -21,7 +21,7 @@ from .warp128.warp128_model import WARP128
 from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from .ascon.ascon_model import Ascon, AsconCharacteristic
 from .skinny.skinny_model import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
-from .present.present_model import Present80, PresentCharacteristic
+from .present.present_model import Present80, PresentLongKey, PresentCharacteristic
 
 log = logging.getLogger(__name__)
 def setup_logging(filename: Optional[Path] = None):

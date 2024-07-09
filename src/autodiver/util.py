@@ -73,6 +73,8 @@ class IndexSet:
                 res[i] = "1"
                 continue
             for k, v in variables.items():
+                if v.size == 0:
+                    continue
                 start, stop = v.flatten()[[0, -1]]
                 rng = range(start, stop + 1)
                 if needle in rng:

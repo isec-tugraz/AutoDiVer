@@ -64,6 +64,7 @@ def test_zero_characteristic_present80():
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
+    pt = model.pt # type: ignore
 
     round_keys = model.round_keys # type: ignore
     long_round_keys = model.long_round_keys # type: ignore
@@ -72,11 +73,12 @@ def test_zero_characteristic_present80():
     print('sbi', sbi.shape, sbi.dtype)
     print('sbo', sbo.shape, sbo.dtype)
 
-    pt = sum(int(x) << i * 4 for i, x in enumerate(sbi[0]))
+    pt = sum(int(x) << i * 4 for i, x in enumerate(pt))
     ct = sum(int(x) << i * 4 for i, x in enumerate(sbi[-1]))
     key = sum(int(x) << i * 8 for i, x in enumerate(key))
-    pt = pt ^ (key >> 16)
 
+    ct_ref = present_enc80(pt, key, num_rounds=num_rounds)
+    assert ct == ct_ref
 
     print(f'pt: {pt:016x}')
     print(f'key: {key:020x}')
