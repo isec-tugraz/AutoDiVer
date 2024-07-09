@@ -7,7 +7,7 @@ import logging
 import numpy as np
 from typing import Any
 from sat_toolkit.formula import XorCNF
-from .util import DDT, RC as DDT, RC
+from .util import DDT, RC
 from .util import rotate_left, rotate_column_down, get_col, add_round_constants
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
@@ -40,7 +40,7 @@ class Rectangle(SboxCipher):
             lin_output = self.char.sbox_in[i]
             # print(lin_input, lin_output)
             permuted = self.apply_perm_nibble(lin_input)
-            print(permuted, lin_output)
+            # print(permuted, lin_output)
             if not np.all(permuted == lin_output):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}]->sbox_in[{i}]')
 
