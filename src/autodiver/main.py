@@ -10,6 +10,7 @@ import sys
 from typing import Optional, Callable
 import numpy as np
 from IPython import start_ipython
+
 from .import version
 from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from .gift64.gift_model import Gift64
@@ -20,6 +21,8 @@ from .warp128.warp128_model import WARP128
 from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from .ascon.ascon_model import Ascon, AsconCharacteristic
 from .skinny.skinny_model import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
+from .present.present_model import Present80, PresentCharacteristic
+
 log = logging.getLogger(__name__)
 def setup_logging(filename: Optional[Path] = None):
     config_file = Path(__file__).parent / 'log_config.json'
@@ -47,6 +50,7 @@ def main():
         "speedy192": (Speedy192, Speedy192Characteristic),
         "gift64": (Gift64, DifferentialCharacteristic),
         "gift128": (Gift128, DifferentialCharacteristic),
+        "present80": (Present80, PresentCharacteristic),
         "midori64": (Midori64, Midori64Characteristic),
         "midori128": (Midori128, Midori128Characteristic),
         "skinny128": (Skinny128, Skinny128Characteristic),
