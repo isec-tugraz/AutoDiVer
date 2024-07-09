@@ -11,16 +11,12 @@ from .util import DDT, RC
 from .util import rotate_left, rotate_column_down, get_col, add_round_constants
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
-
 log = logging.getLogger(__name__)
 
-
 class Rectangle(SboxCipher):
-    cipher_name = "RECTANGLE"
     sbox = np.array([int(x, 16) for x in "65CA1E79B03D8F42"], dtype=np.uint8)
     ddt  = DDT
     block_size = 64
-    key_size = 128
     sbox_bits = 4
     sbox_count = 16
     key: np.ndarray[Any, np.dtype[np.int32]]
@@ -47,12 +43,8 @@ class Rectangle(SboxCipher):
         #generate Variables
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
-        self.add_index_array('key', (2*self.sbox_count, self.sbox_bits))
-        self.add_index_array('s_key', (self.num_rounds, 8, self.sbox_bits))
-        self.add_index_array('r_key', (self.num_rounds, 2*self.sbox_count, self.sbox_bits))
+        self.add_index_array('pt', (self.sbox_count, self.sbox_bits))
         self.add_index_array('tweak', (0,))
-        self.pt = self.sbox_in[0]
-        self._fieldnames.add('pt')
 
         self._model_sboxes()
         self._model_key_schedule()
@@ -92,10 +84,40 @@ class Rectangle(SboxCipher):
         return outstate
 
     def _model_key_schedule(self) -> None:
+        raise NotImplementedError("Subclasses must implement _model_key_schedule")
+
+    def _addKey(self, Y, X, K) -> None:
+        """
+        Y = addKey(X, K)
+        """
+        key_xor_cnf = XorCNF()
+        X_flat = X.flatten()
+        K_flat = K.flatten()
+        Y_flat = Y.flatten()
+        key_xor_cnf += XorCNF.create_xor(X_flat, Y_flat, K_flat)
+        self.cnf += key_xor_cnf
+
+    def _model_linear_layer(self) -> None:
+        self._addKey(self.sbox_in[0], self.pt, self._round_keys[0])
+        for r in range(self.num_rounds):
+            permOut = self.applyPerm(self.sbox_out[r])
+            self._addKey(self.sbox_in[r+1], permOut,  self._round_keys[r+1])
+
+class Rectangle128(Rectangle):
+    cipher_name = "RECTANGLE128"
+    key_size = 128
+    
+    def _model_key_schedule(self) -> None:
+        self.add_index_array('key', (2*self.sbox_count, self.sbox_bits))
+        self.add_index_array('s_key', (self.num_rounds, 8, self.sbox_bits))
+        self.add_index_array('r_key', (self.num_rounds, 2*self.sbox_count, self.sbox_bits))
+
         key_cnf = XorCNF()
         RK = []
         keyWords = self.key.copy()
         for i in range(self.num_rounds):
+            RK.append(keyWords[:16, :])
+
             array = np.empty((32, 4), dtype=np.uint32)
             row = np.empty((4, 32), dtype=np.uint32)
             rk_row = np.empty((4, 32), dtype=np.uint32)
@@ -126,23 +148,16 @@ class Rectangle(SboxCipher):
             key_cnf += XorCNF.create_xor(rk_row[3].flatten(), row[0].flatten())
 
             keyWords = self.r_key[i].copy()
-            RK.append(keyWords[:16, :])
-
+            
+        RK.append(keyWords[:16, :])
         self.cnf += key_cnf
         self._round_keys = np.array(RK)
 
-    def _addKey(self, Y, X, K, rc: int) -> None:
-        """
-        Y = addKey(X, K)
-        """
-        key_xor_cnf = XorCNF()
-        X_flat = X.flatten()
-        K_flat = K.flatten()
-        Y_flat = Y.flatten()
-        key_xor_cnf += XorCNF.create_xor(X_flat, Y_flat, K_flat)
-        self.cnf += key_xor_cnf
-
-    def _model_linear_layer(self) -> None:
-        for r in range(self.num_rounds):
-            permOut = self.applyPerm(self.sbox_out[r])
-            self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r], RC[r])
+class RectangleLongKey(Rectangle):
+    cipher_name = "RECTANGLE-long-key"
+    key_size = 128
+    
+    def _model_key_schedule(self) -> None:
+        self.key_size = (self.num_rounds + 1) * self.block_size
+        self.add_index_array('_round_keys', (self.num_rounds + 1, self.block_size))
+        assert self.key_size == self.round_keys.size

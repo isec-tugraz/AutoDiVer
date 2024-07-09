@@ -2,16 +2,15 @@ from random import randint
 import numpy as np
 import pytest
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.rectangle128.rectangle_model import Rectangle
+from autodiver.rectangle128.rectangle_model import Rectangle128
 from autodiver.rectangle128.rectangle_cipher import rectangle_enc, nibble_to_block, nibble_to_key
 from sat_toolkit.formula import CNF
 def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 16), dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
-    rectangle = Rectangle(char)
-    # num_solutions = count_solutions(rectangle.cnf, epsilon=0.8, delta=0.2, verbosity=0)
-    # assert num_solutions == 1 << (128 + 64)
+    rectangle = Rectangle128(char)
+    
     for bit_var in rectangle.key.flatten():
         rectangle.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
     num_solutions = count_solutions(rectangle.cnf, epsilon=0.8, delta=0.2, verbosity=0)
@@ -19,20 +18,15 @@ def test_zero_characteristic():
     for bit_var in rectangle.sbox_in[0].flatten():
         rectangle.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
     model = rectangle.solve(seed=6024)
+
     key = model.key # type: ignore
-    key0 = key[:16]
-    print(f'{key = }')
     key = nibble_to_key(key)
-    key0 = nibble_to_block(key0);
-    print(f'{hex(key0) = }')
-    print(hex(key[0]), hex(key[1]))
+    pt = model.pt # type: ignore
+    pt = nibble_to_block(pt)
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     assert np.all(rectangle.sbox[sbi[:rectangle.num_rounds]] == sbo)
-    
-    # we need to add the key here in pre-processing
-    pt = nibble_to_block(sbi[0])
-    pt = pt ^ key0
+
     for r in range(1, numrounds):
         out = nibble_to_block(sbi[r])
         ref = rectangle_enc(pt, key[0], key[1], r)
@@ -65,22 +59,17 @@ def test_nonzero_characteristic():
     # sbo_delta = sbo_delta[:, ::-1]
     
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
-    rectangle = Rectangle(char)
+    rectangle = Rectangle128(char)
     model = rectangle.solve(seed=8284)
+
     key = model.key # type: ignore
-    key0 = key[:16]
-    print(f'{key = }')
     key = nibble_to_key(key)
-    key0 = nibble_to_block(key0);
-    print(f'{hex(key0) = }')
-    print(hex(key[0]), hex(key[1]))
+    pt = model.pt # type: ignore
+    pt = nibble_to_block(pt)
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     assert np.all(rectangle.sbox[sbi[:rectangle.num_rounds]] == sbo)
-
-    # we need to add the key here in pre-processing
-    pt = nibble_to_block(sbi[0])
-    pt = pt ^ key0
+    
     delta_0 = nibble_to_block(sbi_delta[0])
     for r in range(1, char.num_rounds):
         out = nibble_to_block(sbi[r])
@@ -98,5 +87,3 @@ def test_nonzero_characteristic():
 if __name__ == "__main__":
     test_zero_characteristic()
     test_nonzero_characteristic()
-    # for tv in rectangle64_testvectors:
-    #     test_tv(*tv)
