@@ -15,7 +15,7 @@ from .import version
 from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
 from .gift64.gift_model import Gift64
 from .gift128.gift_model import Gift128
-from .rectangle128.rectangle_model import Rectangle128
+from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey
 from .midori64.midori64_model import Midori64, Midori64Characteristic
 from .midori128.midori128_model import Midori128, Midori128Characteristic
 from .warp128.warp128_model import WARP128
@@ -59,6 +59,7 @@ def main():
         "skinny64": (Skinny64, Skinny64Characteristic),
         "ascon": (Ascon, AsconCharacteristic),
         "rectangle128": (Rectangle128, DifferentialCharacteristic),
+        "rectangle-long-key": (RectangleLongKey, DifferentialCharacteristic),
     }
     commands: dict[str, Callable[[SboxCipher, argparse.Namespace], None|CountResult]] = {
         'count-tweaks': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=False, count_tweak=True),

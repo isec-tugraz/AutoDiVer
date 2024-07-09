@@ -158,6 +158,9 @@ class RectangleLongKey(Rectangle):
     key_size = 128
     
     def _model_key_schedule(self) -> None:
+        self._fieldnames.add('key')
         self.key_size = (self.num_rounds + 1) * self.block_size
         self.add_index_array('_round_keys', (self.num_rounds + 1, self.block_size))
-        assert self.key_size == self.round_keys.size
+        assert self.key_size == self._round_keys.size
+        self.key = self._round_keys.reshape(self.num_rounds + 1, self.sbox_count, self.sbox_bits)
+

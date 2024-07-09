@@ -10,10 +10,12 @@ import numpy as np
 cdef extern from *:
     """
     uint64_t encrypt(uint64_t msg, uint64_t *orkey, int rounds);
+    uint64_t encryptLongKey(uint64_t msg, uint64_t *round_key, int rounds);
     void nibbleToKey(uint8_t *arr, uint64_t *key);
     uint64_t nibbleToState(uint8_t *arr);
     """
     uint64_t encrypt(uint64_t msg, uint64_t *orkey, int rounds) nogil;
+    uint64_t encryptLongKey(uint64_t msg, uint64_t *round_key, int rounds) nogil;
     void nibbleToKey(uint8_t *arr, uint64_t *key) nogil;
     uint64_t nibbleToState(uint8_t *arr) nogil;
 
@@ -27,6 +29,10 @@ def rectangle_enc(uint64_t pt, uint64_t key0, uint64_t key1, int rounds):
     # print('result:', result)
     return result
 
+def rectangle_enc_longKey(uint64_t pt, uint64_t[:] rkeys, int rounds):
+    cdef uint64_t result
+    result = encryptLongKey(pt, &rkeys[0], rounds)
+    return result
 
 def nibble_to_block(arr):
     cdef uint8_t[:] a = arr

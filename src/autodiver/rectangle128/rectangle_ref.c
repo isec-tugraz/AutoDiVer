@@ -207,6 +207,15 @@ uint64_t encrypt(uint64_t msg, uint64_t *orkey, int rounds){
     free(round_key);
     return msg;
 }
+uint64_t encryptLongKey(uint64_t msg, uint64_t *round_key, int rounds){
+    for(uint8_t round=0; round < rounds; round++){
+        msg = add_round_key(msg, round_key[round]);
+        msg = sbox(msg);
+        msg = shift_row(msg);
+    }
+    msg = add_round_key(msg, round_key[rounds]);
+    return msg;
+}
 void nibbleToKey(uint8_t *arr, uint64_t *key){
     uint64_t S[4] = {0UL, 0UL, 0UL, 0UL};
     for (int i=31; i>=0; i--) {
