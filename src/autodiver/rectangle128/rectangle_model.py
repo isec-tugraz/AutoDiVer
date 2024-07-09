@@ -10,7 +10,11 @@ from sat_toolkit.formula import XorCNF
 from .util import DDT, RC as DDT, RC
 from .util import rotate_left, rotate_column_down, get_col, add_round_constants
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
+
+
 log = logging.getLogger(__name__)
+
+
 class Rectangle(SboxCipher):
     cipher_name = "RECTANGLE"
     sbox = np.array([int(x, 16) for x in "65CA1E79B03D8F42"], dtype=np.uint8)
@@ -20,13 +24,17 @@ class Rectangle(SboxCipher):
     sbox_bits = 4
     sbox_count = 16
     key: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds
+
         assert self.char.sbox_in.shape == self.char.sbox_out.shape
+
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
+
         for i in range(1, self.num_rounds):
             lin_input = self.char.sbox_out[i - 1]
             lin_output = self.char.sbox_in[i]
@@ -35,6 +43,7 @@ class Rectangle(SboxCipher):
             print(permuted, lin_output)
             if not np.all(permuted == lin_output):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}]->sbox_in[{i}]')
+
         #generate Variables
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
