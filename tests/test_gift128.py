@@ -5,20 +5,27 @@ from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.gift128.gift_model import Gift128
 from autodiver.gift128.gift_cipher import gift128_enc
 from sat_toolkit.formula import CNF
+
+
 def print_state(S, state = "s"):
     print(state, ":", end = " ")
     for s in S:
         print(hex(s)[2:], end = "")
     print("")
+
+
 def read_hex(s: str) -> np.ndarray:
     a = [int(x, 16) for x in s]
     a.reverse()  #test vectors are given in MSB first
     return np.array(a, dtype=np.uint8)
+
+
 testvectors = [
     (read_hex("00000000000000000000000000000000"), read_hex("00000000000000000000000000000000"), read_hex("cd0bd738388ad3f668b15a36ceb6ff92")),
     (read_hex("fedcba9876543210fedcba9876543210"), read_hex("fedcba9876543210fedcba9876543210"), read_hex("8422241a6dbf5a9346af468409ee0152")),
     (read_hex("e39c141fa57dba43f08a85b6a91f86c1"), read_hex("d0f5c59a7700d3e799028fa9f90ad837"), read_hex("13ede67cbdcc3dbf400a62d6977265ea")),
 ]
+
 @pytest.mark.parametrize("pt,key,ct_ref", testvectors)
 def test_tv(pt, key, ct_ref):
     print_state(pt, "M")
@@ -27,6 +34,8 @@ def test_tv(pt, key, ct_ref):
     ct = gift128_enc(pt, key, 40)
     print_state(ct, "C")
     assert np.all(ct == ct_ref)
+
+
 def test_zero_characteristic():
     numrounds = 2
     sbi = sbo = np.zeros((numrounds, 32), dtype=np.uint8)
@@ -58,6 +67,8 @@ def test_zero_characteristic():
         assert np.all(round_sbi == ref)
     num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
+
+
 def test_nonzero_characteristic():
     char = (
         ("00000000000000000000060700000000", "00000000000000000000020800000000"),

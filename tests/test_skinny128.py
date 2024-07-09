@@ -5,6 +5,8 @@ import numpy as np
 from sat_toolkit.formula import CNF, XorCNF
 from autodiver.skinny.skinny_model import Skinny128, Skinny128Characteristic
 from autodiver.skinny.constants import do_mix_cols, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
+
+
 def test_zero_characteristic():
     numrounds = 4
     sbox_in_delta = sbox_out_delta   = np.zeros((numrounds, 4, 4), dtype=np.uint8)
@@ -33,6 +35,8 @@ def test_zero_characteristic():
             mc_input = do_shift_rows(sbo ^ this_rtk ^ rc)
             assert np.all(mc_output == do_mix_cols(mc_input))
         rtk = update_tweakey(rtk)
+
+
 def test_unique_solution():
     random.seed("test_skinny128::test_unique_solution")
     numrounds = 4
@@ -58,6 +62,8 @@ def test_unique_solution():
         cnf += CNF(extra_clause)
         is_sat, model = cnf.solve_dimacs()
         assert(not is_sat)
+
+
 def test_nonzero_characteristic():
     sbox_in = np.array(bytearray.fromhex(
         "00000000000000000000000000000000"
@@ -95,9 +101,7 @@ def test_nonzero_characteristic():
         "00000000000000000000000000000000" "00da00fd920000009600000000006c96" "007600fd240000005b0000000000255b"
         "00000000000000000000000000000000" "002d2d0000d9000000da00fd92000000" "002d2d0000920000007600fd24000000"
     )).reshape(10, 3, 4, 4)
-    # sbox_in[:] = 0
-    # sbox_out[:] = 0
-    # tweakeys[:] = 0
+
     char = Skinny128Characteristic(sbox_in, sbox_out, tweakeys)
     cipher = Skinny128(char)
     numrounds = char.num_rounds
@@ -132,6 +136,8 @@ def test_nonzero_characteristic():
         print(f"output diff\n{do_mix_cols(mc_input) ^ mc_output}")
         assert np.all(mc_output == do_mix_cols(mc_input))
         rtk = update_tweakey(rtk)
+
+
 def test_acns2021_characteristic():
     sbox_in = np.array(bytearray.fromhex(
         "00000200002000000800000000000808"
@@ -190,8 +196,10 @@ def test_acns2021_characteristic():
         "0000000000000000000000000000BA00" "0000000000000000000000000000A700" "00000000000000000000000000003400"
         "0000000000ba00000000000000000000" "00000000004e00000000000000000000" "00000000001a00000000000000000000"
     )).reshape(-1, 3, 4, 4)
+
     char = Skinny128Characteristic(sbox_in, sbox_out, tweakeys)
     cipher = Skinny128(char)
+
     numrounds = char.num_rounds
     model = cipher.solve(seed=1159)
     sbox_in = model.sbox_in #type: ignore

@@ -6,6 +6,8 @@ from autodiver.midori64.midori64_model import Midori64, matrix_as_uint64
 from autodiver.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr
 from sat_toolkit.formula import CNF
 from icecream import ic
+
+
 ##0th bit is the LSB
 #def nibble_to_block(key_arr):
 #    ic()
@@ -15,10 +17,13 @@ from icecream import ic
 #    key = ''.join(key_arr_str)
 #    key = int(key, 16)
 #    return key
+
+
 midori64_testvectors = [
     (0x0000000000000000, 0x00000000000000000000000000000000, 0x3c9cceda2bbd449a),
     (0x42c20fd3b586879e, 0x687ded3b3c85b3f35b1009863e2a8cbf, 0x66bcdc6270d901cd),
 ]
+
 @pytest.mark.parametrize("pt,key,ct_ref", midori64_testvectors)
 def test_tv(pt, key, ct_ref):
     print(f'{pt = :016x}', f'{key = :032x}', f'{ct_ref = :016x}')
@@ -29,6 +34,8 @@ def test_tv(pt, key, ct_ref):
     print(f'{ct = :016x}')
     print(f'{ct ^ ct_ref = :016x}')
     assert ct == ct_ref
+
+
 def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
@@ -74,6 +81,8 @@ def test_zero_characteristic():
         assert out == ref
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
+
+
 def test_nonzero_characteristic():
     # characteristic from https://doi.org/10.1109/ACCESS.2020.2995795 (Figure 3)
     # with alpha = beta = 1

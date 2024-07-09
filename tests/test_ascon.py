@@ -6,10 +6,14 @@ from autodiver.ascon.ascon_model import Ascon, AsconCharacteristic
 from autodiver.cipher_model import count_solutions
 from autodiver.ascon.pyascon import ascon_permutation
 from icecream import ic
+
+
 def rotr(val: np.uint64, r: int):
     val_int = int(val)
     res_int = (val_int >> r) | ((val_int & (1<<r)-1) << (64-r))
     return np.uint64(res_int)
+
+
 def ascon_inv_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[Any, np.dtype[np.uint64]]:
     rotations = [
         [0, 3, 6, 9, 11, 12, 14, 15, 17, 18, 19, 21, 22, 24, 25, 27, 30, 33, 36, 38, 39, 41, 42, 44, 45, 47, 50, 53, 57, 60, 63],
@@ -24,6 +28,8 @@ def ascon_inv_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndar
         for rot in rotations[i]:
             output[i] ^= (inp[i] >> rot) | (inp[i] << (np.uint64(64) - rot))
     return output
+
+
 def ascon_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[Any, np.dtype[np.uint64]]:
     S = inp.copy()
     S[0] ^= rotr(S[0], 19) ^ rotr(S[0], 28)
@@ -32,6 +38,8 @@ def ascon_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[
     S[3] ^= rotr(S[3], 10) ^ rotr(S[3], 17)
     S[4] ^= rotr(S[4],  7) ^ rotr(S[4], 41)
     return S
+
+
 def ascon_sbox(sbi: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[Any, np.dtype[np.uint64]]:
     assert sbi.shape == (5,)
     S = sbi.copy()
@@ -47,6 +55,8 @@ def ascon_sbox(sbi: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[Any, np.
     S[3] ^= S[2]
     S[2] ^= 0XFFFFFFFFFFFFFFFF
     return S
+
+
 def test_zero_characteristic():
     numrounds = 5
     sbi = sbo = np.zeros((numrounds, 5), dtype=np.uint64)
@@ -96,6 +106,8 @@ def test_zero_characteristic():
     #     assert np.all(round_sbi == ref)
     # num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     # assert num_solutions == 1
+
+
 def test_nonzero_characteristic():
     np.set_printoptions(formatter={'int': lambda x: f"{x:016x}"})
     sbi_delta = np.array(bytearray.fromhex(
