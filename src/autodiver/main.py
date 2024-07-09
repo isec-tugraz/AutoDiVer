@@ -51,6 +51,7 @@ def main():
         "gift64": (Gift64, DifferentialCharacteristic),
         "gift128": (Gift128, DifferentialCharacteristic),
         "present80": (Present80, PresentCharacteristic),
+        "present-long-key": (PresentLongKey, PresentCharacteristic),
         "midori64": (Midori64, Midori64Characteristic),
         "midori128": (Midori128, Midori128Characteristic),
         "skinny128": (Skinny128, Skinny128Characteristic),
