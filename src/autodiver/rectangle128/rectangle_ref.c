@@ -179,7 +179,7 @@ uint64_t add_round_key(uint64_t msg, uint64_t rkey){
 }
 
 
-uint64_t encrypt(uint64_t msg, uint64_t *orkey, int rounds){
+uint64_t rectangle_encrypt(uint64_t msg, uint64_t *orkey, int rounds){
     /* allocating mem for round keys */
     uint64_t *round_key = (uint64_t *)malloc((NO_OF_ROUNDS+1)*sizeof(uint64_t));
     uint64_t key[2];
@@ -207,7 +207,7 @@ uint64_t encrypt(uint64_t msg, uint64_t *orkey, int rounds){
     free(round_key);
     return msg;
 }
-uint64_t encryptLongKey(uint64_t msg, uint64_t *round_key, int rounds){
+uint64_t rectangle_encrypt_long_key(uint64_t msg, uint64_t *round_key, int rounds){
     for(uint8_t round=0; round < rounds; round++){
         msg = add_round_key(msg, round_key[round]);
         msg = sbox(msg);
@@ -253,7 +253,7 @@ void testVectors0(){
     uint64_t key[2];
     key[0] = 0x0UL;
     key[1] = 0x0UL;
-    uint64_t cip = encrypt(msg, key, NO_OF_ROUNDS);
+    uint64_t cip = rectangle_encrypt(msg, key, NO_OF_ROUNDS);
     printf("%016LX \n", cip);
 }
 void testVectors(){
@@ -261,7 +261,7 @@ void testVectors(){
     uint64_t key[2];
     key[0] = 0xffffffffffffffffUL;
     key[1] = 0xffffffffffffffffUL;
-    uint64_t cip = encrypt(msg, key, NO_OF_ROUNDS);
+    uint64_t cip = rectangle_encrypt(msg, key, NO_OF_ROUNDS);
     printf("%016LX \n", cip);
 }
 int main(){
@@ -269,7 +269,7 @@ int main(){
     uint64_t key[2];
     key[0] = 0x0123456789ABCDEFUL;
     key[1] = 0x0123456789ABCDEFUL;
-    uint64_t cip = encrypt(msg, key, NO_OF_ROUNDS);
+    uint64_t cip = rectangle_encrypt(msg, key, NO_OF_ROUNDS);
     printf("%016LX \n", cip);
     testVectors();
     testVectors0();

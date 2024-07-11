@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.rectangle128.rectangle_model import RectangleLongKey
-from autodiver.rectangle128.rectangle_cipher import rectangle_enc_longKey, nibble_to_block, nibble_to_key
+from autodiver.rectangle128.rectangle_cipher import rectangle_enc_long_key, nibble_to_block, nibble_to_key
 from sat_toolkit.formula import CNF
 def test_zero_characteristic():
     numrounds = 4
@@ -31,7 +31,7 @@ def test_zero_characteristic():
 
     for r in range(1, numrounds):
         out = nibble_to_block(sbi[r])
-        ref = rectangle_enc_longKey(pt, round_keys, r)
+        ref = rectangle_enc_long_key(pt, round_keys, r)
         print(f"{r = }")
         print(f'{pt   = :016x}')
         # print(f'{out  = :016x}')
@@ -68,8 +68,8 @@ def test_nonzero_characteristic():
     delta_0 = nibble_to_block(sbi_delta[0])
     for r in range(1, char.num_rounds):
         out = nibble_to_block(sbi[r])
-        ref = rectangle_enc_longKey(pt, round_keys, r)
-        ref_xor = rectangle_enc_longKey(pt ^ delta_0, round_keys, r)
+        ref = rectangle_enc_long_key(pt, round_keys, r)
+        ref_xor = rectangle_enc_long_key(pt ^ delta_0, round_keys, r)
         print(f"{r = }")
         print(f'diff = {out ^ ref:016x}')
         assert out == ref
