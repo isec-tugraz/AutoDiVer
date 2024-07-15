@@ -64,7 +64,9 @@ def test_unique_solution():
         assert(not is_sat)
 
 
-def test_nonzero_characteristic():
+@pytest.mark.parametrize("rounds", [slice(0, 3), slice(3, 5), slice(5, 7), slice(7, 10)])
+def test_nonzero_characteristic(rounds):
+    numrounds = len(range(rounds.start, rounds.stop))
     sbox_in = np.array(bytearray.fromhex(
         "00000000000000000000000000000000"
         "0000bf000000bf00420000b70000bf00"
@@ -76,7 +78,7 @@ def test_nonzero_characteristic():
         "00000000000000000000e60000000000"
         "00000000cd0000000000004900000000"
         "0000000000ac00000000000000000000"
-    )).reshape(10, 4, 4)
+    )).reshape(10, 4, 4)[rounds]
     sbox_out = np.array(bytearray.fromhex(
         "00000000000000000000000000000000"
         "0000cb0000004500cb0000cb0000cb00"
@@ -88,7 +90,7 @@ def test_nonzero_characteristic():
         "00000000000000000000cd0000000000"
         "000000001a000000000000ac00000000"
         "00000000004b00000000000000000000"
-    )).reshape(10, 4, 4)
+    )).reshape(10, 4, 4)[rounds]
     tweakeys = np.array(bytearray.fromhex(
         "00000000000000000000000000000000" "00006f000000dd090096000049490000" "0000d00000006a4b005b0000b3b30000"
         "00000000000000000000000000000000" "2d0000920000920000006f000000dd09" "2d0000d90000d9000000d00000006a4b"
@@ -100,11 +102,11 @@ def test_nonzero_characteristic():
         "00000000000000000000000000000000" "9600000000006c9600004900007e00ed" "5b0000000000255b0000490000fa00ed"
         "00000000000000000000000000000000" "00da00fd920000009600000000006c96" "007600fd240000005b0000000000255b"
         "00000000000000000000000000000000" "002d2d0000d9000000da00fd92000000" "002d2d0000920000007600fd24000000"
-    )).reshape(10, 3, 4, 4)
+    )).reshape(10, 3, 4, 4)[rounds]
 
     char = Skinny128Characteristic(sbox_in, sbox_out, tweakeys)
     cipher = Skinny128(char)
-    numrounds = char.num_rounds
+    assert char.num_rounds == numrounds
     model = cipher.solve(seed=2006)
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
@@ -138,7 +140,10 @@ def test_nonzero_characteristic():
         rtk = update_tweakey(rtk)
 
 
-def test_acns2021_characteristic():
+
+@pytest.mark.parametrize("rounds", [slice(0, 4), slice(4, 8), slice(8, 12), slice(12, 16), slice(15, 17)])
+def test_acns2021_characteristic(rounds):
+    numrounds = len(range(rounds.start, rounds.stop))
     sbox_in = np.array(bytearray.fromhex(
         "00000200002000000800000000000808"
         "00100000000008000000000000001000"
@@ -157,7 +162,7 @@ def test_acns2021_characteristic():
         "00000000000000000000000000000000"
         "00000000000000000000002900000000"
         "00300000000000000030000000300000"
-    )).reshape(-1, 4, 4)
+    )).reshape(-1, 4, 4)[rounds]
     sbox_out = np.array(bytearray.fromhex(
         "00000800009200001800000000001010"
         "00400000000010000000000000004000"
@@ -176,7 +181,7 @@ def test_acns2021_characteristic():
         "00000000000000000000000000000000"
         "00000000000000000000003000000000"
         "00400000000000000040000000400000"
-    )).reshape(-1, 4, 4)
+    )).reshape(-1, 4, 4)[rounds]
     tweakeys = np.array(bytearray.fromhex(
         "0000000000BA00000000000000000000" "00000000004300000000000000000000" "00000000007300000000000000000000"
         "00000000000000000000000000BA0000" "00000000000000000000000000430000" "00000000000000000000000000730000"
@@ -195,12 +200,12 @@ def test_acns2021_characteristic():
         "000000000000BA000000000000000000" "000000000000A7000000000000000000" "00000000000034000000000000000000"
         "0000000000000000000000000000BA00" "0000000000000000000000000000A700" "00000000000000000000000000003400"
         "0000000000ba00000000000000000000" "00000000004e00000000000000000000" "00000000001a00000000000000000000"
-    )).reshape(-1, 3, 4, 4)
+    )).reshape(-1, 3, 4, 4)[rounds]
 
     char = Skinny128Characteristic(sbox_in, sbox_out, tweakeys)
     cipher = Skinny128(char)
 
-    numrounds = char.num_rounds
+    assert char.num_rounds == numrounds
     model = cipher.solve(seed=1159)
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
