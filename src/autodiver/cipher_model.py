@@ -596,7 +596,7 @@ class SboxCipher(IndexSet):
         solver = Solver()
         solver.add_clauses(self.cnf._clauses)
         for xor_clause in self.cnf._xor_clauses:
-            rhs = int(np.prod(np.sign(xor_clause))) < 0
+            rhs = int(np.prod(np.sign(xor_clause))) > 0
             pos_clause = np.abs(xor_clause).tolist()
             solver.add_xor_clause(pos_clause, rhs=rhs)
         log.info(f'solving with CryptoMiniSat #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}')
