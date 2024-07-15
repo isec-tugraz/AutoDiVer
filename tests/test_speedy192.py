@@ -5,8 +5,11 @@ from autodiver.speedy192.speedy_cipher import speedy192_enc
 from autodiver.speedy192.util import Add, prepare_round_keys
 import numpy as np
 import pytest
+from shutil import which
 from sat_toolkit.formula import CNF
 from icecream import ic
+
+
 #0th bit is the LSB
 def print_state(key, s = "state"):
     print(s, end = ": " )
@@ -25,10 +28,14 @@ speedy192_testvectors = [
 speedy192_testvectors = [
     (str_state(pt), str_state(key), str_state(ct_ref)) for pt, key, ct_ref in speedy192_testvectors
 ]
+
+
 @pytest.mark.parametrize("pt,key,ct_ref", speedy192_testvectors)
 def test_tv(pt, key, ct_ref):
     ct = speedy192_enc(pt, key, 7)
     assert np.all(ct == ct_ref)
+
+@pytest.mark.skipif(which("approxmc") is None, reason="approxmc not found")
 def test_zero_characteristic():
     seed("test_speedy192::test_zero_characteristic")
     numrounds = 2
@@ -136,6 +143,7 @@ def test_nonzero_characteristic_sat():
     expected_diff = sbo_delta[2*(numrounds-1) + 1]
     print_state(expected_diff)
     assert np.all(expected_diff == found_diff)
+
 if __name__ == "__main__":
     test_zero_characteristic()
     test_nonzero_characteristic()

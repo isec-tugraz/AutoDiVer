@@ -1,10 +1,18 @@
 from random import randint
 import numpy as np
 import pytest
+from shutil import which
+
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.rectangle128.rectangle_model import RectangleLongKey
 from autodiver.rectangle128.rectangle_cipher import rectangle_enc_long_key, nibble_to_block, nibble_to_key
 from sat_toolkit.formula import CNF
+
+
+approxmc = which("approxmc")
+
+
+@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 16), dtype=np.uint8)

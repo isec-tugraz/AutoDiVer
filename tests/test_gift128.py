@@ -1,10 +1,15 @@
 from random import randint
 import pytest
+from shutil import which
 import numpy as np
+
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.gift128.gift_model import Gift128
 from autodiver.gift128.gift_cipher import gift128_enc
+
 from sat_toolkit.formula import CNF
+
+approxmc = which("approxmc")
 
 
 def print_state(S, state = "s"):
@@ -35,7 +40,7 @@ def test_tv(pt, key, ct_ref):
     print_state(ct, "C")
     assert np.all(ct == ct_ref)
 
-
+@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 2
     sbi = sbo = np.zeros((numrounds, 32), dtype=np.uint8)

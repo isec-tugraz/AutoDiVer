@@ -5,10 +5,12 @@ from autodiver.midori128.midori_cipher import midori128_enc
 from autodiver.midori128.util import sr_mapping, postPermute
 import numpy as np
 import pytest
+from shutil import which
 from sat_toolkit.formula import CNF
 from icecream import ic
 #0th bit is the LSB
 
+approxmc = which("approxmc")
 
 def print_state(key):
     for k in key:
@@ -41,7 +43,7 @@ def nibble_to_byte(key_arr):
     key = np.asarray(key, dtype=np.uint8)
     return key
 
-
+@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     seed("test_midori128::test_zero_characteristic")
     numrounds = 3

@@ -1,12 +1,15 @@
 from random import randint
 import numpy as np
 import pytest
+from shutil import which
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.midori64.midori64_model import Midori64, matrix_as_uint64
 from autodiver.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr
 from sat_toolkit.formula import CNF
 from icecream import ic
 
+
+approxmc = which("approxmc")
 
 ##0th bit is the LSB
 #def nibble_to_block(key_arr):
@@ -36,6 +39,7 @@ def test_tv(pt, key, ct_ref):
     assert ct == ct_ref
 
 
+@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)

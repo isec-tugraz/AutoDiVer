@@ -1,17 +1,24 @@
 from random import randint
 import numpy as np
 import pytest
+from shutil import which
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.warp128.warp128_model import WARP128
 from autodiver.warp128.warp_cipher import warp_enc
 from autodiver.warp128.util import get_round_in_out, perm_nibble_inv
 from sat_toolkit.formula import CNF
 from icecream import ic
+
+approxmc = which("approxmc")
+
+
 def print_state(S, state = "s"):
     print(state, ":", end = " ")
     for s in S:
         print(hex(s)[2:], end = "")
     print("")
+
+
 def Add(A, B):
     assert A.shape == B.shape
     state = []
@@ -19,6 +26,8 @@ def Add(A, B):
         s = A[i] ^ B[i]
         state.append(s)
     return np.asarray(state, np.uint8)
+
+
 def read_hex(s: str) -> np.ndarray:
     a = [int(x, 16) for x in s]
     return np.array(a, dtype=np.uint8)
@@ -27,6 +36,8 @@ testvectors = [
     (read_hex("00112233445566778899AABBCCDDEEFF"), read_hex("0123456789ABCDEFFEDCBA9876543210"), read_hex("923C64F92827EE62B9667DD2548FB12C")),
     (read_hex("AF6CDD90FC5A6EAA897BCD1208D391E1"), read_hex("0ACD022F680A547FEE03C0867B09E3D7"), read_hex("6123995F1924D31425641ACDD058DD46")),
 ]
+
+
 @pytest.mark.parametrize("pt,key,ct_ref", testvectors)
 def test_tv(pt, key, ct_ref):
     print_state(pt, "M")
@@ -35,6 +46,8 @@ def test_tv(pt, key, ct_ref):
     ct = warp_enc(pt, key, 41)
     print_state(ct, "C")
     assert np.all(ct == ct_ref)
+
+@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 3
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
@@ -79,6 +92,8 @@ def test_zero_characteristic():
         assert np.all(round_out == ref)
     num_solutions = count_solutions(warp.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
+
+
 def test_nonzero_characteristic():
     char =  (('0000000000041000', '0000000000022000'),
              ('0020000000000000', '0040000000000000'),
@@ -117,6 +132,8 @@ def test_nonzero_characteristic():
         expected_diff = perm_nibble_inv(read_hex(inds[r]))
         print_state(expected_diff)
         assert np.all(expected_diff == found_diff)
+
+
 if __name__ == "__main__":
     test_zero_characteristic()
     test_nonzero_characteristic()

@@ -5,7 +5,13 @@ import numpy as np
 from autodiver.ascon.ascon_model import Ascon, AsconCharacteristic
 from autodiver.cipher_model import count_solutions
 from autodiver.ascon.pyascon import ascon_permutation
+from shutil import which
+
+import pytest
 from icecream import ic
+
+
+approxmc = which("approxmc")
 
 
 def rotr(val: np.uint64, r: int):
@@ -57,6 +63,7 @@ def ascon_sbox(sbi: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[Any, np.
     return S
 
 
+@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 5
     sbi = sbo = np.zeros((numrounds, 5), dtype=np.uint64)
