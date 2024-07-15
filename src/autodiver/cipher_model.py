@@ -30,6 +30,8 @@ from .util import IndexSet, Model, fmt_log2
 
 log = logging.getLogger(__name__)
 
+class UnsatException(Exception):
+    pass
 
 @dataclass
 class CountResult:
@@ -207,11 +209,12 @@ class SboxCipher(IndexSet):
     key: np.ndarray[Any, np.dtype[np.int32]]
     pt: np.ndarray[Any, np.dtype[np.int32]]
     tweak: np.ndarray[Any, np.dtype[np.int32]]
+    sbox_assumptions: np.ndarray[Any, np.dtype[np.int32]]
     cnf: CNF
     model_type: Literal['solution_set', 'split_solution_set']
     _cnf_cache: dict[bytes, CNF] = {}
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: Literal['solution_set', 'split_solution_set'] = 'solution_set'):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: Literal['solution_set', 'split_solution_set'] = 'solution_set', model_sbox_assumptions: bool = False):
         super().__init__()
         if model_type not in ('solution_set', 'split_solution_set'):
             raise ValueError(f'unknown model_type {model_type}')
@@ -219,6 +222,8 @@ class SboxCipher(IndexSet):
         self.num_rounds = char.num_rounds
         self.cnf = XorCNF()
         self.model_type = model_type
+        self.model_sbox_assumptions = model_sbox_assumptions
+        self.__model_sboxes_called = False
 
     @classmethod
     def _lut_to_cnf(cls, lut: np.ndarray) -> CNF:
@@ -284,39 +289,76 @@ class SboxCipher(IndexSet):
         return self._get_cnf(self.sbox, x_set, model_type=self.model_type)
 
     def _model_sboxes(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
+        if self.__model_sboxes_called:
+            raise ValueError('model_sboxes can only be called once')
+        self.__model_sboxes_called = True
+
         sbox_in = sbox_in if sbox_in is not None else self.sbox_in
         sbox_out = sbox_out if sbox_out is not None else self.sbox_out
-        inp = sbox_in.reshape(-1, self.sbox_bits)
-        out = sbox_out.reshape(-1, self.sbox_bits)
+
+        assert sbox_in.shape[1:] == sbox_out.shape[1:]
+
+        # support using sbox_in[r+1] as ciphertext variables
+        assert sbox_in.shape[0] == sbox_out.shape[0] or self.sbox_in.shape[0] == self.sbox_out.shape[0] + 1
+
+        inp_vars = sbox_in.reshape(-1, self.sbox_bits)
+        out_vars = sbox_out.reshape(-1, self.sbox_bits)
+
         delta_in = self.char.sbox_in.reshape(-1)
         delta_out = self.char.sbox_out.reshape(-1)
-        # print(f'{inp.shape = }', f'{out.shape}')
-        # print(f'{delta_in.shape = }', f'{delta_out.shape}')
-        self._actual_sbox_in = inp.copy()
-        self._actual_sbox_out = out.copy()
+
+        self._actual_sbox_in = inp_vars.copy()
+        self._actual_sbox_out = out_vars.copy()
+
         self._fieldnames.add('_actual_sbox_in')
         self._fieldnames.add('_actual_sbox_out')
+
+        if self.model_sbox_assumptions:
+            self.add_index_array("sbox_assumptions", sbox_out.shape[:-1])
+        else:
+            self.add_index_array("sbox_assumptions", (0,))
+
         sbox_cnf = CNF()
-        for inp, out, delta_in, delta_out in zip(inp, out, delta_in, delta_out):
+        print(f'inp_vars: {sbox_in.shape}, out_vars: {sbox_out.shape}, delta_in: {self.char.sbox_in.shape}, delta_out: {self.char.sbox_out.shape}, assumptions: {self.sbox_assumptions.shape}')
+
+        for idx in range(delta_out.shape[0]):
+            inp, out = inp_vars[idx], out_vars[idx]
+            d_in, d_out = delta_in[idx], delta_out[idx]
+
             mapping = np.concatenate((np.array([0], dtype=np.int32), inp, out))
-            cnf = self._get_sbox_cnf(delta_in, delta_out).translate(mapping)
+            cnf = self._get_sbox_cnf(d_in, d_out).translate(mapping)
+
+            if self.model_sbox_assumptions:
+                assumption = self.sbox_assumptions.ravel()[idx]
+                cnf = cnf.implied_by(assumption)
+
             sbox_cnf += cnf
         self.cnf += sbox_cnf
 
     def _model_linear_layer(self):
         raise NotImplementedError("this should be implemented by subclasses")
 
-    def _solve(self, cnf: CNF=None, *, log_result: bool=True, seed: int|None=None):
+    def _solve(self, cnf: CNF=None, *, log_result: bool=True, seed: int|None=None, assumptions: np.ndarray|None=None):
+        if assumptions is None:
+            assumptions = self.sbox_assumptions
+
         seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
         cnf = cnf if cnf is not None else self.cnf
-        if log_result:
-            log.info(f'solving with {args} #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
-        is_sat, model = cnf.solve_dimacs(args)
+        with tempfile.NamedTemporaryFile(mode='w', prefix='assumptions', suffix='.txt') as f:
+            f.write("\n".join(str(x) for x in assumptions.ravel()))
+            f.flush()
+
+            args += ['--assump', f.name]
+
+            if log_result:
+                log.info(f'solving with {args} #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}, #Assumptions: {assumptions.size}')
+            is_sat, model = cnf.solve_dimacs(args)
+
         if not is_sat:
             if log_result:
                 log.info('RESULT cnf is UNSAT')
-            raise ValueError('cnf is UNSAT')
+            raise UnsatException('cnf is UNSAT')
         if log_result:
             log.info('RESULT cnf is SAT')
         return list(model)
@@ -335,7 +377,12 @@ class SboxCipher(IndexSet):
         start_time = time.monotonic()
         if seed is None:
             seed = int.from_bytes(os.urandom(4), 'little')
-        raw_model = self._solve(seed=seed)
+        try:
+            raw_model = self._solve(seed=seed)
+        except UnsatException:
+            self.log_result(solve_result={'status': 'UNSAT'})
+            raise
+
         end_time = time.monotonic()
         raw_model[0] = False
         raw_model = np.array(raw_model, dtype=np.uint8)
@@ -344,6 +391,7 @@ class SboxCipher(IndexSet):
         tweak_str = self._fmt_arr(model.tweak, self.tweak.shape[-1]) # type: ignore
         pt_str = self._fmt_arr(model.pt, self.pt.shape[-1]) # type: ignore
         solve_result = {
+            'status': 'SAT',
             'key': key_str,
             'tweak': tweak_str,
             'pt': pt_str,
@@ -353,6 +401,49 @@ class SboxCipher(IndexSet):
         self.log_result(solve_result=solve_result)
         log.info(f'RESULT key={key_str}, tweak={tweak_str}, pt={pt_str}')
         return model
+
+    def find_conflict(self) -> np.ndarray[Any, np.dtype[np.int32]]:
+        if not self.model_sbox_assumptions:
+            raise ValueError('model_sbox_assumptions must be True to find conflicts')
+
+        solver = Solver()
+        solver.add_clauses(self.cnf._clauses)
+        for xor_clause in self.cnf._xor_clauses:
+            rhs = int(np.prod(np.sign(xor_clause))) > 0
+            pos_clause = np.abs(xor_clause).tolist()
+            solver.add_xor_clause(pos_clause, rhs=rhs)
+
+        assumptions_list = self.sbox_assumptions.ravel().tolist()
+        log.info(f'solving CNF with #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}, #Assumptions: {len(assumptions_list)}')
+
+        start_time = time.monotonic()
+        is_sat, raw_model = solver.solve(assumptions_list)
+        end_time = time.monotonic()
+        if is_sat:
+            log.info('RESULT cnf is satisfiable, no conflict')
+
+            raw_model = list(raw_model)
+            raw_model[0] = False
+            raw_model = np.array(raw_model, dtype=np.uint8)
+            model = self.get_model(raw_model)
+            key_str = self._fmt_arr(model.key, self.key.shape[-1]) # type: ignore
+            tweak_str = self._fmt_arr(model.tweak, self.tweak.shape[-1]) # type: ignore
+            pt_str = self._fmt_arr(model.pt, self.pt.shape[-1]) # type: ignore
+            solve_result = {
+                'status': 'SAT',
+                'key': key_str,
+                'tweak': tweak_str,
+                'pt': pt_str,
+                'time': end_time - start_time,
+            }
+            self.log_result(solve_result=solve_result)
+            log.info(f'RESULT key={key_str}, tweak={tweak_str}, pt={pt_str}')
+
+            return np.array([], dtype=np.int32)
+
+        conflict = np.array(solver.get_conflict(), dtype=np.int32)
+        log.info(f'RESULT conflict: {self.format_clause(conflict)}')
+        return conflict
 
     def _fmt_tweak_or_key(self, key_bits: np.ndarray):
         if self.key.shape[-1] == 4:
@@ -609,7 +700,7 @@ class SboxCipher(IndexSet):
         pbar = tqdm(range(trials))
         for i in pbar:
             sampling_new = [x * (-1)**random.randint(0, 1) for x in sampling_set_list]
-            is_sat, _ = solver.solve(sampling_new)
+            is_sat, _ = solver.solve(self.sbox_assumptions.ravel().tolist() + sampling_new)
             count_sat += is_sat
             count_unsat += not is_sat
             if time.monotonic() - prev_keys_update >= 0.1:

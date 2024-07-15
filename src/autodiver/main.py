@@ -12,7 +12,7 @@ import numpy as np
 from IPython import start_ipython
 
 from .import version
-from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic
+from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic, UnsatException
 from .gift64.gift_model import Gift64
 from .gift128.gift_model import Gift128
 from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey
@@ -40,11 +40,19 @@ def parse_slice(s: str) -> slice:
     start = int(start) if start else None
     stop = int(stop) if stop else None
     return slice(start, stop)
+
 def FilePath(path: str) -> Path:
     p = Path(path)
     if not p.is_file():
         raise argparse.ArgumentTypeError(f"{path!r} is not a file")
     return p
+
+def solve_cipher_interactive(cipher: SboxCipher):
+    try:
+        cipher.solve()
+    except UnsatException:
+        pass
+
 def main():
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
         "warp": (WARP128, DifferentialCharacteristic),
@@ -77,7 +85,8 @@ def main():
         'count-prob-fixed-tweakey': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True, fixed_key=True),
         'count-prob-fixed-pt': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True),
         'count-prob-fixed-pt-and-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True, fixed_tweak=True),
-        'solve': lambda cipher, _args: cipher.solve(),
+        'solve': lambda cipher, _args: solve_cipher_interactive(cipher),
+        'find-conflict': lambda cipher, _args: cipher.find_conflict(),
     }
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('cipher', choices=ciphers.keys())
@@ -86,10 +95,16 @@ def main():
     parser.add_argument('--epsilon', type=float, default=0.8)
     parser.add_argument('--delta', type=float, default=0.2)
     parser.add_argument('--cnf', type=str, help="file to save CNF in DIMACS format")
+    parser.add_argument('--sbox-assumptions', action='store_true', help="add assumption variables for all S-boxes")
     parser.add_argument('--embed', action='store_true', help="launch IPython shell after executing command")
     parser.add_argument('commands', choices=commands.keys(), nargs=1, help="command to execute")
     args = parser.parse_args()
     setup_logging(args.trail.with_suffix('.jsonl'))
+
+    if 'find-conflict' in args.commands and not args.sbox_assumptions:
+        log.warning("command 'find-conflict' requires --sbox-assumptions, adding it automatically")
+        args.sbox_assumptions = True
+
     git_cmd = shutil.which('git')
     git_commit = git_cmd and sp.check_output([git_cmd, 'rev-parse', 'HEAD']).decode().strip()
     git_changed_files = git_cmd and sp.check_output([git_cmd, 'status', '--porcelain', '-uno', '-z']).decode().strip('\0').split('\0')
@@ -105,7 +120,7 @@ def main():
         log.error(e)
         return 1
     log.info(f"loaded characteristic with {char.num_rounds} rounds from {args.trail}")
-    cipher = Cipher(char)
+    cipher = Cipher(char, model_sbox_assumptions=args.sbox_assumptions)
     ddt_prob = char.log2_ddt_probability(Cipher.ddt)
     log.info(f"ddt probability: 2**{ddt_prob:.1f}")
     log.info(f"generated {cipher.cnf!r}")
