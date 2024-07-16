@@ -1,6 +1,6 @@
 from random import seed, randint
 
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
+from autodiver.cipher_model import DifferentialCharacteristic, count_solutions, UnsatException
 from autodiver.speedy192.speedy192_model import Speedy192
 from autodiver.speedy192.speedy_cipher import speedy192_enc
 
@@ -116,8 +116,8 @@ def test_nonzero_characteristic():
 
     print(f'ddt probability: 2^{char.log2_ddt_probability(speedy.ddt):.1f}')
 
-    with pytest.raises(ValueError):
-        model = speedy.solve(seed=5612)
+    with pytest.raises(UnsatException):
+        model = speedy.solve(seed=1)
 
 def test_nonzero_characteristic_sat():
     char =( ((0x28,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00),
@@ -150,7 +150,7 @@ def test_nonzero_characteristic_sat():
 
     print(f'ddt probability: 2^{char.log2_ddt_probability(speedy.ddt):.1f}')
 
-    model = speedy.solve(seed=8291)
+    model = speedy.solve(seed=1)
     key = model.key[0] # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
@@ -179,10 +179,3 @@ def test_nonzero_characteristic_sat():
     expected_diff = sbo_delta[2*(numrounds-1) + 1]
     print_state(expected_diff)
     assert np.all(expected_diff == found_diff)
-
-
-
-if __name__ == "__main__":
-    test_zero_characteristic()
-    test_nonzero_characteristic()
-    test_nonzero_characteristic_sat()
