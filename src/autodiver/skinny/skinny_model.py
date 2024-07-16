@@ -213,31 +213,6 @@ class SkinnyBase(SboxCipher):
 
             self.cnf += lin_layer_cnf
 
-    @staticmethod
-    def _get_cnf(delta_in: int, delta_out: int, cellsize) -> CNF:
-        if delta_in == delta_out == 0:
-            return sbox_cnfs[cellsize]
-
-        sbox = sboxes[cellsize]
-        in_vals = get_solution_set(sbox, delta_in, delta_out)
-
-        dnf = Truthtable.from_indices(2 * cellsize, (sbox[in_vals].astype(np.uint16) << 0) | (in_vals.astype(np.uint16) << cellsize))
-        cnf = dnf.to_cnf()
-        return cnf
-
-
-    def _model_sboxes(self):
-        for rnd in range(self.numrounds):
-            for row, col in product(range(4), range(4)):
-                sbox_in = self._sbox_in[rnd, row, col]
-                sbox_out = self._sbox_out[rnd, row, col]
-
-                cnf = self._get_cnf(sbox_in, sbox_out, self.sbox_bits)
-
-                variables = [0] + self.sbox_out[rnd, row, col].tolist() + self.sbox_in[rnd, row, col].tolist()
-
-                self.cnf += cnf.translate(variables)
-
     def get_rtk_value(self, m: Model, rnd: int):
         return np.array([rtk.get_value(m) for rtk in self.round_tweakeys[rnd]])
 
