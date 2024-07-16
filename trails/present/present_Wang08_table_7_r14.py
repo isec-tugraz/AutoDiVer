@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     # sbox_in[14, [0, 8]] = 0
     print(np.where(ddt[sbox_in, sbox_out] == 0))
-    
+
     prob = np.log2(ddt[sbox_in, sbox_out] / 16).sum()
     print(f"probability: 2^{prob:.1f}")
 

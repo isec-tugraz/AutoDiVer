@@ -46,7 +46,7 @@ uint64_t sbox(uint64_t msg){
         row[1] |= ((col[j]>>1)&1)<<j;
         row[0] |= ((col[j]>>0)&1)<<j;
     }
-    
+
     msg = 0UL;
     for (int8_t i=3; i>=0; i--){
         msg = (msg<<16) | (row[i]&0xffff);
@@ -62,10 +62,10 @@ uint64_t sbox(uint64_t msg){
 
 
 /* left shift within 16-bit only */
-uint32_t circ_left_shift32(uint32_t x, int pos){    
+uint32_t circ_left_shift32(uint32_t x, int pos){
     return ((x<<pos)|(x>>(32-pos)));
-}    
-uint16_t circ_left_shift16(uint16_t x, int pos){    
+}
+uint16_t circ_left_shift16(uint16_t x, int pos){
     return ((x<<pos)|(x>>(16-pos)));
 }
 uint64_t shift_row(uint64_t msg){
@@ -74,9 +74,9 @@ uint64_t shift_row(uint64_t msg){
         row[i] = (msg >> (16*i)) & 0xffff;
     }
 
-    row[1] = circ_left_shift16(row[1], 1);    
-    row[2] = circ_left_shift16(row[2], 12);    
-    row[3] = circ_left_shift16(row[3], 13);    
+    row[1] = circ_left_shift16(row[1], 1);
+    row[2] = circ_left_shift16(row[2], 12);
+    row[3] = circ_left_shift16(row[3], 13);
 
     msg = 0UL;
     for (int8_t i=3; i>=0; i--){
@@ -112,7 +112,7 @@ void ksp(uint64_t *round_key, uint64_t *key){
 
     for (uint8_t round=0; round<NO_OF_ROUNDS; round++){
         round_key[round] = extract_round_key(key);
-        
+
         uint32_t row[4];
         row[0] =   key[0]      & 0xffffffff;
         row[1] =  (key[0]>>32) & 0xffffffff;
@@ -146,7 +146,7 @@ void ksp(uint64_t *round_key, uint64_t *key){
         new_row[2] = circ_left_shift32(row[2], 16)^row[3];
         new_row[3] = row[0];
 
-        
+
         /* xoring the rc val */
         new_row[0] ^= rc[round]&0x1f;
 
@@ -174,7 +174,7 @@ void ksp(uint64_t *round_key, uint64_t *key){
 }
 
 
-uint64_t add_round_key(uint64_t msg, uint64_t rkey){	
+uint64_t add_round_key(uint64_t msg, uint64_t rkey){
     return (msg ^ rkey);
 }
 
@@ -221,7 +221,7 @@ void nibbleToKey(uint8_t *arr, uint64_t *key){
     for (int i=31; i>=0; i--) {
         for (int j=3; j>=0; j--) {
             S[j] = (S[j] << 1) | ((arr[i] >> j) & 0x1);
-        } 
+        }
     }
     key[0] = S[0] | (S[1] << 32);
     key[1] = S[2] | (S[3] << 32);
@@ -232,7 +232,7 @@ uint64_t nibbleToState(uint8_t *arr){
     for (int i=15; i>=0; i--) {
         for (int j=3; j>=0; j--) {
             S[j] = (S[j] << 1) | ((arr[i] >> j) & 0x1);
-        } 
+        }
     }
     for (int i=3; i>=0; i--) {
         state = (state << 16) | S[i];

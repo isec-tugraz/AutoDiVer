@@ -2,10 +2,12 @@
 #
 # Ascon v1.2 implemention by Maria Eichlseder (https://github.com/meichlseder/pyascon)
 # Licensed under CC0 1.0 Universal.
+
 """
 Implementation of Ascon v1.2, an authenticated cipher and hash function
 http://ascon.iaik.tugraz.at/
 """
+
 debug = False
 debugpermutation = False
 

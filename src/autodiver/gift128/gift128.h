@@ -17,6 +17,7 @@
 //SKINY
 const uint8_t sbox[16] = {12, 6, 9, 0, 1, 10, 2, 11, 3, 8, 5, 13, 4, 14, 7, 15};
 const uint8_t invsbox[16] = {3, 4, 6, 8, 12, 10, 1, 14, 9, 2, 5, 7, 0, 11, 13, 15};
+
 //bit permutation
 const uint8_t PermBits[128] = {0, 33, 66, 99, 96, 1, 34, 67, 64, 97, 2, 35, 32, 65, 98, 3, 4, 37, 70, 103, 100, 5, 38, 71, 68, 101, 6, 39, 36, 69, 102, 7, 8, 41, 74, 107, 104, 9, 42, 75, 72, 105, 10, 43, 40, 73, 106, 11, 12, 45, 78, 111, 108, 13, 46, 79, 76, 109, 14, 47, 44, 77, 110, 15, 16, 49, 82, 115, 112, 17, 50, 83, 80, 113, 18, 51, 48, 81, 114, 19, 20, 53, 86, 119, 116, 21, 54, 87, 84, 117, 22, 55, 52, 85, 118, 23, 24, 57, 90, 123, 120, 25, 58, 91, 88, 121, 26, 59, 56, 89, 122, 27, 28, 61, 94, 127, 124, 29, 62, 95, 92, 125, 30, 63, 60, 93, 126, 31};
 const uint8_t PermBitsInv[128] = {0, 5, 10, 15, 16, 21, 26, 31, 32, 37, 42, 47, 48, 53, 58, 63, 64, 69, 74, 79, 80, 85, 90, 95, 96, 101, 106, 111, 112, 117, 122, 127, 12, 1, 6, 11, 28, 17, 22, 27, 44, 33, 38, 43, 60, 49, 54, 59, 76, 65, 70, 75, 92, 81, 86, 91, 108, 97, 102, 107, 124, 113, 118, 123, 8, 13, 2, 7, 24, 29, 18, 23, 40, 45, 34, 39, 56, 61, 50, 55, 72, 77, 66, 71, 88, 93, 82, 87, 104, 109, 98, 103, 120, 125, 114, 119, 4, 9, 14, 3, 20, 25, 30, 19, 36, 41, 46, 35, 52, 57, 62, 51, 68, 73, 78, 67, 84, 89, 94, 83, 100, 105, 110, 99, 116, 121, 126, 115};
@@ -30,13 +31,18 @@ const unsigned char rc[62] = {
     0x26, 0x0c, 0x19, 0x32, 0x25, 0x0a, 0x15, 0x2a, 0x14, 0x28,
     0x10, 0x20
 };
+
 void Display_state_nibble(uint8_t *state){
+
   for(int i = 0; i < 32; i++){
     printf("%x", state[32 - i - 1]);
   }
   printf("\n");
+
 }
+
 void Display_state_bit(uint8_t *state){
+
   printf(" ");
   for(int i = 0; i < 32; i++){
     for(int j = 0; j < 4; j++){
@@ -192,13 +198,16 @@ int dual_enc_bit(int rounds, uint8_t *state1, uint8_t *state2, uint8_t *key, int
         PLayer(state1);
         addRc(state1, r);
         addRk(state1, key);
+
         SBox(state2);
         PLayer(state2);
         addRc(state2, r);
+
         uint8_t temp[32];
         memcpy(temp, state2, 32);
         addRk(state2, key);
         xor_sum_32(temp, state2, rks[r]);
+
         Key_update(key);
         if(r == fr){
             f_bit_index = rand64() % 128;
@@ -228,13 +237,16 @@ int dual_enc_nibble(int rounds, uint8_t *state1, uint8_t *state2, uint8_t *key, 
         PLayer(state1);
         addRc(state1, r);
         addRk(state1, key);
+
         SBox(state2);
         PLayer(state2);
         addRc(state2, r);
+
         uint8_t temp[32];
         memcpy(temp, state2, 32);
         addRk(state2, key);
         xor_sum_32(temp, state2, rks[r]);
+
         Key_update(key);
         if(r == fr){
             f_nibble_index = rand64() % 32;
@@ -266,23 +278,30 @@ int dual_enc_byte(int rounds, uint8_t *state1, uint8_t *state2, uint8_t *key, in
         PLayer(state1);
         addRc(state1, r);
         addRk(state1, key);
+
         SBox(state2);
         PLayer(state2);
         addRc(state2, r);
+
         uint8_t temp[32];
         memcpy(temp, state2, 32);
         addRk(state2, key);
         xor_sum_32(temp, state2, rks[r]);
+
         Key_update(key);
+
         if(r == fr){
             f_bit_index = rand64() % 56;
             offset = rand64() % 2;
+
             fault_value = rand64() & 0x00000000000000FFUL;
             while(fault_value == 0){
                 fault_value = rand64() & 0x00000000000000FFUL;
             }
+
             printf("%d %d %016LX \n", f_bit_index, offset, fault_value);
             fault_value = fault_value << f_bit_index;
+
             memset(fault_state, 0x00, 32);
             if(offset > 0){
                 offset = 16;
@@ -304,33 +323,41 @@ int dual_enc_byte(int rounds, uint8_t *state1, uint8_t *state2, uint8_t *key, in
 uint16_t circ_left_shift(uint16_t x,int pos){
     return ((((x<<pos)&0xffff)|((x>>(16-pos))&0xffff))&0xffff);
     }
+
 void new_inv_key_schedule(uint8_t *k39, uint8_t *k38, uint8_t *k37, uint8_t *k36){
     uint32_t u1 = 0UL,
              v1 = 0UL,
              u2 = 0UL,
              v2 = 0UL;
+
     /* constructing u,v of 32 bits */
     for(int8_t i=0;i<32;i++){
         u1 = ((u1<<1)|((k39[31-i] >> 2)&0x1));
         v1 = ((v1<<1)|((k39[31-i] >> 1)&0x1));
+
         u2 = ((u2<<1)|((k38[31-i] >> 2)&0x1));
         v2 = ((v2<<1)|((k38[31-i] >> 1)&0x1));
         }
+
     /* forming k[] w.r.to second last round */
     uint16_t k[8];
     k[0] = (v2&0xffff);
     k[1] = ((v2>>16)&0xffff);
     k[4] = (u2&0xffff);
     k[5] = ((u2>>16)&0xffff);
+
     k[2] = (v1&0xffff);
     k[3] = ((v1>>16)&0xffff);
     k[6] = (u1&0xffff);
     k[7] = ((u1>>16)&0xffff);
+
+
     uint16_t prev_k[8] = {0};
     prev_k[0] = circ_left_shift(k[6],12);
     prev_k[1] = circ_left_shift(k[7],2);
     prev_k[4] = k[2];
     prev_k[5] = k[3];
+
     prev_k[2] = circ_left_shift(k[4],12);
     prev_k[3] = circ_left_shift(k[5],2);
     prev_k[6] = k[0];
@@ -341,6 +368,7 @@ void new_inv_key_schedule(uint8_t *k39, uint8_t *k38, uint8_t *k37, uint8_t *k36
     prev_u = (prev_k[5]<<16)|prev_k[4];
     /* storing the third last round key */    for(int i=0;i<32;i++){
         k37[i] = (((prev_u>>i)&1) << 2)|(((prev_v>>i)&1) << 1);        }
+
     /* to retrieve the fourth last round key */    prev_v = (prev_k[3]<<16)|prev_k[2];
     prev_u = (prev_k[7]<<16)|prev_k[6];
     /* storing the fourth last round key */    for(int i=0;i<32;i++){
@@ -352,28 +380,35 @@ void inv_master_key_schedule(uint8_t *k39, uint8_t *k38, uint8_t *k0){
                  v1 = 0UL,
                  u2 = 0UL,
                  v2 = 0UL;
+
         /* constructing u,v of 32 bits */
         for(int8_t i=0;i<32;i++){
             u1 = ((u1<<1)|((k39[31-i] >> 2)&0x1));
             v1 = ((v1<<1)|((k39[31-i] >> 1)&0x1));
+
             u2 = ((u2<<1)|((k38[31-i] >> 2)&0x1));
             v2 = ((v2<<1)|((k38[31-i] >> 1)&0x1));
             }
+
         /* forming k[] w.r.to second last round */
         uint16_t k[8];
         k[0] = (v2&0xffff);
         k[1] = ((v2>>16)&0xffff);
         k[4] = (u2&0xffff);
         k[5] = ((u2>>16)&0xffff);
+
         k[2] = (v1&0xffff);
         k[3] = ((v1>>16)&0xffff);
         k[6] = (u1&0xffff);
         k[7] = ((u1>>16)&0xffff);
+
+
         uint16_t prev_k[8] = {0};
         prev_k[0] = circ_left_shift(k[6],12);
         prev_k[1] = circ_left_shift(k[7],2);
         prev_k[4] = k[2];
         prev_k[5] = k[3];
+
         prev_k[2] = circ_left_shift(k[4],12);
         prev_k[3] = circ_left_shift(k[5],2);
         prev_k[6] = k[0];

@@ -2,12 +2,16 @@
 """
 Efficient Methods to Search for Best Differential Characteristics on SKINNY
 Stephanie Delaune, Patrick Derbez, Paul Huynh, Marine Minier, Victor Mollimard, and Charles Prud’homme
+
 Table 12. The Best TK3 differential characteristics we found on 17 rounds of
 SKINNY-128 with probability equal to 2^-110.
+
 https://doi.org/10.1007/978-3-030-78375-4_8
 """
+
 from pathlib import Path
 import numpy as np
+
 def state2tex(S, nb=1):
     res = ""
     for row in range(4):
@@ -15,6 +19,7 @@ def state2tex(S, nb=1):
             if S[row][col]:
                 res += r"\Cell{ss" + str(row) + str(col) + "}{" + hex(S[row][col])[2:].zfill(nb) + "}"
     return res
+
 if __name__ == '__main__':
     sbox_in = np.array(bytearray.fromhex(
         "00000200002000000800000000000808"
@@ -35,6 +40,7 @@ if __name__ == '__main__':
         "00000000000000000000002900000000"
         "00300000000000000030000000300000"
     )).reshape(17, 4, 4)
+
     sbox_out = np.array(bytearray.fromhex(
         "00000800009200001800000000001010"
         "00400000000010000000000000004000"
@@ -54,6 +60,7 @@ if __name__ == '__main__':
         "00000000000000000000003000000000"
         "00400000000000000040000000400000"
     )).reshape(17, 4, 4)
+
     tweakeys = np.array(bytearray.fromhex(
         "0000000000BA00000000000000000000" "00000000004300000000000000000000" "00000000007300000000000000000000"
         "00000000000000000000000000BA0000" "00000000000000000000000000430000" "00000000000000000000000000730000"
@@ -73,16 +80,19 @@ if __name__ == '__main__':
         "0000000000000000000000000000BA00" "0000000000000000000000000000A700" "00000000000000000000000000003400"
         "0000000000ba00000000000000000000" "00000000004e00000000000000000000" "00000000001a00000000000000000000"
     )).reshape(17, 3, 4, 4)
+
     for r, (si, so, tk) in enumerate(zip(sbox_in, sbox_out, tweakeys)):
         if r:
             print(r"    \SkinnyNewLine{" + state2tex(si, 2) + "}")
         else:
             print(r"    \SkinnyInit{}{}{}{}")
+
         S1 = si # sbox_in
         S2 = [[(tk[0][row][col] ^ tk[1][row][col] ^ tk[2][row][col] if row < 2 else 0) for col in range(4)] for row in range(4)]  # round subtweakey
         S3 = so # sbox_out
         S4 = [[S3[row][col] ^ S2[row][col] for col in range(4)] for row in range(4)] # AK(S3, S2)
         S5 = [[S4[row][(col-row)%4] for col in range(4)] for row in range(4)] # SR(S4)
+
         print(r"    \SkinnyRoundTK{" + state2tex(S1, 2) + r"}")
         print(r"                  {" + state2tex(S2, 2) + r"}{}{}")
         print(r"                  {" + state2tex(S3, 2) + r"}")

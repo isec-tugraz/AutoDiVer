@@ -14,7 +14,6 @@ def perm_nibble_16(state):
         state[i] = temp[2*i + 1]
     return state
 
-
 def perm_nibble_16_inv(state):
     state1 = [0 for i in range(32)]
     for i in range(16):
@@ -28,12 +27,13 @@ def perm_nibble_16_inv(state):
         state[i] = temp[2*i + 1]
     return state
 
-if __name__ == '__main__':
-    state = [2*i for i in range(16)]
-    print(state)
-    state = perm_nibble_16(state)
-    print(state)
-    state = [2*i for i in range(16)]
-    print(state)
-    state = perm_nibble_16_inv(state)
-    print(state)
+state = [2*i for i in range(16)]
+print(state)
+state = perm_nibble_16(state)
+print(state)
+
+state = [2*i for i in range(16)]
+print(state)
+state = perm_nibble_16_inv(state)
+print(state)
+

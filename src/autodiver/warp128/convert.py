@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 from __future__ import annotations
+
 import numpy as np
 import argparse
 from typing import Literal
 from  util import DDT, RC, perm_nibble_inv, perm_nibble_16, perm_nibble_16_inv, perm_nibble
 from  util import get_round_in_out
 
-
 def print_state(S):
     for s in S:
         print(hex(s)[2:], end = "")
     print("")
-
 
 def check_L_R(L, R):
     print(" " )
@@ -23,7 +22,6 @@ def check_L_R(L, R):
         a = perm_nibble_16(a)
         print_state(a)
         assert np.all(a == b)
-
 
 def get_sout(L, R):
     sin = np.empty((len(L)-1, 16), dtype=np.uint8)
@@ -38,7 +36,6 @@ def get_sout(L, R):
             sout[i][j] = a[j] ^ b[j]
     return sin, sout
 
-
 def get_sbox_in_out(inds):
     inds_d = inds.shape
     L = np.empty((inds_d[0], 16), dtype=np.uint8)
@@ -48,6 +45,7 @@ def get_sbox_in_out(inds):
         for j in range(16):
             L[i][j] = ind[2*j]
             R[i][j] = ind[2*j + 1]
+
         print_state(inds[i])
         print_state(L[i])
         print_state(R[i])
@@ -61,14 +59,15 @@ def get_sbox_in_out(inds):
         print_state(sout[i])
     print_state(X)
     print_state(Y)
-    return sin, sout, X, Y
 
+    return sin, sout, X, Y
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('filename')
     parser.add_argument('output', default=None)
     args = parser.parse_args()
+
     res = []
     with open(args.filename, 'r') as f:
         for line in f:
@@ -78,20 +77,25 @@ if __name__ == '__main__':
             ints = [int(x, 16) for x in line]
             # ints.reverse()
             res.append(ints)
+
     inds = np.array(res, dtype=np.uint8)
     print(inds)
     sbox_in, sbox_out, X, Y = get_sbox_in_out(inds)
     assert sbox_in.shape == sbox_out.shape
+
     sbox_in_or  = sbox_in.copy()
     sbox_out_or = sbox_out.copy()
+
     for inp, out in zip(sbox_in, sbox_out, strict=True):
         print(DDT[inp, out])
     ddt_prob = np.log2(DDT[sbox_in, sbox_out] / 16).sum()
     print(f"ddt probability: 2**{ddt_prob:.1f}")
+
     for inp, out in zip(sbox_in, sbox_out, strict=True):
         print(''.join(f'{x:x}' for x in inp)[::])
         print(''.join(f'{x:x}' for x in out)[::])
         print()
+
     char = []
     for inp, out in zip(sbox_in, sbox_out, strict=True):
         s = []
@@ -102,11 +106,13 @@ if __name__ == '__main__':
     print('char = ', tuple(char))
     print('X = ', ''.join(f'{x:x}' for x in X)[::])
     print('Y = ', ''.join(f'{x:x}' for x in Y)[::])
+
     indds = []
     for ind in inds:
         s = ''.join(f'{x:x}' for x in ind)[::]
         indds.append(s)
     print('inds = ', tuple(indds))
+
     if args.output:
         with open(args.output, 'w') as f:
             for inp, out in zip(sbox_in, sbox_out, strict=True):

@@ -3,21 +3,25 @@
 **********************************************/
 #include <stdio.h>
 #include <stdint.h>
+
 #define R 41    /*round number*/
 #define RN    6    /*rotation number*/
 #define BR    32  /*brunch number*/
 #define BR_HALF    (BR / 2)  /*half of the branch number*/
 #define PRINT_INTER 0
+
 int Sbox[BR_HALF] = { 0xc, 0xa, 0xd, 0x3, 0xe, 0xb, 0xf, 0x7, 0x8, 0x9, 0x1, 0x5, 0x0, 0x2, 0x4, 0x6 };
 int perm[BR] = { 31, 6, 29, 14, 1, 12, 21, 8, 27, 2, 3, 0, 25, 4, 23, 10, 15, 22, 13, 30, 17, 28, 5, 24, 11, 18, 19, 16, 9, 20, 7, 26, };
 int RC0[R] = { 0x0U, 0x0U, 0x1U, 0x3U, 0x7U, 0xfU, 0xfU, 0xfU, 0xeU, 0xdU, 0xaU, 0x5U, 0xaU, 0x5U, 0xbU, 0x6U, 0xcU, 0x9U, 0x3U, 0x6U, 0xdU, 0xbU, 0x7U, 0xeU, 0xdU, 0xbU, 0x6U, 0xdU, 0xaU, 0x4U, 0x9U, 0x2U, 0x4U, 0x9U, 0x3U, 0x7U, 0xeU, 0xcU, 0x8U, 0x1U, 0x2U};
 int RC1[R] = { 0x4U, 0xcU, 0xcU, 0xcU, 0xcU, 0xcU, 0x8U, 0x4U, 0x8U, 0x4U, 0x8U, 0x4U, 0xcU, 0x8U, 0x0U, 0x4U, 0xcU, 0x8U, 0x4U, 0xcU, 0xcU, 0x8U, 0x4U, 0xcU, 0x8U, 0x4U, 0x8U, 0x0U, 0x4U, 0x8U, 0x0U, 0x4U, 0xcU, 0xcU, 0x8U, 0x0U, 0x0U, 0x4U, 0x8U, 0x4U, 0xcU};
+
 void print_state(uint8_t *m){
     for (int i = 0; i < BR; i++){
         printf("%x, ", m[i]&0xf);
     }
     printf("\n");
 };
+
 void printState(uint8_t *state){
     printf("L: ");
     for (int x = 0; x < BR_HALF; x++){
@@ -43,6 +47,7 @@ void permutation(uint8_t *state){
         state[perm[j]] = temp[j];
     }
 }
+
 void enc(uint8_t *m, uint8_t *k, int rounds){
     uint8_t state[BR];
     uint8_t temp[BR_HALF];
@@ -54,6 +59,7 @@ void enc(uint8_t *m, uint8_t *k, int rounds){
         printf("%d round\n", i + 1);
         printState(state);
         #endif
+
         for (int j = 0; j < BR_HALF; j++){
             temp[j] = state[j * 2];
         }
@@ -69,11 +75,13 @@ void enc(uint8_t *m, uint8_t *k, int rounds){
         /*permutation*/
         permutation(state);
     }
+
     /*last round function */
     #if PRINT_INTER
     printf("%d round\n", rounds);
     printState(state);
     #endif
+
     for (int j = 0; j < BR_HALF; j++){
         temp[j] = state[j * 2];
     }
@@ -86,6 +94,7 @@ void enc(uint8_t *m, uint8_t *k, int rounds){
     /*add round constants*/
     state[1] = state[1] ^ RC0[rounds-1];
     state[3] = state[3] ^ RC1[rounds-1];
+
     #if PRINT_INTER
     printState(state);
     #endif
@@ -95,6 +104,7 @@ void enc(uint8_t *m, uint8_t *k, int rounds){
         m[i] = state[i];
     }
 }
+
 /* int main(){ */
 /*     uint8_t k[BR] = {0x0, 0xa, 0xc, 0xd, 0x0, 0x2, 0x2, 0xf, */
 /*                      0x6, 0x8, 0x0, 0xa, 0x5, 0x4, 0x7, 0xf, */
@@ -112,5 +122,7 @@ void enc(uint8_t *m, uint8_t *k, int rounds){
 /*     printf("ciphertext :\n"); */
 /*     print_state(m); */
 /*     printf("\n"); */
+
 /*     return 0; */
 /* } */
+

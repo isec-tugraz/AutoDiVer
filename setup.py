@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from setuptools import Extension, setup, find_packages
 from Cython.Build import cythonize
+
+
 setup(
     ext_modules = cythonize([
         Extension("autodiver.skinny.skinny", ["src/autodiver/skinny/skinny.pyx"]),

@@ -2,12 +2,17 @@
 """
 Differential Characteristic from the 2015 CTRSA paper "Cryptanalysis of Ascon" [1, Table 6].
 The last round of the characteristic was "untruncated".
+
 [1] https://doi.org/10.1007/978-3-319-16715-2_20
 """
+
 from __future__ import annotations
+
 from pathlib import Path
 import numpy as np
+
 from typing import Any
+
 ascon_ddt = np.array(bytearray.fromhex(
     "2000000000000000000000000000000000000000000000000000000000000000"
     "0000000000000000000400040004000400000000000000000400040004000400"
@@ -42,6 +47,8 @@ ascon_ddt = np.array(bytearray.fromhex(
     "0000000000000000020202020202020200000000000000000202020202020202"
     "0000040404040000000000000000000000000404040400000000000000000000"
 )).reshape(32, 32)
+
+
 def ascon_inv_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[Any, np.dtype[np.uint64]]:
     rotations = [
         [0, 3, 6, 9, 11, 12, 14, 15, 17, 18, 19, 21, 22, 24, 25, 27, 30, 33, 36, 38, 39, 41, 42, 44, 45, 47, 50, 53, 57, 60, 63],
@@ -51,37 +58,51 @@ def ascon_inv_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndar
         [0, 1, 2, 3, 4, 5, 9, 10, 11, 13, 16, 20, 21, 22, 24, 25, 28, 29, 30, 31, 35, 36, 40, 41, 44, 45, 46, 47, 48, 50, 53, 55, 60, 61, 63],
     ]
     rotations = [np.array(rot, dtype=np.uint64) for rot in rotations]
+
     output = np.zeros_like(inp)
     for i in range(5):
         for rot in rotations[i]:
             output[i] ^= (inp[i] >> rot) | (inp[i] << (np.uint64(64) - rot))
+
     return output
+
 def get_best_output_difference(sbox_in: np.ndarray[Any, np.dtype[np.uint64]]):
     assert sbox_in.shape == (5,)
     assert sbox_in.dtype == np.uint64
+
     sbox_out = np.zeros(5, dtype=np.uint64)
+
     for sbox_idx in range(64):
         input_diff = (sbox_in >> sbox_idx) & 1
         input_diff = input_diff << np.arange(5, dtype=np.uint64)[::-1]
         input_diff = np.bitwise_or.reduce(input_diff)
+
         output_diff = ascon_ddt[input_diff].argmax().astype(np.uint64)
         for i in range(5):
             sbox_out[i] |= ((output_diff >> np.uint64(4 - i)) & np.uint64(1)) << np.uint64(sbox_idx)
     return sbox_out
+
+
 if __name__ == '__main__':
     sbox_in = np.array(bytearray.fromhex(
         "8000000000000000" "0000000000000000" "0000000000000000" "0000000000000000" "0000000000000000"
         "8000100800000000" "8000000001000004" "0000000000000000" "0000000000000000" "0000000000000000"
         "8000000002000080" "9002904800000000" "d200000001840006" "0102000001004084" "0000000000000000"
     )).reshape(3, 40).view(np.uint64).byteswap()
+
     sbox_out = np.zeros_like(sbox_in)
+
     for i in range(len(sbox_in) - 1):
         sbox_out[i] = ascon_inv_linear_layer(sbox_in[i + 1])
+
     sbox_out[-1] = get_best_output_difference(sbox_in[-1])
+
+
     script_file = Path(__file__)
     dst_file = script_file.with_suffix('.npz')
     print(f'Writing to {dst_file}')
     np.savez(dst_file, sbox_in=sbox_in, sbox_out=sbox_out)
+
     numrounds = len(sbox_in)
     for i in range(4, numrounds):
         dst_file = script_file.with_name(script_file.stem + f'_r{i}.npz')

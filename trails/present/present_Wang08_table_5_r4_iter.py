@@ -54,7 +54,7 @@ if __name__ == '__main__':
     sbox_out[3, [2, 14]] = 1
 
     # sbox_in[3, [0, 3]] = 4
-    
+
     prob = np.log2(ddt[sbox_in, sbox_out] / 16).sum()
     print(f"probability: 2^{prob:.1f}")
 

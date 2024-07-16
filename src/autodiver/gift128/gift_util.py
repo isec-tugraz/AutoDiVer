@@ -9,9 +9,14 @@ P128 = np.array((0, 33, 66, 99, 96, 1, 34, 67, 64, 97, 2, 35, 32, 65, 98, 3, 4, 
                 87, 84, 117, 22, 55, 52, 85, 118, 23, 24, 57, 90, 123, 120, 25, 58, 91,
                 88, 121, 26, 59, 56, 89, 122, 27, 28, 61, 94, 127, 124, 29, 62, 95, 92,
                 125, 30, 63, 60, 93, 126, 31))
+
+
 IP128 = np.full_like(P128, -1)
 IP128[P128] = np.arange(len(P128), dtype=P128.dtype)
+
 IP128, P128 = P128, IP128
+
+
 DDT = np.array([[16,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
                 [ 0,  0,  0,  0,  0,  2,  2,  0,  2,  2,  2,  2,  2,  0,  0,  2],
                 [ 0,  0,  0,  0,  0,  4,  4,  0,  0,  2,  2,  0,  0,  2,  2,  0],
@@ -29,11 +34,13 @@ DDT = np.array([[16,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0]
                 [ 0,  4,  0,  0,  4,  0,  0,  0,  2,  2,  0,  0,  2,  2,  0,  0],
                 [ 0,  2,  2,  0,  4,  0,  0,  0,  0,  2,  0,  2,  0,  0,  2,  2]],
                dtype=np.uint8)
+
 GIFT_RC = bytearray.fromhex(
     "0103070f1f3e3d3b372f1e3c3933270e1d3a352b162c"
     "18302102050b172e1c383123060d1b362d1a34291224"
     "081122040913260c1932250a152a14281020"
 )
+
 
 
 def unpack_bits(cell):
@@ -42,21 +49,17 @@ def unpack_bits(cell):
         cellBin[j] = (cell >> j) & 0x01
     return cellBin
 
-
 def pack_bits(cellBin):
     cell = 0;
     for j in range(4):
         cell = (cell << 1) | cellBin[3 - j];
     return cell
 
-
 def unpack_bits_arr(A):
     B = []
     for a in A:
         B = B + unpack_bits(a)
     return B
-
-
 def pack_bits_arr(A):
     B = []
     for i in range(len(A)//4):
@@ -72,7 +75,6 @@ def bit_perm(arr):
     permuted = res[P128]
     res = pack_bits_arr(permuted)
     return res
-
 
 # def bit_perm(arr):
 #     bits = unpack_bits(arr)

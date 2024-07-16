@@ -1,5 +1,6 @@
 [build-system]
 requires = ["setuptools>=64", "wheel", "Cython"]
+
 [project]
 name = "autodiver"
 version = "0.4"
@@ -21,6 +22,7 @@ dependencies = [
 requires-python = ">=3.9"
 authors = [
 ]
+
 description = "A tool for verifying differential characteristics in block ciphers"
 readme = "README.md"
 license = {file = "LICENSE.txt"}
@@ -33,6 +35,7 @@ classifiers = [
    "Programming Language :: C",
    "Framework :: Pytest",
 ]
+
 [tool.setuptools.package-data]
 autodiver = ["**/log_config.json"]
 [project.scripts]

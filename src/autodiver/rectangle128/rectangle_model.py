@@ -59,7 +59,7 @@ class Rectangle(SboxCipher):
            arrayOut = rotate_column_down(arrayOut, i, offset[i])
         # print(f'{arrayOut = }')
         return arrayOut
-    
+
     def apply_perm_nibble(self, instate):
         outstate = instate.copy()
         array = np.empty((16, 4), dtype=np.uint32)
@@ -70,7 +70,7 @@ class Rectangle(SboxCipher):
                 b = (instate[i] >> j) & 0x1
                 # print(b, type(b))
                 array[i][j] = b
-        
+
         # print(array)
         array = np.array(array)
         array = self.applyPerm(array)
@@ -106,7 +106,7 @@ class Rectangle(SboxCipher):
 class Rectangle128(Rectangle):
     cipher_name = "RECTANGLE128"
     key_size = 128
-    
+
     def _model_key_schedule(self) -> None:
         self.add_index_array('key', (2*self.sbox_count, self.sbox_bits))
         self.add_index_array('s_key', (self.num_rounds, 8, self.sbox_bits))
@@ -121,7 +121,7 @@ class Rectangle128(Rectangle):
             array = np.empty((32, 4), dtype=np.uint32)
             row = np.empty((4, 32), dtype=np.uint32)
             rk_row = np.empty((4, 32), dtype=np.uint32)
-            
+
             #first compute the sbox operations
             for j in range(8):
                 inp = keyWords[j].reshape(-1, self.sbox_bits)[0]
@@ -133,13 +133,13 @@ class Rectangle128(Rectangle):
 
             for j in range(8, 32):
                 array[j] = keyWords[j].copy()
-            
+
             for j in range(4):
                 row[j] = get_col(array, j)
                 rk_row[j] = get_col(self.r_key[i], j)
-            
+
             rk_row[0] = add_round_constants(rk_row[0], i)
-            
+
             row0r8 = np.roll(row[0], 8)
             row2r16 = np.roll(row[2], 16)
             key_cnf += XorCNF.create_xor(rk_row[0].flatten(), row0r8.flatten(), row[1].flatten())
@@ -148,7 +148,7 @@ class Rectangle128(Rectangle):
             key_cnf += XorCNF.create_xor(rk_row[3].flatten(), row[0].flatten())
 
             keyWords = self.r_key[i].copy()
-            
+
         RK.append(keyWords[:16, :])
         self.cnf += key_cnf
         self._round_keys = np.array(RK)
@@ -156,7 +156,7 @@ class Rectangle128(Rectangle):
 class RectangleLongKey(Rectangle):
     cipher_name = "RECTANGLE-long-key"
     key_size = 128
-    
+
     def _model_key_schedule(self) -> None:
         self._fieldnames.add('key')
         self.key_size = (self.num_rounds + 1) * self.block_size

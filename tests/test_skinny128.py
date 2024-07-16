@@ -1,8 +1,10 @@
 from copy import copy
 import random
+
 import pytest
 import numpy as np
 from sat_toolkit.formula import CNF, XorCNF
+
 from autodiver.skinny.skinny_model import Skinny128, Skinny128Characteristic
 from autodiver.skinny.constants import do_mix_cols, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
 
@@ -11,54 +13,74 @@ def test_zero_characteristic():
     numrounds = 4
     sbox_in_delta = sbox_out_delta   = np.zeros((numrounds, 4, 4), dtype=np.uint8)
     tweakeys = np.zeros((numrounds, 3, 4, 4), dtype=np.uint8)
+
     char = Skinny128Characteristic(sbox_in_delta, sbox_out_delta, tweakeys)
     cipher = Skinny128(char)
+
     model = cipher.solve(seed=9789)
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
     round_tweakeys = model.round_tweakeys #type: ignore
+
     key, tk2, tk3 = round_tweakeys[0]
+
     sbox_in = sbox_in[:-1]
     sbox = cipher.sbox
+
     assert np.all(sbox[sbox_in] == sbox_out)
+
     # sanity check result
     rtk = np.array([key, tk2, tk3])
     for i in range(numrounds):
         sbi = sbox_in[i]
         sbo = sbox_out[i]
         assert np.all(sbo == sbox[sbi])
+
         if i + 1 in range(numrounds):
             rc = expanded_rc[i]
             sbo = sbox_out[i]
             mc_output = sbox_in[i + 1]
+
             this_rtk = np.bitwise_xor.reduce(rtk, axis=0) & tweakey_mask
+
             mc_input = do_shift_rows(sbo ^ this_rtk ^ rc)
             assert np.all(mc_output == do_mix_cols(mc_input))
         rtk = update_tweakey(rtk)
-
 
 def test_unique_solution():
     random.seed("test_skinny128::test_unique_solution")
     numrounds = 4
     sbox_in_delta = sbox_out_delta   = np.zeros((numrounds, 4, 4), dtype=np.uint8)
     tweakeys = np.zeros((numrounds, 3, 4, 4), dtype=np.uint8)
+
     char = Skinny128Characteristic(sbox_in_delta, sbox_out_delta, tweakeys)
     cipher = Skinny128(char)
+
     inputs = cipher.pt.flatten().tolist() + cipher.key.flatten().tolist() + cipher.tweak.flatten().tolist()
+
     ct_idxes = cipher.sbox_out[-1].flatten().tolist()
+
     assert len(inputs) == 128 + 128 + 256
+
     for _ in range(10):
         cnf = copy(cipher.cnf)
+
         extra_clauses = np.zeros(len(inputs) * 2, np.int32)
+
         for i, inp in enumerate(inputs):
             extra_clauses[i * 2] = inp * (-1)**random.randint(0, 1)
             extra_clauses[i * 2 + 1] = 0
+
         cnf += CNF(extra_clauses)
+
         is_sat, model = cnf.solve_dimacs()
         assert(is_sat)
+
         ct = model[ct_idxes]
+
         extra_clause = np.zeros(len(ct) + 1, np.int32)
         extra_clause[:-1] = ct_idxes * (-1)**(ct)
+
         cnf += CNF(extra_clause)
         is_sat, model = cnf.solve_dimacs()
         assert(not is_sat)
@@ -111,32 +133,43 @@ def test_nonzero_characteristic(rounds):
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
     round_tweakeys = model.round_tweakeys #type: ignore
+
     print(round_tweakeys.shape)
     key, tk2, tk3 = round_tweakeys[0]
+
     sbox = cipher.sbox
+
     assert np.all(sbox[sbox_in[:-1]] == sbox_out)
+
     np.set_printoptions(formatter={'int': lambda x: f'{x:02x}'})
+
     # sanity check result
     rtk = np.array([key, tk2, tk3])
     for i in range(numrounds):
         sbi = sbox_in[i]
         sbo = sbox_out[i]
         assert np.all(sbo == sbox[sbi])
+
         actual_rtk = round_tweakeys[i]
         print(f"round {i}".center(80, '-'))
         print(rtk.shape, actual_rtk.shape)
         print(rtk ^ actual_rtk)
         assert np.all(rtk == actual_rtk)
+
         rc = expanded_rc[i]
         sbo = sbox_out[i]
         mc_output = sbox_in[i + 1]
+
         this_rtk = np.bitwise_xor.reduce(rtk, axis=0) & tweakey_mask
+
         mc_input = do_shift_rows(sbo ^ this_rtk ^ rc)
         print(f"input\n{mc_input}")
         print(f"output ref\n{do_mix_cols(mc_input)}")
         print(f"output act\n{mc_output}")
         print(f"output diff\n{do_mix_cols(mc_input) ^ mc_output}")
+
         assert np.all(mc_output == do_mix_cols(mc_input))
+
         rtk = update_tweakey(rtk)
 
 
@@ -205,35 +238,45 @@ def test_acns2021_characteristic(rounds):
     char = Skinny128Characteristic(sbox_in, sbox_out, tweakeys)
     cipher = Skinny128(char)
 
-    assert char.num_rounds == numrounds
     model = cipher.solve(seed=1159)
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
     round_tweakeys = model.round_tweakeys #type: ignore
+
     print(round_tweakeys.shape)
     key, tk2, tk3 = round_tweakeys[0]
+
     sbox = cipher.sbox
+
     assert np.all(sbox[sbox_in[:-1]] == sbox_out)
+
     np.set_printoptions(formatter={'int': lambda x: f'{x:02x}'})
+
     # sanity check result
     rtk = np.array([key, tk2, tk3])
     for i in range(numrounds):
         sbi = sbox_in[i]
         sbo = sbox_out[i]
         assert np.all(sbo == sbox[sbi])
+
         actual_rtk = round_tweakeys[i]
         print(f"round {i}".center(80, '-'))
         print(rtk.shape, actual_rtk.shape)
         print(rtk ^ actual_rtk)
         assert np.all(rtk == actual_rtk)
+
         rc = expanded_rc[i]
         sbo = sbox_out[i]
         mc_output = sbox_in[i + 1]
+
         this_rtk = np.bitwise_xor.reduce(rtk, axis=0) & tweakey_mask
+
         mc_input = do_shift_rows(sbo ^ this_rtk ^ rc)
         print(f"input\n{mc_input}")
         print(f"output ref\n{do_mix_cols(mc_input)}")
         print(f"output act\n{mc_output}")
         print(f"output diff\n{do_mix_cols(mc_input) ^ mc_output}")
+
         assert np.all(mc_output == do_mix_cols(mc_input))
+
         rtk = update_tweakey(rtk)

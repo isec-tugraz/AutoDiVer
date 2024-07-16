@@ -2,18 +2,23 @@
 """
 Efficient Methods to Search for Best Differential Characteristics on SKINNY
 Stephanie Delaune, Patrick Derbez, Paul Huynh, Marine Minier, Victor Mollimard, and Charles Prud’homme
+
 Table 9. The Best TK3 differential characteristics on 15 rounds of SKINNY-64
 with probability equal to 2^−54
+
 https://doi.org/10.1007/978-3-030-78375-4_8
 """
+
 from pathlib import Path
 import numpy as np
+
 def pad(s: bytearray) -> bytearray:
     nibbles = []
     for byte in s:
         nibbles.append(byte >> 4)
         nibbles.append(byte & 0xf)
     return bytearray(nibbles)
+
 if __name__ == '__main__':
     sbox_in = np.array(pad(bytearray.fromhex(
         "0000000140000004"
@@ -32,6 +37,7 @@ if __name__ == '__main__':
         "0000000000000000"
         "0000000000040000"
     ))).reshape(15, 4, 4)
+
     sbox_out = np.array(pad(bytearray.fromhex(
         "0000000820000002"
         "0000000000000010"
@@ -49,6 +55,7 @@ if __name__ == '__main__':
         "0000000000000000"
         "0000000000020000"
     ))).reshape(15, 4, 4)
+
     tweakeys = np.array(pad(bytearray.fromhex(
         "0000080D00000800" "0000040800000500" "00000E0D00000C00"
         "000800000000080D" "000B000000000408" "000E000000000E0D"
@@ -66,10 +73,12 @@ if __name__ == '__main__':
         "0000008000008D00" "0000001000005600" "000000D00000D100"
         "000D008000000080" "000D00B000000010" "00080060000000D0"
     ))).reshape(15, 3, 4, 4)
+
     script_file = Path(__file__)
     dst_file = script_file.with_suffix('.npz')
     print(f'Writing to {dst_file}')
     np.savez(dst_file, sbox_in=sbox_in, sbox_out=sbox_out, tweakeys=tweakeys)
+
     # numrounds = len(sbox_in)
     # print(script_file.stem)
     # for i in range(4, numrounds):

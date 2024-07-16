@@ -8,9 +8,11 @@ void constructDiff(uint8_t *p1, uint8_t *p2, uint8_t *key, int rounds) {
     prepare_round_cons();
     prepare_round_keys(key);
     uint8_t diff[32];
+
     for(int r = 0; r < rounds; r++) {
         AK(p1, r);
         AK(p2, r);
+
         /*----------------------------------*/
         get_diff(diff, p1, p2);
         printf("indiff %d0:", r);
@@ -23,8 +25,10 @@ void constructDiff(uint8_t *p1, uint8_t *p2, uint8_t *key, int rounds) {
         printf("oudiff %d0:", r);
         print_state6(diff);
         /*-----------------------------------*/
+
         SC(p1);
         SC(p2);
+
         /*----------------------------------*/
         get_diff(diff, p1, p2);
         printf("indiff %d0:", r);
@@ -37,6 +41,7 @@ void constructDiff(uint8_t *p1, uint8_t *p2, uint8_t *key, int rounds) {
         printf("oudiff %d0:", r);
         print_state6(diff);
         /*-----------------------------------*/
+
         if (r == (rounds - 1)){
             AK(p1, rounds);
             AK(p2, rounds);
@@ -44,18 +49,22 @@ void constructDiff(uint8_t *p1, uint8_t *p2, uint8_t *key, int rounds) {
         else {
             SC(p1);
             SC(p2);
+
             MC(p1);
             MC(p2);
+
             AC(p1, r);
             AC(p2, r);
         }
     }
 }
+
 void test_diff(){
     StateChar p1char, p2char, keychar;
     StateUint Key  = {0x764C4F6254E1BFF2,0x08E95862428FAED0,0x1584F4207A7E8477};
     StateUint p1   = {0xA13A632451070E43,0x82A27F26A40682F3,0xFE9FF68028D24FDB};
     StateUint p2   = {0x013A632451070E43,0x82A27F26A40682F3,0xFE9FF68028D24FDB};
+
     convert_stateuint_to_statechar(p1, p1char);
     convert_stateuint_to_statechar(p2, p2char);
     convert_stateuint_to_statechar(Key, keychar);
@@ -67,6 +76,7 @@ void test_diff(){
     print_state6(p2char);
     print_state6(keychar);
 }
+
 uint8_t get_best_output_diff(uint8_t indiff){
     uint8_t max_value = DDT[indiff][0];
     uint8_t max_index = 0;
@@ -85,6 +95,7 @@ void create_diff_from_ddt(uint8_t *diff){
 }
 void generate_naive_diff(int rounds){
     StateChar diff = {01};
+
     for(int r = 0; r < rounds; r++) {
         printf("((");
         print_state6(diff);
@@ -93,7 +104,9 @@ void generate_naive_diff(int rounds){
         printf("(");
         print_state6(diff);
         printf(")),\n\n");
+
         SC(diff);
+
         printf("((");
         print_state6(diff);
         printf("),");
@@ -101,6 +114,7 @@ void generate_naive_diff(int rounds){
         printf("(");
         print_state6(diff);
         printf(")),\n\n");
+
         if (r == (rounds - 1)){
             continue;
         }
@@ -109,4 +123,5 @@ void generate_naive_diff(int rounds){
             MC(diff);
         }
     }
+
 }

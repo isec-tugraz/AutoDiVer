@@ -1,16 +1,20 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+
 #define   NR   7    /* Put the number of rounds here */
 #define CYTHON
+
 const uint8_t S[64] = { 0x08,0x00,0x09,0x03,0x38,0x10,0x29,0x13,0x0c,0x0d,0x04,0x07,0x30,0x01,0x20,0x23,
                         0x1a,0x12,0x18,0x32,0x3e,0x16,0x2c,0x36,0x1c,0x1d,0x14,0x37,0x34,0x05,0x24,0x27,
                         0x02,0x06,0x0b,0x0f,0x33,0x17,0x21,0x15,0x0a,0x1b,0x0e,0x1f,0x31,0x11,0x25,0x35,
                         0x22,0x26,0x2a,0x2e,0x3a,0x1e,0x28,0x3c,0x2b,0x3b,0x2f,0x3f,0x39,0x19,0x2d,0x3d };
+
 const uint8_t SI[64] = {0x01,0x0d,0x20,0x03,0x0a,0x1d,0x21,0x0b,0x00,0x02,0x28,0x22,0x08,0x09,0x2a,0x23,
                         0x05,0x2d,0x11,0x07,0x1a,0x27,0x15,0x25,0x12,0x3d,0x10,0x29,0x18,0x19,0x35,0x2b,
                         0x0e,0x26,0x30,0x0f,0x1e,0x2e,0x31,0x1f,0x36,0x06,0x32,0x38,0x16,0x3e,0x33,0x3a,
                         0x0c,0x2c,0x13,0x24,0x1c,0x2f,0x17,0x1b,0x04,0x3c,0x34,0x39,0x37,0x3f,0x14,0x3b };
+
 const uint64_t constants[] = {  0x243f6a8885a308d3,0x13198a2e03707344,0xa4093822299f31d0,0x082efa98ec4e6c89,0x452821e638d01377,0xbe5466cf34e90c6c,
                                 0xc0ac29b7c97c50dd,0x3f84d5b5b5470917,0x9216d5d98979fb1b,0xd1310ba698dfb5ac,0x2ffd72dbd01adfb7,0xb8e1afed6a267e96,
                                 0xba7c9045f12c7f99,0x24a19947b3916cf7,0x0801f2e2858efc16,0x636920d871574e69,0xa458fea3f4933d7e,0x0d95748f728eb658,
@@ -45,11 +49,14 @@ const uint64_t constants[] = {  0x243f6a8885a308d3,0x13198a2e03707344,0xa4093822
                                 0x81ac77d65f11199b,0x043556f1d7a3c76b,0x3c11183b5924a509,0xf28fe6ed97f1fbfa,0x9ebabf2c1e153c6e,0x86e34570eae96fb1,
                                 0x860e5e0a5a3e2ab3,0x771fe71c4e3d06fa,0x2965dcb999e71d0f,0x803e89d65266c825,0x2e4cc9789c10b36a,0xc6150eba94e2ea78,
                                 0xa5fc3c531e0a2df4,0xf2f74ea7361d2b3d   };
+
 typedef bool StateBool[192];
 typedef uint8_t StateChar[32];
 typedef uint64_t StateUint[3];
+
 StateChar RoundKeys[NR+1];
 StateChar RoundCons[NR-1];
+
 void convert_stateuint_to_statechar(StateUint input, StateChar output) {
     for(int i = 0; i < 10; i++)
         output[i] = (input[0] >> (58 - 6 * i)) & 0x3f;
@@ -68,21 +75,26 @@ void convert_statechar_to_stateuint(StateChar input, StateUint output) {
     }
     output[0] <<= 4;
     output[0] ^= (input[10] >> 2) & 0xf;
+
     output[1] = 0;
     output[1] ^= (input[10] & 0x3);
+
     for(int i = 11; i < 21; i++){
         output[1] <<= 6;
         output[1] ^= (input[i] & 0x3f);
     }
     output[1] <<= 2;
     output[1] ^= (input[21] >> 4) & 0x3;
+
     output[2] = 0;
     output[2] ^= (input[21] & 0xf);
+
     for(int i = 22; i < 32; i++){
         output[2] <<= 6;
         output[2] ^= (input[i] & 0x3f);
     }
 }
+
 void convert_statebool_to_statechar(StateBool input, StateChar output) {
     for(int i = 0; i < 32; i++) {
         output[i] = 0;
@@ -92,6 +104,7 @@ void convert_statebool_to_statechar(StateBool input, StateChar output) {
         }
     }
 }
+
 void print_state(StateChar input) {
     for(int i = 0; i < 16; i++)
         printf("%X%X%X", input[2 * i] >> 2, ((input[2 * i] & 3) << 2) ^ (input[2 * i + 1] >> 4), input[2 * i + 1] & 0xf);
@@ -109,6 +122,7 @@ void print_state6(StateChar input){
     }
     printf("\n");
 }
+
 void prepare_round_cons() {
     StateUint RCuint;
     /* printf("----------------------------------------------------\n"); */
@@ -121,49 +135,62 @@ void prepare_round_cons() {
     }
     /* printf("----------------------------------------------------\n"); */
 }
+
 void prepare_round_keys(StateChar Key) {
     StateBool TempRoundKeyState[2];
+
     for(int i = 0; i < 32; i++)
         for(int j = 0; j < 6; j++)
             TempRoundKeyState[0][6 * i + j] = (Key[i] >> (5 - j)) & 1;
+
     convert_statebool_to_statechar(TempRoundKeyState[0], RoundKeys[0]);
+
     for(int r = 1; r <= NR; r++) {
         bool ind_new = (r % 2);
         bool ind_old = !ind_new;
         /* printf("%d %d \n", ind_new, ind_old); */
+
         for(int i = 0; i < 192; i++)
             TempRoundKeyState[ind_new][i] = TempRoundKeyState[ind_old][(7 * i + 1) % 192];
         convert_statebool_to_statechar(TempRoundKeyState[ind_new], RoundKeys[r]);
     }
 }
+
 void AK(StateChar input, int r) {
     for(int i = 0; i < 32; i++)
         input[i] ^= RoundKeys[r][i];
 }
+
 void AC(StateChar input, int r) {
     for(int i = 0; i < 32; i++)
         input[i] ^= RoundCons[r][i];
 }
+
 void SB(StateChar input) {
     for(int i = 0; i < 32; i++)
         input[i] = S[(int)input[i]];
 }
+
 void MC(StateChar input) {
     const int alphas[] = {1, 5, 9, 15, 21, 26};
+
     StateChar temp;
     for(int i = 0; i < 32; i++)
         temp[i] = input[i];
+
     for(int a = 0; a < (sizeof(alphas) / sizeof(alphas[0])); a++)
     {
         for(int i = 0; i < 32; i++)
             input[i] ^= temp[(i + alphas[a]) % 32];
     }
 }
+
 void SC(StateChar input) {
     bool temp[32][6];
     for(int i = 0; i < 32; i++)
         for(int j = 0; j < 6; j++)
             temp[i][j] = ((input[(i + j) % 32] >> (5 - j)) & 1);
+
     for(int i = 0; i < 32; i++) {
         input[i] = 0;
         for(int j = 0; j < 6; j++) {
@@ -172,9 +199,11 @@ void SC(StateChar input) {
         }
     }
 }
+
 void Encrypt(uint8_t *plaintext, uint8_t *key, int rounds) {
     prepare_round_cons();
     prepare_round_keys(key);
+
     for(int r = 0; r < rounds; r++) {
      /* print_state6(plaintext); */
         AK(plaintext, r);
@@ -185,6 +214,7 @@ void Encrypt(uint8_t *plaintext, uint8_t *key, int rounds) {
      /* print_state6(plaintext); */
         SB(plaintext);
      /* print_state6(plaintext); */
+
         if (r == (rounds - 1))
             AK(plaintext, rounds);
         else {
@@ -195,15 +225,19 @@ void Encrypt(uint8_t *plaintext, uint8_t *key, int rounds) {
         }
     }
 }
+
+
 void SBI(StateChar input) {
     for(int i = 0; i < 32; i++)
         input[i] = SI[(int)input[i]];
 }
 void MCI(StateChar input) {
     const int alphas[] = {4, 5, 6, 7, 10, 12, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24, 25, 28};
+
     StateChar temp;
     for(int i = 0; i < 32; i++)
         temp[i] = input[i];
+
     for(int a = 0; a < (sizeof(alphas) / sizeof(alphas[0])); a++)
     {
         for(int i = 0; i < 32; i++)
@@ -215,6 +249,7 @@ void SCI(StateChar input) {
     for(int i = 0; i < 32; i++)
         for(int j = 0; j < 6; j++)
             temp[(i + j) % 32][j] = ((input[i] >> (5 - j)) & 1);
+
     for(int i = 0; i < 32; i++) {
         input[i] = 0;
         for(int j = 0; j < 6; j++) {
@@ -226,11 +261,13 @@ void SCI(StateChar input) {
 void Decrypt(uint8_t *Ciphertext, uint8_t *Key, int rounds) {
     prepare_round_cons();
     prepare_round_keys(Key);
+
     AK (Ciphertext, rounds);
     SBI(Ciphertext);
     SCI(Ciphertext);
     SBI(Ciphertext);
     AK (Ciphertext, rounds - 1);
+
     for(int r = rounds - 2; r >= 0; r--) {
         AC (Ciphertext, r);
         MCI(Ciphertext);
@@ -241,6 +278,7 @@ void Decrypt(uint8_t *Ciphertext, uint8_t *Key, int rounds) {
         AK (Ciphertext, r);
     }
 }
+
 /* #include "diff.h" */
 void test_convert(){
     StateUint plaintext     = {0xA13A632451070E43,0x82A27F26A40682F3,0xFE9FF68028D24FDB};
@@ -254,23 +292,31 @@ void test_convert(){
 #ifndef CYTHON
 int main() {
     /* test_convert(); */
+
     StateUint Plaintext     = {0xA13A632451070E43,0x82A27F26A40682F3,0xFE9FF68028D24FDB};
     StateUint Key           = {0x764C4F6254E1BFF2,0x08E95862428FAED0,0x1584F4207A7E8477};
     StateUint Ciphertext    = {0xED3D0EA11C427BD3,0x2570DF41C6FD66EB,0xBF4916E760ED0943};
+
     StateChar plaintextchar, keychar;
     convert_stateuint_to_statechar(Plaintext, plaintextchar);
     convert_stateuint_to_statechar(Key, keychar);
+
     print_state(plaintextchar);
     print_state6(plaintextchar);
     print_state6(keychar);
+
     Encrypt(plaintextchar, keychar, NR);
+
     print_state(plaintextchar);
     print_state6(plaintextchar);
     print_state6(keychar);
+
     Decrypt(plaintextchar, keychar, NR);
+
     print_state(plaintextchar);
     print_state6(plaintextchar);
     print_state6(keychar);
+
     /* test_diff(); */
     /* generate_naive_diff(2); */
     return 0;

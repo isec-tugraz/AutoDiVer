@@ -44,6 +44,6 @@ def nibble_to_key(arr):
     cdef uint8_t[:] a = arr
     cdef uint64_t key[2]
     nibbleToKey(&a[0], key)
-    
+
     key_arr = [key[0], key[1]]
     return key_arr
