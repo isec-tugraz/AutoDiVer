@@ -141,7 +141,7 @@ class Ascon(SboxCipher):
         constants = np.pad(constants, ((0, 0), (0, 64 - 8))) # type:ignore
 
         for r in range(self.num_rounds):
-            sbox_in[r, 2] *= (-1)**constants[12 - self.num_rounds + r]
+            sbox_in[r, 2] *= np.int8(-1)**constants[12 - self.num_rounds + r]
 
         # swap axes for bitsliced sboxes
         # swap bits for compatibility with big-endian s-box table

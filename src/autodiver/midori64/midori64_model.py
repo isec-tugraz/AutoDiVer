@@ -100,7 +100,7 @@ class Midori64(SboxCipher):
             rc = RC[r].swapaxes(0, 1).flatten()
 
             for i in range(16):
-                inp[4*i]  *= (-1)**(rc[i] & 0x1)
+                inp[4*i]  *= np.int8(-1)**(rc[i] & 0x1)
 
             if r < self.num_rounds - 1:
                 self.cnf += XorCNF.create_xor(inp, out, key)

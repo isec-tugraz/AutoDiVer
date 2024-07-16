@@ -137,7 +137,7 @@ class Midori128(SboxCipher):
     def _addKey(self, Y, X, K, RC: np.ndarray):
         X_flat = X.copy().reshape(16, 8)
         for i in range(16):
-            X_flat[i][4]  *= (-1)**(RC[i] & 0x1)
+            X_flat[i][4]  *= np.int8(-1)**(RC[i] & 0x1)
         X_flat = X_flat.flatten()
         key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())
         return key_xor_cnf

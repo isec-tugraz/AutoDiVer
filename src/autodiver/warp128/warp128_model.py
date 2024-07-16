@@ -87,15 +87,15 @@ class WARP128(SboxCipher):
         xor_in_flat = temp.reshape(-1) # don't use .flatten() here because it creates a copy
 
         # flip bits according to round constant
-        xor_in_flat[0] *= (-1)**(RC0 & 0x1)
-        xor_in_flat[1] *= (-1)**((RC0 >> 1) & 0x1)
-        xor_in_flat[2] *= (-1)**((RC0 >> 2) & 0x1)
-        xor_in_flat[3] *= (-1)**((RC0 >> 3) & 0x1)
+        xor_in_flat[0] *= np.int8(-1)**(RC0 & 0x1)
+        xor_in_flat[1] *= np.int8(-1)**((RC0 >> 1) & 0x1)
+        xor_in_flat[2] *= np.int8(-1)**((RC0 >> 2) & 0x1)
+        xor_in_flat[3] *= np.int8(-1)**((RC0 >> 3) & 0x1)
 
-        xor_in_flat[4] *= (-1)**(RC1 & 0x1)
-        xor_in_flat[5] *= (-1)**((RC1 >> 1) & 0x1)
-        xor_in_flat[6] *= (-1)**((RC1 >> 2) & 0x1)
-        xor_in_flat[7] *= (-1)**((RC1 >> 3) & 0x1)
+        xor_in_flat[4] *= np.int8(-1)**(RC1 & 0x1)
+        xor_in_flat[5] *= np.int8(-1)**((RC1 >> 1) & 0x1)
+        xor_in_flat[6] *= np.int8(-1)**((RC1 >> 2) & 0x1)
+        xor_in_flat[7] *= np.int8(-1)**((RC1 >> 3) & 0x1)
 
         lin_cnf = XorCNF()
         lin_cnf += XorCNF.create_xor(xor_in_flat, xor_out.flatten(), sbox_out.flatten(), key.flatten())

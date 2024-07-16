@@ -108,12 +108,12 @@ class Speedy192(SboxCipher):
     def _addKey(self, Y, X, K, RC: np.ndarray):
         X_flat = X.copy().reshape(32, 6)
         for i in range(32):
-            X_flat[i][0]  *= (-1)**(RC[i] & 0x1)
-            X_flat[i][1]  *= (-1)**((RC[i]>>1) & 0x1)
-            X_flat[i][2]  *= (-1)**((RC[i]>>2) & 0x1)
-            X_flat[i][3]  *= (-1)**((RC[i]>>3) & 0x1)
-            X_flat[i][4]  *= (-1)**((RC[i]>>4) & 0x1)
-            X_flat[i][5]  *= (-1)**((RC[i]>>5) & 0x1)
+            X_flat[i][0]  *= np.int8(-1)**(RC[i] & 0x1)
+            X_flat[i][1]  *= np.int8(-1)**((RC[i]>>1) & 0x1)
+            X_flat[i][2]  *= np.int8(-1)**((RC[i]>>2) & 0x1)
+            X_flat[i][3]  *= np.int8(-1)**((RC[i]>>3) & 0x1)
+            X_flat[i][4]  *= np.int8(-1)**((RC[i]>>4) & 0x1)
+            X_flat[i][5]  *= np.int8(-1)**((RC[i]>>5) & 0x1)
 
         X_flat = X_flat.flatten()
         key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())

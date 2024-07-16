@@ -68,7 +68,7 @@ def test_unique_solution():
         extra_clauses = np.zeros(len(inputs) * 2, np.int32)
 
         for i, inp in enumerate(inputs):
-            extra_clauses[i * 2] = inp * (-1)**random.randint(0, 1)
+            extra_clauses[i * 2] = np.int32(inp) * np.int8(-1)**random.randint(0, 1)
             extra_clauses[i * 2 + 1] = 0
 
         cnf += CNF(extra_clauses)
@@ -79,7 +79,7 @@ def test_unique_solution():
         ct = model[ct_idxes]
 
         extra_clause = np.zeros(len(ct) + 1, np.int32)
-        extra_clause[:-1] = ct_idxes * (-1)**(ct)
+        extra_clause[:-1] = ct_idxes * np.int8(-1)**(ct)
 
         cnf += CNF(extra_clause)
         is_sat, model = cnf.solve_dimacs()

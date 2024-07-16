@@ -13,11 +13,11 @@ dependencies = [
    "ipython",
    "pyapproxmc",
    "pycryptosat",
-   "sat_toolkit>=0.4.3",
+   "sat_toolkit>=0.4.4",
    "galois",
    "setuptools",
    "tqdm",
-   "numpy<2.0",
+   "numpy",
 ]
 requires-python = ">=3.9"
 authors = [
