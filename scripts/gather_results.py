@@ -8,6 +8,7 @@ import json
 import sys
 from math import log2, sqrt
 from datetime import datetime
+from typing import TextIO
 
 import scipy.stats as stats
 import tabulate
@@ -105,7 +106,7 @@ def fmt_ci_latex(lower: float, upper: float):
 
 
 
-def gather_results(argv: list[str]):
+def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('path', type=Path, nargs='?', default=Path('.'), help='Path to the directory containing the log files')
     parser.add_argument('output', type=Path, nargs='?', default=Path('results.md'), help='Path to the output markdown file')
@@ -248,34 +249,34 @@ def gather_results(argv: list[str]):
                     }
 
     # if solve_results:
-    #     print(f'# Solve Results')
-    #     print()
-    #     print(tabulate.tabulate(solve_results, headers='keys', tablefmt='github') + '\n')
-    #     print()
+    #     print(f'# Solve Results', file=md_file)
+    #     print(file=md_file)
+    #     print(tabulate.tabulate(solve_results, headers='keys', tablefmt='github') + '\n', file=md_file)
+    #     print(file=md_file)
 
     if count_results:
-        print(f'# Count Probability Results')
-        print()
-        print(tabulate.tabulate(count_results, headers='keys', tablefmt='github') + '\n')
-        print()
+        print(f'# Count Probability Results', file=md_file)
+        print(file=md_file)
+        print(tabulate.tabulate(count_results, headers='keys', tablefmt='github') + '\n', file=md_file)
+        print(file=md_file)
 
     if count_tweakey_results:
-        print(f'# Count Tweakey Results')
-        print()
-        print(tabulate.tabulate(count_tweakey_results, headers='keys', tablefmt='github') + '\n')
-        print()
+        print(f'# Count Tweakey Results', file=md_file)
+        print(file=md_file)
+        print(tabulate.tabulate(count_tweakey_results, headers='keys', tablefmt='github') + '\n', file=md_file)
+        print(file=md_file)
 
     if count_tweakey_lin_results:
-        print(f'# Count Tweakey Lin Results')
-        print()
-        print(tabulate.tabulate(count_tweakey_lin_results, headers='keys', tablefmt='github') + '\n')
-        print()
+        print(f'# Count Tweakey Lin Results', file=md_file)
+        print(file=md_file)
+        print(tabulate.tabulate(count_tweakey_lin_results, headers='keys', tablefmt='github') + '\n', file=md_file)
+        print(file=md_file)
 
     if lin_constraints:
-        print(f'## Linear Constraints')
-        print()
-        print(tabulate.tabulate(lin_constraints, headers='keys', tablefmt='github') + '\n')
-        print()
+        print(f'## Linear Constraints', file=md_file)
+        print(file=md_file)
+        print(tabulate.tabulate(lin_constraints, headers='keys', tablefmt='github') + '\n', file=md_file)
+        print(file=md_file)
 
     if count_tweakey_sat_results:
         tweakey_sat_conditions = []
@@ -310,21 +311,21 @@ def gather_results(argv: list[str]):
             del v['_tweakey_size']
 
 
-        print(f'# Count Tweakey SAT results')
-        print()
-        print(tabulate.tabulate(count_tweakey_sat_results.values(), headers='keys', tablefmt='github') + '\n')
-        print()
+        print(f'# Count Tweakey SAT results', file=md_file)
+        print(file=md_file)
+        print(tabulate.tabulate(count_tweakey_sat_results.values(), headers='keys', tablefmt='github') + '\n', file=md_file)
+        print(file=md_file)
 
         print(f'## Constraints')
         print(tabulate.tabulate(tweakey_sat_conditions, headers='keys', tablefmt='github') + '\n')
 
 
         latex_table_list = [{'trail': trail, 'kind': kind, **v} for ((trail, kind), v) in latex_table.items()]
-        with open('results.tex', 'w') as f:
-            f.write(tabulate.tabulate(latex_table_list, headers='keys', tablefmt='latex_raw') + '\n')
+        tex_file.write(tabulate.tabulate(latex_table_list, headers='keys', tablefmt='latex_raw') + '\n')
 
 
 
 if __name__ == '__main__':
-    ret = gather_results(sys.argv[1:])
+    with open('results.md', 'w') as md_file, open('results.tex', 'w') as tex_file:
+        ret = gather_results(sys.argv[1:], md_file, tex_file)
     raise SystemExit(ret)
