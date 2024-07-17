@@ -316,8 +316,8 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
         print(tabulate.tabulate(count_tweakey_sat_results.values(), headers='keys', tablefmt='github') + '\n', file=md_file)
         print(file=md_file)
 
-        print(f'## Constraints')
-        print(tabulate.tabulate(tweakey_sat_conditions, headers='keys', tablefmt='github') + '\n')
+        print(f'## Constraints', file=md_file)
+        print(tabulate.tabulate(tweakey_sat_conditions, headers='keys', tablefmt='github') + '\n', file=md_file)
 
 
         latex_table_list = [{'trail': trail, 'kind': kind, **v} for ((trail, kind), v) in latex_table.items()]
