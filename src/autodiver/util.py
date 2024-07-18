@@ -90,7 +90,7 @@ class IndexSet:
 
                 if needle in rng:
                     idx = np.unravel_index(rng.index(needle), v.shape)
-                    res[i] = k + str(list(idx))
+                    res[i] = k + str(np.array(idx).tolist())
                     # res[i] = str(f'{idx[1]}{idx[2]}')
                     break
             else:
