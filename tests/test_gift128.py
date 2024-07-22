@@ -3,8 +3,8 @@ import pytest
 from shutil import which
 import numpy as np
 
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.gift128.gift_model import Gift128
+from autodiver.cipher_model import count_solutions
+from autodiver.gift128.gift_model import Gift128, Gift128Characteristic
 from autodiver.gift128.gift_cipher import gift128_enc
 
 from sat_toolkit.formula import CNF
@@ -43,7 +43,7 @@ def test_tv(pt, key, ct_ref):
 def test_zero_characteristic():
     numrounds = 2
     sbi = sbo = np.zeros((numrounds, 32), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi, sbo)
+    char = Gift128Characteristic(sbi, sbo)
     char.sbox_in = sbi
     char.sbox_out = sbo
     char.num_rounds = numrounds
@@ -108,7 +108,7 @@ def test_nonzero_characteristic():
     sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
 
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Gift128Characteristic(sbi_delta, sbo_delta)
 
     print(f'ddt probability: 2^{char.log2_ddt_probability(Gift128.ddt):.1f}')
 

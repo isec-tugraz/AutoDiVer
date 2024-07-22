@@ -15,8 +15,7 @@ from IPython import start_ipython
 
 from .import version
 from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic, UnsatException
-from .gift64.gift_model import Gift64
-from .gift128.gift_model import Gift128
+from .gift.gift_model import Gift64, Gift64Characteristic, Gift128, Gift128Characteristic
 from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey
 from .midori64.midori64_model import Midori64, Midori64Characteristic
 from .midori128.midori128_model import Midori128, Midori128Characteristic
@@ -66,8 +65,8 @@ def main():
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
         "warp": (WARP128, DifferentialCharacteristic),
         "speedy192": (Speedy192, Speedy192Characteristic),
-        "gift64": (Gift64, DifferentialCharacteristic),
-        "gift128": (Gift128, DifferentialCharacteristic),
+        "gift64": (Gift64, Gift64Characteristic),
+        "gift128": (Gift128, Gift128Characteristic),
         "present80": (Present80, PresentCharacteristic),
         "present-long-key": (PresentLongKey, PresentCharacteristic),
         "midori64": (Midori64, Midori64Characteristic),

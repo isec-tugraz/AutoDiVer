@@ -10,11 +10,21 @@ P128 = np.array((0, 33, 66, 99, 96, 1, 34, 67, 64, 97, 2, 35, 32, 65, 98, 3, 4, 
                 88, 121, 26, 59, 56, 89, 122, 27, 28, 61, 94, 127, 124, 29, 62, 95, 92,
                 125, 30, 63, 60, 93, 126, 31))
 
+P64 = np.array((0, 17, 34, 51, 48, 1, 18, 35, 32, 49, 2, 19, 16, 33, 50, 3,
+                4, 21, 38, 55, 52, 5, 22, 39, 36, 53, 6, 23, 20, 37, 54, 7,
+                8, 25, 42, 59, 56, 9, 26, 43, 40, 57, 10, 27, 24, 41, 58, 11,
+                12, 29, 46, 63, 60, 13, 30, 47, 44, 61, 14, 31, 28, 45, 62, 15))
+
+
 
 IP128 = np.full_like(P128, -1)
+IP64 = np.full_like(P64, -1)
+
 IP128[P128] = np.arange(len(P128), dtype=P128.dtype)
+IP64[P64] = np.arange(len(P64), dtype=P64.dtype)
 
 IP128, P128 = P128, IP128
+IP64, P64 = P64, IP64
 
 
 DDT = np.array([[16,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
@@ -70,9 +80,9 @@ def pack_bits_arr(A):
     return B
 
 
-def bit_perm(arr):
+def bit_perm(arr: np.ndarray, permutation: np.ndarray) -> np.ndarray:
     res = np.asarray(unpack_bits_arr(arr))
-    permuted = res[P128]
+    permuted = res[permutation]
     res = pack_bits_arr(permuted)
     return res
 

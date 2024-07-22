@@ -1,5 +1,5 @@
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = src/autodiver/gift128/gift128_ref.c
+#distutils: sources = src/autodiver/gift/gift128_ref.c
 cimport cython
 
 from libc.stdio cimport printf
