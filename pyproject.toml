@@ -39,5 +39,5 @@ classifiers = [
 [tool.setuptools.package-data]
 autodiver = ["**/log_config.json"]
 [project.scripts]
-verify-characteristic = "autodiver.main:main"
+verify-characteristic = "autodiver.verify_characteristic:main"
 tikzify = "autodiver.tikzify:main"
