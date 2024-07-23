@@ -1,4 +1,5 @@
 colorama
+click
 cython
 galois
 icecream

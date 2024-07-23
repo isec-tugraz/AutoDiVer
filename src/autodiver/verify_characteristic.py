@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging.config
+from dataclasses import dataclass
 from pathlib import Path
 import shutil
 import subprocess as sp
@@ -12,6 +13,7 @@ from typing import Optional, Callable, Any
 
 import numpy as np
 from IPython import start_ipython
+import click
 
 from .import version
 from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic, UnsatException
@@ -28,6 +30,11 @@ from .present.present_model import Present80, PresentLongKey, PresentCharacteris
 log = logging.getLogger(__name__)
 
 
+@dataclass
+class GlobalArgs:
+    characteristic: DifferentialCharacteristic
+    cipher: SboxCipher
+
 def setup_logging(filename: Optional[Path] = None):
     config_file = Path(__file__).parent / 'log_config.json'
     with config_file.open('r') as f:
@@ -39,129 +46,194 @@ def setup_logging(filename: Optional[Path] = None):
     logging.getLogger().setLevel(logging.DEBUG)
     logging.config.dictConfig(config)
 
-def parse_slice(s: str) -> slice:
-    start, sep, stop = s.partition('..')
-    if sep == '':
-        raise argparse.ArgumentTypeError(f"invalid slice {s!r} -> expected 'start..stop'")
 
-    start_int = int(start) if start else None
-    stop_int = int(stop) if stop else None
+_ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
+    "warp": (WARP128, DifferentialCharacteristic),
+    "speedy192": (Speedy192, Speedy192Characteristic),
+    "gift64": (Gift64, Gift64Characteristic),
+    "gift128": (Gift128, Gift128Characteristic),
+    "present80": (Present80, PresentCharacteristic),
+    "present-long-key": (PresentLongKey, PresentCharacteristic),
+    "midori64": (Midori64, Midori64Characteristic),
+    "midori128": (Midori128, Midori128Characteristic),
+    "skinny128": (Skinny128, Skinny128Characteristic),
+    "skinny64": (Skinny64, Skinny64Characteristic),
+    "ascon": (Ascon, AsconCharacteristic),
+    "rectangle128": (Rectangle128, DifferentialCharacteristic),
+    "rectangle-long-key": (RectangleLongKey, DifferentialCharacteristic),
+}
 
-    return slice(start_int, stop_int)
 
-def FilePath(path: str) -> Path:
-    p = Path(path)
-    if not p.is_file():
-        raise argparse.ArgumentTypeError(f"{path!r} is not a file")
-    return p
+@click.group()
+@click.argument('cipher_name', type=click.Choice(list(_ciphers.keys())), required=True)
+@click.argument('characteristic_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=True)
+@click.option('--sbox-assumptions', is_flag=True, help="add assumption variables for all S-boxes")
+@click.pass_context
+def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: bool) -> None:
+    characteristic_path = Path(characteristic_path)
+    setup_logging(characteristic_path.with_suffix('.jsonl'))
+    git_cmd = shutil.which('git')
+    git_commit = git_cmd and sp.check_output([git_cmd, 'rev-parse', 'HEAD']).decode().strip()
+    git_changed_files = git_cmd and sp.check_output([git_cmd, 'status', '--porcelain', '-uno', '-z']).decode().strip('\0').split('\0')
+    log.info(f"version: {version}, git_commit: {git_commit}, git_changed_files: {git_changed_files}")
+    log.debug("arguments: %s", sys.argv, extra={"cli_args": sys.argv, "git_commit": git_commit, "git_changed_files": git_changed_files, "version": version})
 
-def solve_cipher_interactive(cipher: SboxCipher):
+    Cipher, Characteristic = _ciphers[cipher_name]
+    characteristic = Characteristic.load(characteristic_path)
+    cipher = Cipher(characteristic, model_sbox_assumptions=sbox_assumptions)
+    ddt_prob_log2 = characteristic.log2_ddt_probability(Cipher.ddt)
+    log.info(f"loaded characteristic with {characteristic.num_rounds} rounds from {characteristic_path} with ddt probability 2**{ddt_prob_log2:.1f}")
+
+    if characteristic.file_path is None:
+        log.warning(f"file path not stored in characteristic object")
+        characteristic.file_path = characteristic_path
+
+    log.info(f"generated {cipher.cnf!r}")
+    ctx.obj = GlobalArgs(characteristic, cipher)
+
+def ensure_executables(*executables: str) -> None:
+    missing = [exe for exe in executables if not shutil.which(exe)]
+    if missing:
+        if len(missing) == 1:
+            raise click.UsageError(f"missing executable in $PATH: {missing[0]}")
+        raise click.UsageError(f"missing executables in $PATH: {', '.join(missing)}")
+
+def ensure_cipher_comatible(cipher: SboxCipher, needs_key: bool, needs_tweak: bool) -> None:
+    if cipher.key_size == 0 and needs_key:
+        raise click.UsageError(f"{cipher.cipher_name} has no key")
+    if cipher.tweak_size == 0 and needs_tweak:
+        raise click.UsageError(f"{cipher.cipher_name} has no tweak")
+
+@cli.command()
+@click.option('--epsilon', type=float, default=0.8)
+@click.option('--delta', type=float, default=0.2)
+@click.pass_obj
+def count_tweakeys(obj: GlobalArgs, epsilon: float, delta: float) -> None|int:
+    """count valid tweakeys using ApproxMC"""
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=True)
+    ensure_executables('approxmc')
+    cipher.count_tweakey_space(epsilon, delta, count_key=True, count_tweak=True)
+
+@cli.command()
+@click.option('--epsilon', type=float, default=0.8)
+@click.option('--delta', type=float, default=0.2)
+@click.pass_obj
+def count_keys(obj: GlobalArgs, epsilon: float, delta: float) -> None:
+    """count valid keys using ApproxMC"""
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=False)
+    ensure_executables('approxmc')
+    cipher.count_tweakey_space(epsilon, delta, count_key=True, count_tweak=False)
+
+@cli.command()
+@click.option('--epsilon', type=float, default=0.8)
+@click.option('--delta', type=float, default=0.2)
+@click.pass_obj
+def count_tweaks(obj: GlobalArgs, epsilon: float, delta: float) -> None:
+    """count valid tweaks using ApproxMC"""
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=False, needs_tweak=True)
+    cipher.count_tweakey_space(epsilon, delta, count_key=False, count_tweak=True)
+
+
+@cli.command()
+@click.pass_obj
+def count_tweakeys_lin(obj: GlobalArgs) -> None:
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=True)
+    ensure_executables('cryptominisat5')
+    cipher.count_lin_tweakey_space(count_key=True, count_tweak=True)
+
+@cli.command()
+@click.pass_obj
+def count_keys_lin(obj: GlobalArgs) -> None:
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=False)
+    ensure_executables('cryptominisat5')
+    cipher.count_lin_tweakey_space(count_key=True, count_tweak=False)
+
+@cli.command()
+@click.pass_obj
+def count_tweaks_lin(obj: GlobalArgs) -> None:
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=False, needs_tweak=True)
+    ensure_executables('cryptominisat5')
+    cipher.count_lin_tweakey_space(count_key=False, count_tweak=True)
+
+
+@cli.command()
+@click.option('--trials', type=int, default=1_000)
+@click.pass_obj
+def count_tweakeys_sat(obj: GlobalArgs, trials: int) -> None:
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=True)
+    cipher.count_tweakey_space_sat_solver(trials, count_key=True, count_tweak=True)
+
+@cli.command()
+@click.option('--trials', type=int, default=1_000)
+@click.pass_obj
+def count_keys_sat(obj: GlobalArgs, trials: int) -> None:
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=False)
+    cipher.count_tweakey_space_sat_solver(trials, count_key=True, count_tweak=False)
+
+@cli.command()
+@click.option('--trials', type=int, default=1_000)
+@click.pass_obj
+def count_tweaks_sat(obj: GlobalArgs, trials: int) -> None:
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=False, needs_tweak=True)
+    cipher.count_tweakey_space_sat_solver(trials, count_key=False, count_tweak=True)
+
+
+@cli.command()
+@click.option('--epsilon', type=float, default=0.8)
+@click.option('--delta', type=float, default=0.2)
+@click.option('--fixed-key', is_flag=True)
+@click.option('--fixed-tweak', is_flag=True)
+@click.pass_obj
+def count_prob(obj: GlobalArgs, epsilon: float, delta: float, fixed_key: bool, fixed_tweak: bool) -> None:
+    cipher = obj.cipher
+    ensure_cipher_comatible(cipher, needs_key=fixed_key, needs_tweak=fixed_tweak)
+    cipher.count_probability(epsilon, delta, fixed_key=fixed_key, fixed_tweak=fixed_tweak)
+
+
+@cli.command()
+@click.pass_obj
+def solve(obj: GlobalArgs) -> None:
+    cipher = obj.cipher
     try:
         cipher.solve()
     except UnsatException:
         pass
 
-def main() -> int|None:
-    ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
-        "warp": (WARP128, DifferentialCharacteristic),
-        "speedy192": (Speedy192, Speedy192Characteristic),
-        "gift64": (Gift64, Gift64Characteristic),
-        "gift128": (Gift128, Gift128Characteristic),
-        "present80": (Present80, PresentCharacteristic),
-        "present-long-key": (PresentLongKey, PresentCharacteristic),
-        "midori64": (Midori64, Midori64Characteristic),
-        "midori128": (Midori128, Midori128Characteristic),
-        "skinny128": (Skinny128, Skinny128Characteristic),
-        "skinny64": (Skinny64, Skinny64Characteristic),
-        "ascon": (Ascon, AsconCharacteristic),
-        "rectangle128": (Rectangle128, DifferentialCharacteristic),
-        "rectangle-long-key": (RectangleLongKey, DifferentialCharacteristic),
-    }
+@cli.command()
+@click.pass_obj
+def find_conflict(obj: GlobalArgs) -> None:
+    """list s-boxes which lead to an impossible characteristic"""
+    cipher = obj.cipher
+    if not cipher.model_sbox_assumptions:
+        raise click.UsageError("command 'find-conflict' requires --sbox-assumptions")
+    cipher.find_conflict()
 
-    commands: dict[str, Callable[[SboxCipher, argparse.Namespace], Any]] = {
-        'count-tweaks': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=False, count_tweak=True),
-        'count-keys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=False),
-        'count-tweakeys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=True),
+@cli.command()
+@click.argument('filename', type=click.Path(writable=True))
+@click.pass_obj
+def write_cnf(obj: GlobalArgs, filename: Path) -> None:
+    with open(filename, 'w') as f:
+        log.info(f"writing CNF to {filename}")
+        f.write(obj.cipher.cnf.to_dimacs())
 
-        'count-tweaks-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=False, count_tweak=True),
-        'count-keys-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=True, count_tweak=False),
-        'count-tweakeys-sat': lambda cipher, args: cipher.count_tweakey_space_sat_solver(1_000, count_key=True, count_tweak=True),
 
-        'count-tweaks-lin': lambda cipher, args: cipher.count_lin_tweakey_space(count_key=False, count_tweak=True),
-        'count-keys-lin': lambda cipher, args: cipher.count_lin_tweakey_space(count_key=True, count_tweak=False),
-        'count-tweakeys-lin': lambda cipher, args: cipher.count_lin_tweakey_space(count_key=True, count_tweak=True),
-
-        'count-prob': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta),
-        'count-prob-fixed-key': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_key=True),
-        'count-prob-fixed-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True),
-        'count-prob-fixed-tweakey': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True, fixed_key=True),
-        'solve': lambda cipher, _args: solve_cipher_interactive(cipher),
-        'find-conflict': lambda cipher, _: cipher.find_conflict(),
-    }
-
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('cipher', choices=ciphers.keys())
-    parser.add_argument('trail', type=FilePath, help='Text/Numpy file containing the sbox input and output differences.\n'\
-                                      'Input and output differences are listed on separate lines.')
-    parser.add_argument('--epsilon', type=float, default=0.8)
-    parser.add_argument('--delta', type=float, default=0.2)
-    parser.add_argument('--cnf', type=str, help="file to save CNF in DIMACS format")
-    parser.add_argument('--sbox-assumptions', action='store_true', help="add assumption variables for all S-boxes")
-    parser.add_argument('--embed', action='store_true', help="launch IPython shell after executing command")
-
-    parser.add_argument('commands', choices=commands.keys(), nargs=1, help="command to execute")
-
-    args = parser.parse_args()
-
-    setup_logging(args.trail.with_suffix('.jsonl'))
-
-    if 'find-conflict' in args.commands and not args.sbox_assumptions:
-        log.warning("command 'find-conflict' requires --sbox-assumptions, adding it automatically")
-        args.sbox_assumptions = True
-
-    git_cmd = shutil.which('git')
-    git_commit = git_cmd and sp.check_output([git_cmd, 'rev-parse', 'HEAD']).decode().strip()
-    git_changed_files = git_cmd and sp.check_output([git_cmd, 'status', '--porcelain', '-uno', '-z']).decode().strip('\0').split('\0')
-
-    log.info(f"version: {version}, git_commit: {git_commit}, git_changed_files: {git_changed_files}")
-    log.info("arguments: %s", vars(args), extra={"cli_args": vars(args), "git_commit": git_commit, "git_changed_files": git_changed_files, "version": version})
-
-    Cipher, Characteristic = ciphers[args.cipher]
-
-    try:
-        char = Characteristic.load(args.trail)
-        if char.file_path is None:
-            log.warning(f"file path not stored in characteristic object")
-            char.file_path = args.trail
-    except OSError as e:
-        log.error(e)
-        return 1
-
-    log.info(f"loaded characteristic with {char.num_rounds} rounds from {args.trail}")
-
-    cipher = Cipher(char, model_sbox_assumptions=args.sbox_assumptions)
-
-    ddt_prob = char.log2_ddt_probability(Cipher.ddt)
-    log.info(f"ddt probability: 2**{ddt_prob:.1f}")
-
-    log.info(f"generated {cipher.cnf!r}")
-
-    if args.cnf:
-        with open(args.cnf, 'w') as f:
-            f.write(cipher.cnf.to_dimacs())
-        log.info(f"wrote {cipher.cnf!r} to {args.cnf}")
-
-    count_results = []
-    for command in args.commands:
-        res = commands[command](cipher, args)
-        if res is not None:
-            count_results.append(res)
-
-    if args.embed:
-        start_ipython(user_ns=globals()|locals())
-
-    return 0
+@cli.command()
+@click.pass_obj
+def embed(obj: GlobalArgs) -> None:
+    cipher = obj.cipher
+    characteristic = obj.characteristic
+    sys.argv = sys.argv[:1] # remove all arguments except the command, so start_ipython doesn't try to parse it
+    start_ipython(user_ns=globals()|locals())
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    cli()

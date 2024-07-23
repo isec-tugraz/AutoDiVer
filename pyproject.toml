@@ -7,6 +7,7 @@ version = "0.4"
 # dynamic = ["version"]
 dependencies = [
    "colorama",
+   "click",
    "cython",
    "galois",
    "icecream",
@@ -39,5 +40,5 @@ classifiers = [
 [tool.setuptools.package-data]
 autodiver = ["**/log_config.json"]
 [project.scripts]
-verify-characteristic = "autodiver.verify_characteristic:main"
+verify-characteristic = "autodiver.verify_characteristic:cli"
 tikzify = "autodiver.tikzify:main"
