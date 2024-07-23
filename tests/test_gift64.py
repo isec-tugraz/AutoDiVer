@@ -4,9 +4,9 @@ import numpy as np
 import pytest
 from shutil import which
 
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.gift64.gift_model import Gift64
-from autodiver.gift64.gift_cipher import gift64_enc
+from autodiver.cipher_model import count_solutions
+from autodiver.gift.gift_model import Gift64, Gift64Characteristic
+from autodiver.gift.gift64_cipher import gift64_enc
 
 from sat_toolkit.formula import CNF
 
@@ -43,7 +43,7 @@ def test_tv(pt, key, ct_ref):
 def test_zero_characteristic():
     numrounds = 5
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi, sbo)
+    char = Gift64Characteristic(sbi, sbo)
     gift = Gift64(char)
 
 
@@ -91,7 +91,7 @@ def test_nonzero_characteristic():
     sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
 
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Gift64Characteristic(sbi_delta, sbo_delta)
 
     gift = Gift64(char)
     model = gift.solve(seed=6804)

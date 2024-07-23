@@ -4,8 +4,8 @@ from shutil import which
 import numpy as np
 
 from autodiver.cipher_model import count_solutions
-from autodiver.gift128.gift_model import Gift128, Gift128Characteristic
-from autodiver.gift128.gift_cipher import gift128_enc
+from autodiver.gift.gift_model import Gift128, Gift128Characteristic
+from autodiver.gift.gift128_cipher import gift128_enc
 
 from sat_toolkit.formula import CNF
 
