@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from io import StringIO
 
 import numpy as np
 from typing import Any
@@ -15,6 +16,21 @@ from .gift_util import bit_perm, P64, P128, DDT as GIFT_DDT, GIFT_RC
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
 log = logging.getLogger(__name__)
+
+_PREAMBLE = r"""
+\documentclass{standalone}
+\usepackage{tikz}
+\usepackage{gift}
+\usepackage{tugcolors}
+\begin{document}
+
+""".strip("\n")
+
+_DOCUMENT_END = r"""
+\end{document}
+""".strip("\n")
+
+
 
 class _GiftCharacteristic(DifferentialCharacteristic):
     num_sboxes: int
@@ -85,6 +101,54 @@ class _GiftCharacteristic(DifferentialCharacteristic):
             return cls.load_np(characteristic_path)
         else:
             raise ValueError(f'unsupported file type {characteristic_path.suffix}')
+
+    def tikzify(self) -> str:
+        result = StringIO()
+
+        inv_perm = np.zeros_like(self.permutation)
+        inv_perm[self.permutation] = np.arange(len(self.permutation), dtype=self.permutation.dtype)
+
+
+        print(_PREAMBLE, file=result)
+        print(r"""
+  \begin{tikzpicture}[gift, xscale=.8, sbox/.append style={minimum size=.4cm}, op/.append style={scale=.8}]
+              """.strip("\n").rstrip(), file=result)
+
+        cmd = "smallgiftfalse" if self.block_size == 128 else "smallgifttrue"
+        print(f"      \\{cmd}", file=result)
+        print(f"      \\giftinit[i]", file=result)
+        print(f"      \\spnlinktrue", file=result)
+
+        num_rounds = len(self.sbox_in)
+        for rnd in range(num_rounds):
+            print(f"      \\giftround", file=result)
+
+            active_sboxes, = np.nonzero(self.sbox_in[rnd])
+            active_input_bits = []
+            active_output_bits = []
+            for nibble_idx in range(self.num_sboxes):
+                for bit_idx in range(4):
+                    if self.sbox_in[rnd, nibble_idx] & (1 << bit_idx):
+                        active_input_bits.append(4 * nibble_idx + bit_idx)
+                    if self.sbox_out[rnd, nibble_idx] & (1 << bit_idx):
+                        active_output_bits.append(4 * nibble_idx + bit_idx)
+
+            active_sboxes_str = ",".join(str(x) for x in active_sboxes)
+            active_input_bits_str = ",".join(str(x) for x in active_input_bits)
+            active_bit_transitions = ",".join(f"{x}/{inv_perm[x]}" for x in active_output_bits)
+            print(f"      \\giftmarkbits[tugblue]{{{active_input_bits_str}}}{{{active_sboxes_str}}}{{{active_bit_transitions}}}", file=result)
+
+        print(f"      \\giftfini", file=result)
+        print(r"      \foreach \i in {0,4,...,\bits} { \draw (b\i|-here) node[below,gray,inner sep=0pt,font=\tiny] {\i}; }", file=result)
+
+
+
+        print(r"""
+  \end{tikzpicture}
+        """.strip("\n").rstrip(), file=result)
+
+        print(_DOCUMENT_END, file=result)
+        return result.getvalue()
 
 
 class Gift64Characteristic(_GiftCharacteristic):
