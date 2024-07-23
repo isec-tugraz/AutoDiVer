@@ -77,7 +77,7 @@ class IndexSet:
         if np.any((index_array < 0) | (index_array >= self.numvars + 1)):
             raise IndexError("index out of bounds")
 
-        res = [None] * np.prod(index_array.shape, dtype=int)
+        res: list[str|None] = [None] * np.prod(index_array.shape, dtype=int)
         for i, needle in enumerate(index_array.flatten()):
             if needle == self.numvars:
                 res[i] = "1"

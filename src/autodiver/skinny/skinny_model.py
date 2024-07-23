@@ -216,20 +216,6 @@ class SkinnyBase(SboxCipher):
     def get_rtk_value(self, m: Model, rnd: int):
         return np.array([rtk.get_value(m) for rtk in self.round_tweakeys[rnd]])
 
-    def _get_random_pt(self):
-        pt = np.zeros_like(self.char.sbox_in[0])
-        pt = pt.reshape(-1)
-
-        for i, (di, do) in enumerate(zip(self.char.sbox_in[0].flatten(), self.char.sbox_out[0].flatten())):
-            x = np.arange(len(self.sbox), dtype=np.uint8)
-            x_set, = np.where(self.sbox[x] ^ self.sbox[x ^ di] == do)
-            x = np.random.choice(x_set)
-            pt[i] = x
-
-        assert np.all(self.sbox[pt] ^ self.sbox[pt ^ self.char.sbox_in[0].ravel()] == self.char.sbox_out[0].ravel())
-
-        return np.unpackbits(pt, bitorder='little')
-
 
 class Skinny128(SkinnyBase):
     sbox = sbox8

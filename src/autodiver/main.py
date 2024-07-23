@@ -8,7 +8,7 @@ from pathlib import Path
 import shutil
 import subprocess as sp
 import sys
-from typing import Optional, Callable
+from typing import Optional, Callable, Any
 
 import numpy as np
 from IPython import start_ipython
@@ -44,10 +44,10 @@ def parse_slice(s: str) -> slice:
     if sep == '':
         raise argparse.ArgumentTypeError(f"invalid slice {s!r} -> expected 'start..stop'")
 
-    start = int(start) if start else None
-    stop = int(stop) if stop else None
+    start_int = int(start) if start else None
+    stop_int = int(stop) if stop else None
 
-    return slice(start, stop)
+    return slice(start_int, stop_int)
 
 def FilePath(path: str) -> Path:
     p = Path(path)
@@ -61,7 +61,7 @@ def solve_cipher_interactive(cipher: SboxCipher):
     except UnsatException:
         pass
 
-def main():
+def main() -> int|None:
     ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
         "warp": (WARP128, DifferentialCharacteristic),
         "speedy192": (Speedy192, Speedy192Characteristic),
@@ -78,7 +78,7 @@ def main():
         "rectangle-long-key": (RectangleLongKey, DifferentialCharacteristic),
     }
 
-    commands: dict[str, Callable[[SboxCipher, argparse.Namespace], None|CountResult]] = {
+    commands: dict[str, Callable[[SboxCipher, argparse.Namespace], Any]] = {
         'count-tweaks': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=False, count_tweak=True),
         'count-keys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=False),
         'count-tweakeys': lambda cipher, args: cipher.count_tweakey_space(args.epsilon, args.delta, count_key=True, count_tweak=True),
@@ -95,10 +95,8 @@ def main():
         'count-prob-fixed-key': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_key=True),
         'count-prob-fixed-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True),
         'count-prob-fixed-tweakey': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_tweak=True, fixed_key=True),
-        'count-prob-fixed-pt': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True),
-        'count-prob-fixed-pt-and-tweak': lambda cipher, args: cipher.count_probability(args.epsilon, args.delta, fixed_pt=True, fixed_tweak=True),
         'solve': lambda cipher, _args: solve_cipher_interactive(cipher),
-        'find-conflict': lambda cipher, _args: cipher.find_conflict(),
+        'find-conflict': lambda cipher, _: cipher.find_conflict(),
     }
 
     parser = argparse.ArgumentParser(description=__doc__)
@@ -161,6 +159,8 @@ def main():
 
     if args.embed:
         start_ipython(user_ns=globals()|locals())
+
+    return 0
 
 
 if __name__ == "__main__":
