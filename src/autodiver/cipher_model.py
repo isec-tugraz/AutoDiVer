@@ -756,12 +756,13 @@ class SboxCipher(IndexSet):
                 sample = raw_model[sampling_set_list]
                 initial_samples.append(sample)
                 counter_example_found = True
-            except ValueError as e:
+            except UnsatException as e:
                 assert 'UNSAT' in str(e)
                 log.info(f'RESULT no counterexample found -> conditions on {name} are necessary')
                 counter_example_found = False
                 break
         end_time = time.monotonic()
+        assert A is not None and b is not None
 
         constraints = []
         for i, eq, rhs in zip(count(), A, b):

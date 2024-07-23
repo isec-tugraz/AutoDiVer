@@ -108,6 +108,8 @@ class _Gift(SboxCipher):
     sbox_count: int
     characteristic_type: type
 
+    _round_keys: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         if not isinstance(char, self.characteristic_type):
             raise ValueError(f'expected {self.characteristic_type}, got {type(char)}')
