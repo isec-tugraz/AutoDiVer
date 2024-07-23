@@ -1,0 +1,13 @@
+# MILP-Based Differential Attack on Round-Reduced GIFT
+# Baoyu Zhu, Xiaoyang Dong, and Hongbo Yu
+
+# Table 10. "18-round differential characteristic of GIFT-128"
+# Probability: 2^-109
+#
+# only last 2 rounds where the conflict happens
+
+00100000000000000000000080200000
+00800000000000000000000030600000
+
+00000000800000200000005000000020
+0000000030000060000000f000000060
