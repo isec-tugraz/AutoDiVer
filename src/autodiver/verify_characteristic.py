@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
 import json
 import logging.config
 from dataclasses import dataclass
@@ -9,14 +8,13 @@ from pathlib import Path
 import shutil
 import subprocess as sp
 import sys
-from typing import Optional, Callable, Any
+from typing import Optional, Literal
 
-import numpy as np
 from IPython import start_ipython
 import click
 
 from .import version
-from .cipher_model import CountResult, SboxCipher, DifferentialCharacteristic, UnsatException
+from .cipher_model import SboxCipher, DifferentialCharacteristic, UnsatException
 from .gift.gift_model import Gift64, Gift64Characteristic, Gift128, Gift128Characteristic
 from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey
 from .midori64.midori64_model import Midori64, Midori64Characteristic
@@ -107,84 +105,62 @@ def ensure_cipher_comatible(cipher: SboxCipher, needs_key: bool, needs_tweak: bo
 @cli.command()
 @click.option('--epsilon', type=float, default=0.8)
 @click.option('--delta', type=float, default=0.2)
+@click.option('-k', '--kind', type=click.Choice(['tweakey', 'key', 'tweak']), default=None)
 @click.pass_obj
-def count_tweakeys(obj: GlobalArgs, epsilon: float, delta: float) -> None|int:
+def count_tweakeys(obj: GlobalArgs, epsilon: float, delta: float, kind: Literal['tweakey', 'key', 'tweak']|None) -> None|int:
     """count valid tweakeys using ApproxMC"""
     cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=True)
+
+    if kind is None:
+        count_key = cipher.key_size > 0
+        count_tweak = cipher.tweak_size > 0
+    else:
+        count_key = 'key' in kind
+        count_tweak = 'tweak' in kind
+
+    ensure_cipher_comatible(cipher, needs_key=count_key, needs_tweak=count_tweak)
     ensure_executables('approxmc')
-    cipher.count_tweakey_space(epsilon, delta, count_key=True, count_tweak=True)
-
-@cli.command()
-@click.option('--epsilon', type=float, default=0.8)
-@click.option('--delta', type=float, default=0.2)
-@click.pass_obj
-def count_keys(obj: GlobalArgs, epsilon: float, delta: float) -> None:
-    """count valid keys using ApproxMC"""
-    cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=False)
-    ensure_executables('approxmc')
-    cipher.count_tweakey_space(epsilon, delta, count_key=True, count_tweak=False)
-
-@cli.command()
-@click.option('--epsilon', type=float, default=0.8)
-@click.option('--delta', type=float, default=0.2)
-@click.pass_obj
-def count_tweaks(obj: GlobalArgs, epsilon: float, delta: float) -> None:
-    """count valid tweaks using ApproxMC"""
-    cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=False, needs_tweak=True)
-    cipher.count_tweakey_space(epsilon, delta, count_key=False, count_tweak=True)
+    cipher.count_tweakey_space(epsilon, delta, count_key=count_key, count_tweak=count_tweak)
 
 
 @cli.command()
 @click.pass_obj
-def count_tweakeys_lin(obj: GlobalArgs) -> None:
+@click.option('-k', '--kind', type=click.Choice(['tweakey', 'key', 'tweak']), default=None)
+def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['tweakey', 'key', 'tweak']|None) -> None:
+    """find the affine hull of the set of valid tweakeys"""
     cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=True)
+
+    if kind is None:
+        count_key = cipher.key_size > 0
+        count_tweak = cipher.tweak_size > 0
+    else:
+        count_key = 'key' in kind
+        count_tweak = 'tweak' in kind
+
+    ensure_cipher_comatible(cipher, needs_key=count_key, needs_tweak=count_tweak)
     ensure_executables('cryptominisat5')
-    cipher.count_lin_tweakey_space(count_key=True, count_tweak=True)
+    cipher.count_lin_tweakey_space(count_key=count_key, count_tweak=count_tweak)
 
-@cli.command()
-@click.pass_obj
-def count_keys_lin(obj: GlobalArgs) -> None:
-    cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=False)
-    ensure_executables('cryptominisat5')
-    cipher.count_lin_tweakey_space(count_key=True, count_tweak=False)
 
-@cli.command()
-@click.pass_obj
-def count_tweaks_lin(obj: GlobalArgs) -> None:
-    cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=False, needs_tweak=True)
-    ensure_executables('cryptominisat5')
-    cipher.count_lin_tweakey_space(count_key=False, count_tweak=True)
 
 
 @cli.command()
-@click.option('--trials', type=int, default=1_000)
+@click.option('-n', '--trials', type=int, default=1_000, help="number of tweakeys to test")
+@click.option('-k', '--kind', type=click.Choice(['tweakey', 'key', 'tweak']), default=None)
 @click.pass_obj
-def count_tweakeys_sat(obj: GlobalArgs, trials: int) -> None:
+def count_tweakeys_sat(obj: GlobalArgs, trials: int, kind: Literal['tweakey', 'key', 'tweak']|None) -> None:
+    """estimate size of valid tweakey space experimentally with SAT solvers"""
     cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=True)
-    cipher.count_tweakey_space_sat_solver(trials, count_key=True, count_tweak=True)
 
-@cli.command()
-@click.option('--trials', type=int, default=1_000)
-@click.pass_obj
-def count_keys_sat(obj: GlobalArgs, trials: int) -> None:
-    cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=True, needs_tweak=False)
-    cipher.count_tweakey_space_sat_solver(trials, count_key=True, count_tweak=False)
+    if kind is None:
+        count_key = cipher.key_size > 0
+        count_tweak = cipher.tweak_size > 0
+    else:
+        count_key = 'key' in kind
+        count_tweak = 'tweak' in kind
 
-@cli.command()
-@click.option('--trials', type=int, default=1_000)
-@click.pass_obj
-def count_tweaks_sat(obj: GlobalArgs, trials: int) -> None:
-    cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=False, needs_tweak=True)
-    cipher.count_tweakey_space_sat_solver(trials, count_key=False, count_tweak=True)
+    ensure_cipher_comatible(cipher, needs_key=count_key, needs_tweak=count_tweak)
+    cipher.count_tweakey_space_sat_solver(trials, count_key=count_key, count_tweak=count_tweak)
 
 
 @cli.command()
@@ -194,6 +170,7 @@ def count_tweaks_sat(obj: GlobalArgs, trials: int) -> None:
 @click.option('--fixed-tweak', is_flag=True)
 @click.pass_obj
 def count_prob(obj: GlobalArgs, epsilon: float, delta: float, fixed_key: bool, fixed_tweak: bool) -> None:
+    """estimate the probability using ApproxMC"""
     cipher = obj.cipher
     ensure_cipher_comatible(cipher, needs_key=fixed_key, needs_tweak=fixed_tweak)
     cipher.count_probability(epsilon, delta, fixed_key=fixed_key, fixed_tweak=fixed_tweak)
@@ -202,6 +179,7 @@ def count_prob(obj: GlobalArgs, epsilon: float, delta: float, fixed_key: bool, f
 @cli.command()
 @click.pass_obj
 def solve(obj: GlobalArgs) -> None:
+    """find a satisfying pair for the charactersitic"""
     cipher = obj.cipher
     try:
         cipher.solve()
@@ -211,7 +189,7 @@ def solve(obj: GlobalArgs) -> None:
 @cli.command()
 @click.pass_obj
 def find_conflict(obj: GlobalArgs) -> None:
-    """list s-boxes which lead to an impossible characteristic"""
+    """list s-boxes which lead to a contradiction"""
     cipher = obj.cipher
     if not cipher.model_sbox_assumptions:
         raise click.UsageError("command 'find-conflict' requires --sbox-assumptions")
@@ -219,16 +197,25 @@ def find_conflict(obj: GlobalArgs) -> None:
 
 @cli.command()
 @click.argument('filename', type=click.Path(writable=True))
+@click.option('--convert-xors', is_flag=True, help="convert XOR constraints to CNF")
 @click.pass_obj
-def write_cnf(obj: GlobalArgs, filename: Path) -> None:
+def write_cnf(obj: GlobalArgs, filename: Path, convert_xors: bool) -> None:
+    """write the CNF to a file"""
+
+    if convert_xors:
+        cnf = obj.cipher.cnf.to_cnf()
+    else:
+        cnf = obj.cipher.cnf
+
     with open(filename, 'w') as f:
         log.info(f"writing CNF to {filename}")
-        f.write(obj.cipher.cnf.to_dimacs())
+        f.write(cnf.to_dimacs())
 
 
 @cli.command()
 @click.pass_obj
 def embed(obj: GlobalArgs) -> None:
+    """launch an interactive IPython shell"""
     cipher = obj.cipher
     characteristic = obj.characteristic
     sys.argv = sys.argv[:1] # remove all arguments except the command, so start_ipython doesn't try to parse it
