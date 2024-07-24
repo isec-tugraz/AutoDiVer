@@ -26,13 +26,13 @@ For example, to verify analyze the MIDORI-64 characteristic the following is pos
 verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-prob
 
 # find affine conditions on the key
-verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-keys-lin
+verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-lin
 
 # use ApproxMC to count the number of keys
-verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-keys
+verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys
 
 # count the number of keys experimentally
-verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-keys-sat
+verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-sat
 ```
 
 
