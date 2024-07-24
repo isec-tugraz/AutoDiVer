@@ -188,12 +188,12 @@ def solve(obj: GlobalArgs) -> None:
 
 @cli.command()
 @click.pass_obj
-def find_conflict(obj: GlobalArgs) -> None:
+def find_conflicts(obj: GlobalArgs) -> None:
     """list s-boxes which lead to a contradiction"""
     cipher = obj.cipher
     if not cipher.model_sbox_assumptions:
         raise click.UsageError("command 'find-conflict' requires --sbox-assumptions")
-    cipher.find_conflict()
+    cipher.find_conflicts()
 
 @cli.command()
 @click.argument('filename', type=click.Path(writable=True))

@@ -94,7 +94,6 @@ class SboxCipher(IndexSet):
     cnf: CNF
 
     model_type: Literal['solution_set', 'split_solution_set']
-    _cnf_cache: dict[bytes, CNF] = {}
 
     def __init__(self, char: DifferentialCharacteristic, *, model_type: Literal['solution_set', 'split_solution_set'] = 'solution_set', model_sbox_assumptions: bool = False):
         super().__init__()
@@ -288,40 +287,58 @@ class SboxCipher(IndexSet):
 
         return model
 
-    def find_conflict(self) -> np.ndarray[Any, np.dtype[np.int32]]:
+    def find_conflicts(self) -> CNF:
         if not self.model_sbox_assumptions:
             raise ValueError('model_sbox_assumptions must be True to find conflicts')
 
-        solver = xor_cnf_as_cryptominisat_solver(self.cnf)
-
         assumptions_list = self.sbox_assumptions.ravel().tolist()
-        log.info(f'solving CNF with #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}, #Assumptions: {len(assumptions_list)}')
 
         with Timer() as timer:
-            is_sat, raw_model = solver.solve(assumptions_list)
+            conflicts = self._find_conflics(self.cnf, assumptions_list)
+
+        formatted_conflicts = [self.format_clause(clause) for clause in conflicts]
+
+        log.info(f'RESULT conflict: {conflicts!r}')
+        for formatted_conflict in formatted_conflicts:
+            log.info(f'RESULT {formatted_conflict}')
+
+        find_conflict_result = {
+            'conflicts': formatted_conflicts,
+            'time': timer.elapsed(),
+        }
+        self.log_result(find_conflict_result=find_conflict_result)
+
+
+        return conflicts
+
+    def _find_conflics(self, cnf: CNF, assumptions: list[int]) -> CNF:
+        if any(assumption < 0 for assumption in assumptions):
+            raise ValueError('only positive assumptions are supported')
+
+        solver = xor_cnf_as_cryptominisat_solver(cnf)
+        conflicts = CNF(nvars=cnf.nvars)
+
+        log.info(f'solving CNF with #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}, #Assumptions: {len(assumptions)}')
+
+        with Timer() as timer:
+            is_sat, _ = solver.solve(assumptions)
 
         if is_sat:
-            log.info('RESULT cnf is satisfiable, no conflict')
+            # no extra conflicts
+            return conflicts
 
-            model = self.get_model(raw_model)
-            key_str = self._fmt_arr(model.key, self.key.shape[-1]) # type: ignore
-            tweak_str = self._fmt_arr(model.tweak, self.tweak.shape[-1]) # type: ignore
-            pt_str = self._fmt_arr(model.pt, self.pt.shape[-1]) # type: ignore
-            solve_result = {
-                'status': 'SAT',
-                'key': key_str,
-                'tweak': tweak_str,
-                'pt': pt_str,
-                'time': timer.elapsed(),
-            }
-            self.log_result(solve_result=solve_result)
-            log.info(f'RESULT key={key_str}, tweak={tweak_str}, pt={pt_str}')
+        conflict = Clause(solver.get_conflict())
+        conflicts.add_clause(conflict)
+        log.info(f'conflict: {self.format_clause(conflict)}')
 
-            return np.array([], dtype=np.int32)
+        for conflicting_var in conflict:
+            new_assumptions = [assumption for assumption in assumptions if assumption != -conflicting_var]
+            assert new_assumptions != assumptions, f'conflicting variable ({conflicting_var}) not found in assumptions ({assumptions})'
+            conflicts += self._find_conflics(cnf, new_assumptions)
 
-        conflict = np.array(solver.get_conflict(), dtype=np.int32)
-        log.info(f'RESULT conflict: {self.format_clause(conflict)}')
-        return conflict
+        return conflicts
+
+
 
     def _fmt_tweak_or_key(self, key_bits: np.ndarray):
         if self.key.shape[-1] == 4:
