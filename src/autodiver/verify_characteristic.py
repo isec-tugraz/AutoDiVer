@@ -96,50 +96,51 @@ def ensure_executables(*executables: str) -> None:
             raise click.UsageError(f"missing executable in $PATH: {missing[0]}")
         raise click.UsageError(f"missing executables in $PATH: {', '.join(missing)}")
 
-def ensure_cipher_comatible(cipher: SboxCipher, needs_key: bool, needs_tweak: bool) -> None:
-    if cipher.key_size == 0 and needs_key:
+def ensure_cipher_comatible(cipher: SboxCipher, kind: Literal['key', 'tweak', 'tweakey']) -> None:
+    if cipher.key_size == 0 and 'key' in kind:
         raise click.UsageError(f"{cipher.cipher_name} has no key")
-    if cipher.tweak_size == 0 and needs_tweak:
+    if cipher.tweak_size == 0 and 'tweak' in kind:
         raise click.UsageError(f"{cipher.cipher_name} has no tweak")
+
+def default_kind(cipher: SboxCipher) -> Literal['key', 'tweak', 'tweakey']:
+    if cipher.key_size > 0 and cipher.tweak_size > 0:
+        return 'tweakey'
+    if cipher.key_size > 0:
+        return 'key'
+    if cipher.tweak_size > 0:
+        return 'tweak'
+    raise click.UsageError(f"{cipher.cipher_name} has neither key nor tweak")
 
 @cli.command()
 @click.option('--epsilon', type=float, default=0.8)
 @click.option('--delta', type=float, default=0.2)
 @click.option('-k', '--kind', type=click.Choice(['tweakey', 'key', 'tweak']), default=None)
 @click.pass_obj
-def count_tweakeys(obj: GlobalArgs, epsilon: float, delta: float, kind: Literal['tweakey', 'key', 'tweak']|None) -> None|int:
+def count_tweakeys(obj: GlobalArgs, epsilon: float, delta: float, kind: Literal['key', 'tweak', 'tweakey']|None) -> None:
     """count valid tweakeys using ApproxMC"""
     cipher = obj.cipher
 
     if kind is None:
-        count_key = cipher.key_size > 0
-        count_tweak = cipher.tweak_size > 0
-    else:
-        count_key = 'key' in kind
-        count_tweak = 'tweak' in kind
+        kind = default_kind(cipher)
 
-    ensure_cipher_comatible(cipher, needs_key=count_key, needs_tweak=count_tweak)
+    ensure_cipher_comatible(cipher, kind)
     ensure_executables('approxmc')
-    cipher.count_tweakey_space(epsilon, delta, count_key=count_key, count_tweak=count_tweak)
+    cipher.count_tweakey_space(epsilon, delta, kind=kind)
 
 
 @cli.command()
 @click.pass_obj
 @click.option('-k', '--kind', type=click.Choice(['tweakey', 'key', 'tweak']), default=None)
-def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['tweakey', 'key', 'tweak']|None) -> None:
+def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['key', 'tweak', 'tweakey']|None) -> None:
     """find the affine hull of the set of valid tweakeys"""
     cipher = obj.cipher
 
     if kind is None:
-        count_key = cipher.key_size > 0
-        count_tweak = cipher.tweak_size > 0
-    else:
-        count_key = 'key' in kind
-        count_tweak = 'tweak' in kind
+        kind = default_kind(cipher)
 
-    ensure_cipher_comatible(cipher, needs_key=count_key, needs_tweak=count_tweak)
+    ensure_cipher_comatible(cipher, kind)
     ensure_executables('cryptominisat5')
-    cipher.count_lin_tweakey_space(count_key=count_key, count_tweak=count_tweak)
+    cipher.find_affine_hull(kind)
 
 
 
@@ -148,19 +149,15 @@ def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['tweakey', 'key', 'tweak']
 @click.option('-n', '--trials', type=int, default=1_000, help="number of tweakeys to test")
 @click.option('-k', '--kind', type=click.Choice(['tweakey', 'key', 'tweak']), default=None)
 @click.pass_obj
-def count_tweakeys_sat(obj: GlobalArgs, trials: int, kind: Literal['tweakey', 'key', 'tweak']|None) -> None:
+def count_tweakeys_sat(obj: GlobalArgs, trials: int, kind: Literal['key', 'tweak', 'tweakey']|None) -> None:
     """estimate size of valid tweakey space experimentally with SAT solvers"""
     cipher = obj.cipher
 
     if kind is None:
-        count_key = cipher.key_size > 0
-        count_tweak = cipher.tweak_size > 0
-    else:
-        count_key = 'key' in kind
-        count_tweak = 'tweak' in kind
+        kind = default_kind(cipher)
 
-    ensure_cipher_comatible(cipher, needs_key=count_key, needs_tweak=count_tweak)
-    cipher.count_tweakey_space_sat_solver(trials, count_key=count_key, count_tweak=count_tweak)
+    ensure_cipher_comatible(cipher, kind)
+    cipher.count_tweakey_space_sat_solver(trials, kind)
 
 
 @cli.command()
@@ -172,7 +169,10 @@ def count_tweakeys_sat(obj: GlobalArgs, trials: int, kind: Literal['tweakey', 'k
 def count_prob(obj: GlobalArgs, epsilon: float, delta: float, fixed_key: bool, fixed_tweak: bool) -> None:
     """estimate the probability using ApproxMC"""
     cipher = obj.cipher
-    ensure_cipher_comatible(cipher, needs_key=fixed_key, needs_tweak=fixed_tweak)
+    if fixed_key and cipher.key_size == 0:
+        raise click.UsageError(f"{cipher.cipher_name} has no key")
+    if fixed_tweak and cipher.tweak_size == 0:
+        raise click.UsageError(f"{cipher.cipher_name} has no tweak")
     cipher.count_probability(epsilon, delta, fixed_key=fixed_key, fixed_tweak=fixed_tweak)
 
 

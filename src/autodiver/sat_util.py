@@ -54,7 +54,7 @@ def xor_cnf_as_cryptominisat_solver(xor_cnf: XorCNF) -> pycryptosat.Solver:
 
 class XorClause():
     def __init__(self, literals: Iterable[Integral]):
-        self.literals = set()
+        self.literals: set[Integral] = set()
         for literal in literals:
             self.add(literal)
 

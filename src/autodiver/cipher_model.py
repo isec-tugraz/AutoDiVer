@@ -426,36 +426,41 @@ class SboxCipher(IndexSet):
 
         return CountResult(prob, key_bits, tweak_bits)
 
-    def get_tweak_or_key_variables(self, get_key: bool, get_tweak: bool) -> list[int]:
+    def get_tweak_or_key_variables(self, kind: Literal['key', 'tweak', 'tweakey']) -> list[int]:
+        if kind not in ('key', 'tweak', 'tweakey'):
+            raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
+
         variables = []
-        if get_key:
+        if 'key' in kind:
             variables += self.key.flatten().tolist()
-        if get_tweak:
+        if 'tweak' in kind:
             variables += self.tweak.flatten().tolist()
         return variables
 
-    def count_tweakey_space(self, epsilon, delta, count_key: bool=True, count_tweak: bool=True, verbosity: int=2):
+    def count_tweakey_space(self, epsilon, delta, kind: Literal['key', 'tweak', 'tweakey'], verbosity: int=2):
         """
         Use model counting to count the number of tweakeys for which the
         characteristic is not impossible.
         """
-        sampling_set = self.get_tweak_or_key_variables(count_key, count_tweak)
+        if kind not in ('key', 'tweak', 'tweakey'):
+            raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
 
-        name = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
+        sampling_set = self.get_tweak_or_key_variables(kind)
 
         seed = int.from_bytes(os.urandom(4), 'little')
         with Timer() as timer:
             num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set, seed=seed)
 
         log_num_keys = fmt_log2(num_keys)
-        log.info(f'RESULT {name} space: {log_num_keys}, {epsilon=}, {delta=}')
+        log.info(f'RESULT {kind} space: {log_num_keys}, {epsilon=}, {delta=}')
 
         count_tweakey_result = {
             'num_keys': num_keys,
             'epsilon': epsilon,
             'delta': delta,
-            'count_key': count_key,
-            'count_tweak': count_tweak,
+            'kind': kind,
+            'count_key': 'key' in kind,
+            'count_tweak': 'tweak' in kind,
             'time': timer.elapsed(),
             'seed': seed,
         }
@@ -491,11 +496,14 @@ class SboxCipher(IndexSet):
 
             yield clause
 
-    def count_lin_tweakey_space(self, count_key: bool=True, count_tweak: bool=True):
+    def find_affine_hull(self, kind: Literal['key', 'tweak', 'tweakey']):
         """
         determine the size of the affine hull of the tweakey space
         """
-        sampling_set_list = np.array(self.get_tweak_or_key_variables(count_key, count_tweak))
+        if kind not in ('key', 'tweak', 'tweakey'):
+            raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
+
+        sampling_set_list = np.array(self.get_tweak_or_key_variables(kind))
         sampling_set = set(sampling_set_list)
 
         # one extra sample because the affine space has an offset as well
@@ -503,20 +511,21 @@ class SboxCipher(IndexSet):
         initial_samples: list[GF2] = []
 
         start_time = time.monotonic()
-        name = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
+
         with ThreadPoolExecutor(max_workers=_available_cpus()) as executor:
             def task(_index):
                 raw_model = self._solve(log_result=False)
                 return GF2(raw_model[sampling_set_list])
 
             samples = executor.map(task, range(count_initial_samples))
-            for sample in tqdm(samples, total=count_initial_samples, desc=f'gathering valid {name}s'):
+            for sample in tqdm(samples, total=count_initial_samples, desc=f'gathering valid {kind}s'):
                 initial_samples.append(sample)
 
         A, b = None, None
+        affine_space = None
         while A is None or b is None:
             affine_space = affine_hull(initial_samples)
-            log.info(f'gathered {name}s span affine space of dimension {affine_space.dimension()}')
+            log.info(f'gathered {kind}s span affine space of dimension {affine_space.dimension()}')
 
             A, b = affine_space.as_equation_system()
 
@@ -540,7 +549,7 @@ class SboxCipher(IndexSet):
                 sample = raw_model[sampling_set_list]
                 initial_samples.append(GF2(sample))
             except UnsatException as e:
-                log.info(f'RESULT no counterexample found -> conditions on {name} are necessary')
+                log.info(f'RESULT no counterexample found -> conditions on {kind} are necessary')
                 break
         end_time = time.monotonic()
 
@@ -557,23 +566,25 @@ class SboxCipher(IndexSet):
 
         count_tweakey_lin_result = {
             'constraints': constraints,
-            'count_key': count_key,
-            'count_tweak': count_tweak,
+            'kind': kind,
+            'count_key': 'key' in kind,
+            'count_tweak': 'tweak' in kind,
             'time': end_time - start_time,
         }
 
         self.log_result(count_tweakey_lin_result=count_tweakey_lin_result)
 
 
-    def count_tweakey_space_sat_solver(self, trials: int, count_key: bool=True, count_tweak: bool=True, verbosity: int=2):
+    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey'], verbosity: int=2):
         """
         Use repeated SAT solving to estimate the number of tweakeys for which
         the characteristic is not impossible.
         """
-        sampling_set_list = self.get_tweak_or_key_variables(count_key, count_tweak)
-        sampling_set = set(sampling_set_list)
+        if kind not in ('key', 'tweak', 'tweakey'):
+            raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
 
-        name = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
+        sampling_set_list = self.get_tweak_or_key_variables(kind)
+        sampling_set = set(sampling_set_list)
 
         solver = xor_cnf_as_cryptominisat_solver(self.cnf)
 
@@ -601,9 +612,9 @@ class SboxCipher(IndexSet):
 
                 if time.perf_counter() - prev_keys_update >= 0.1:
                     prev_keys_update = time.perf_counter()
-                    pbar.set_description(f'valid {name}s: {count_sat}/{i + 1}')
+                    pbar.set_description(f'valid {kind}s: {count_sat}/{i + 1}')
 
-        log.info(f'RESULT {name} count: {count_sat}/{trials}')
+        log.info(f'RESULT {kind} count: {count_sat}/{trials}')
 
         for clause in self.get_small_clauses_over_set(solver, len(sampling_set), 1<<32 - 1, sampling_set):
             clause = Clause(clause)
@@ -625,8 +636,9 @@ class SboxCipher(IndexSet):
             'count_sat': count_sat,
             'count_unsat': count_unsat,
             'trials': trials,
-            'count_key': count_key,
-            'count_tweak': count_tweak,
+            'kind': kind,
+            'count_key': 'key' in kind,
+            'count_tweak': 'tweak' in kind,
             'tweakey_conditions': key_conditions,
             'time': timer.elapsed(),
         }
