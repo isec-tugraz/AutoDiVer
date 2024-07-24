@@ -521,9 +521,7 @@ class SboxCipher(IndexSet):
             for sample in tqdm(samples, total=count_initial_samples, desc=f'gathering valid {kind}s'):
                 initial_samples.append(sample)
 
-        A, b = None, None
-        affine_space = None
-        while A is None or b is None:
+        while True:
             affine_space = affine_hull(initial_samples)
             log.info(f'gathered {kind}s span affine space of dimension {affine_space.dimension()}')
 
