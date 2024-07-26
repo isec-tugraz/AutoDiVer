@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import copy
 from concurrent.futures import ThreadPoolExecutor
+from collections import defaultdict
 from dataclasses import dataclass
+from enum import Enum, unique
 import os
 import logging
 import random
@@ -32,6 +34,11 @@ from .characteristic import DifferentialCharacteristic
 
 
 log = logging.getLogger(__name__)
+
+@unique
+class ModelType(Enum):
+    solution_set = 'solution-set'
+    split_solution_set = 'split-solution-set'
 
 
 class Timer:
@@ -93,12 +100,13 @@ class SboxCipher(IndexSet):
     sbox_assumptions: np.ndarray[Any, np.dtype[np.int32]]
     cnf: CNF
 
-    model_type: Literal['solution_set', 'split_solution_set']
+    model_type: ModelType
+    __affine_hull: dict[Literal['key', 'tweak', 'tweakey'], tuple[AffineSpace, np.ndarray[Any, np.dtype[np.int32]]]]
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: Literal['solution_set', 'split_solution_set'] = 'solution_set', model_sbox_assumptions: bool = False):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False):
         super().__init__()
 
-        if model_type not in ('solution_set', 'split_solution_set'):
+        if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
             raise ValueError(f'unknown model_type {model_type}')
 
         self.char = char
@@ -108,6 +116,7 @@ class SboxCipher(IndexSet):
         self.model_type = model_type
         self.model_sbox_assumptions = model_sbox_assumptions
         self.__model_sboxes_called = False
+        self.__affine_hull = {}
 
     def log_result(self, **kwargs):
         """log results in machine readable json"""
@@ -143,14 +152,14 @@ class SboxCipher(IndexSet):
         log.debug(f'RESULT', extra=extra)
 
     @staticmethod
-    def _get_cnf(sbox: np.ndarray, x_set: np.ndarray, *, model_type: Literal['solution_set', 'split_solution_set']) -> CNF:
+    def _get_cnf(sbox: np.ndarray, x_set: np.ndarray, *, model_type: ModelType) -> CNF:
         lut = np.zeros((len(sbox), len(sbox)), dtype=np.uint8)
 
-        if model_type == 'solution_set':
+        if model_type == ModelType.solution_set:
             lut[x_set, sbox[x_set]] = 1
             assert lut.sum() == len(x_set)
             return lut_to_cnf(lut)
-        elif model_type == 'split_solution_set':
+        elif model_type == ModelType.split_solution_set:
             input_lut = np.zeros(len(sbox), dtype=np.uint8)
             output_lut = np.zeros(len(sbox), dtype=np.uint8)
 
@@ -173,6 +182,13 @@ class SboxCipher(IndexSet):
         return self._get_cnf(self.sbox, x_set, model_type=self.model_type)
 
     def _model_sboxes(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
+        """
+        Add cnf constraints for all S-boxes to self.cnf.
+
+        The variables for each S-box are interpreted as little endian.
+        I.e., the least significant bit is stored at index 0.
+        """
+
         if self.__model_sboxes_called:
             raise ValueError('model_sboxes can only be called once')
         self.__model_sboxes_called = True
@@ -203,7 +219,6 @@ class SboxCipher(IndexSet):
             self.add_index_array("sbox_assumptions", (0,))
 
         sbox_cnf = CNF()
-        # print(f'inp_vars: {sbox_in.shape}, out_vars: {sbox_out.shape}, delta_in: {self.char.sbox_in.shape}, delta_out: {self.char.sbox_out.shape}, assumptions: {self.sbox_assumptions.shape}')
 
         for idx in range(delta_out.shape[0]):
             inp, out = inp_vars[idx], out_vars[idx]
@@ -306,11 +321,10 @@ class SboxCipher(IndexSet):
         with Timer() as timer:
             conflicts = self._find_conflics(self.cnf, assumptions_list)
 
-        formatted_conflicts = [self.format_clause(clause) for clause in conflicts]
+        formatted_conflicts = [self.format_clause(clause, invert=True).replace("_assumptions", "") for clause in conflicts]
 
-        log.info(f'RESULT conflict: {conflicts!r}')
         for formatted_conflict in formatted_conflicts:
-            log.info(f'RESULT {formatted_conflict}')
+            log.info(f'RESULT conflict cause: {formatted_conflict}')
 
         find_conflict_result = {
             'conflicts': formatted_conflicts,
@@ -331,6 +345,8 @@ class SboxCipher(IndexSet):
         log.info(f'solving CNF with #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}, #Assumptions: {len(assumptions)}')
 
         with Timer() as timer:
+            for assumption in assumptions:
+                solver.add_clause([assumption, -assumption])
             is_sat, _ = solver.solve(assumptions)
 
         if is_sat:
@@ -339,12 +355,15 @@ class SboxCipher(IndexSet):
 
         conflict = Clause(solver.get_conflict())
         conflicts.add_clause(conflict)
-        log.info(f'conflict: {self.format_clause(conflict)}')
+        log.info(f'conflict cause: {self.format_clause(conflict, invert=True).replace("_assumptions", "")}')
 
         for conflicting_var in conflict:
             new_assumptions = [assumption for assumption in assumptions if assumption != -conflicting_var]
             assert new_assumptions != assumptions, f'conflicting variable ({conflicting_var}) not found in assumptions ({assumptions})'
-            conflicts += self._find_conflics(cnf, new_assumptions)
+            new_conflicts = self._find_conflics(cnf, new_assumptions)
+            for new_conflict in new_conflicts:
+                if new_conflict not in conflicts:
+                    conflicts.add_clause(new_conflict)
 
         return conflicts
 
@@ -513,7 +532,17 @@ class SboxCipher(IndexSet):
         if kind not in ('key', 'tweak', 'tweakey'):
             raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
 
-        sampling_set_list = np.array(self.get_tweak_or_key_variables(kind))
+        # print(self.sbox_assumptions.shape)
+        # assumptions = np.array([self.sbox_assumptions[*x] for x in [[0, 0, 0], [0, 2, 2], [1, 0, 0], [1, 1, 0], [2, 1, 1], [3, 0, 0], [3, 1, 0], [3, 3, 0]]])
+        # assumptions = np.array([self.sbox_assumptions[*x] for x in [[2, 1, 1], [3, 0, 0], [3, 1, 0], [3, 3, 0]]])
+        assumptions = None
+        # print(assumptions.shape)
+
+        if assumptions is not None:
+            print(assumptions)
+            log.info(f'using assumptions {self.format_clause(assumptions)}')
+
+        sampling_set_list = np.array(self.get_tweak_or_key_variables(kind), dtype=np.int32)
         sampling_set = set(sampling_set_list)
 
         # one extra sample because the affine space has an offset as well
@@ -524,7 +553,7 @@ class SboxCipher(IndexSet):
 
         with ThreadPoolExecutor(max_workers=_available_cpus()) as executor:
             def task(_index):
-                raw_model = self._solve(log_result=False)
+                raw_model = self._solve(log_result=False, assumptions=assumptions)
                 return GF2(raw_model[sampling_set_list])
 
             samples = executor.map(task, range(count_initial_samples))
@@ -552,7 +581,7 @@ class SboxCipher(IndexSet):
             extra_constraints.add_clauses(list(extra_vars) + [0])
             try:
                 log.info('solving for counterexample')
-                raw_model = self._solve(self.cnf + extra_constraints, log_result=False)
+                raw_model = self._solve(self.cnf + extra_constraints, log_result=False, assumptions=assumptions)
                 log.info('found counterexample -> trying again')
                 sample = raw_model[sampling_set_list]
                 initial_samples.append(GF2(sample))
@@ -560,6 +589,8 @@ class SboxCipher(IndexSet):
                 log.info(f'RESULT no counterexample found -> conditions on {kind} are necessary')
                 break
         end_time = time.monotonic()
+
+        self.__affine_hull[kind] = affine_space, sampling_set_list
 
         constraints = []
         for i, eq, rhs in zip(count(), A, b):
@@ -583,7 +614,54 @@ class SboxCipher(IndexSet):
         self.log_result(count_tweakey_lin_result=count_tweakey_lin_result)
 
 
-    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey'], verbosity: int=2):
+    def explain_affine_hull(self, kind: Literal['key', 'tweak', 'tweakey']):
+        """
+        find s-box conflicts that explain the conditions in the affine hull
+        """
+        if kind not in ('key', 'tweak', 'tweakey'):
+            raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
+
+        if not self.model_sbox_assumptions:
+            raise ValueError('model_sbox_assumptions must be True to explain affine hull')
+
+        try:
+            affine_space, sampling_set_list = self.__affine_hull[kind]
+        except KeyError:
+            raise ValueError(f'call self.find_affine_hull({kind!r}) first')
+
+        A, b = affine_space.as_equation_system()
+
+        assumptions_to_constraints: dict[tuple[int, ...], list[str]] = defaultdict(list)
+        for i, eq, rhs in zip(count(), A, b):
+            variables, = np.nonzero(eq)
+            var_idxes = sampling_set_list[variables]
+
+            # extra constraint, such that the xor is violated
+            extra_constraint = XorCNF.create_xor(*var_idxes[:, np.newaxis], rhs=[1 - int(rhs)])
+
+            var_names = self.describe_idx_array(var_idxes)
+            str_lhs = ' ⊕ '.join(var_names)
+            constr = f'{str_lhs} = {rhs}'
+
+            log.info(f'finding conflicts when constraint {constr} is violated')
+            conflict = self._find_conflics(self.cnf + extra_constraint, self.sbox_assumptions.ravel().tolist())
+
+            # usually there is only one clause in the conflict
+            # but there may be multiple s-boxes causing the same dependency
+            for clause in conflict:
+                assumptions_to_constraints[tuple(clause)].append(constr)
+
+            # log.info(f'conflict: {self.format_cnf(conflict).replace("_assumptions", "")}')
+
+        for clause, constr in assumptions_to_constraints.items():
+            clause = Clause(clause)
+            print()
+            log.info(f'RESULT cause: {self.format_clause(clause, invert=True).replace("_assumptions", "")}')
+            for constr in constr:
+                log.info(f'RESULT     effect: {constr}')
+
+
+    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey']):
         """
         Use repeated SAT solving to estimate the number of tweakeys for which
         the characteristic is not impossible.

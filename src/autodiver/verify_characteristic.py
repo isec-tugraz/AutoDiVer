@@ -14,7 +14,7 @@ from IPython import start_ipython
 import click
 
 from .import version
-from .cipher_model import SboxCipher, DifferentialCharacteristic, UnsatException
+from .cipher_model import SboxCipher, ModelType, DifferentialCharacteristic, UnsatException
 from .gift.gift_model import Gift64, Gift64Characteristic, Gift128, Gift128Characteristic
 from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey
 from .midori64.midori64_model import Midori64, Midori64Characteristic
@@ -66,8 +66,9 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
 @click.argument('cipher_name', type=click.Choice(list(_ciphers.keys())), required=True)
 @click.argument('characteristic_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=True)
 @click.option('--sbox-assumptions', is_flag=True, help="add assumption variables for all S-boxes")
+@click.option('--model-type', type=click.Choice([mt.value for mt in ModelType]), default=ModelType.solution_set.value, help="using split-solution set allows for more efficient but less accurate modeling")
 @click.pass_context
-def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: bool) -> None:
+def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: bool, model_type: str) -> None:
     characteristic_path = Path(characteristic_path)
     setup_logging(characteristic_path.with_suffix('.jsonl'))
     git_cmd = shutil.which('git')
@@ -78,7 +79,7 @@ def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: 
 
     Cipher, Characteristic = _ciphers[cipher_name]
     characteristic = Characteristic.load(characteristic_path)
-    cipher = Cipher(characteristic, model_sbox_assumptions=sbox_assumptions)
+    cipher = Cipher(characteristic, model_sbox_assumptions=sbox_assumptions, model_type=ModelType(model_type))
     ddt_prob_log2 = characteristic.log2_ddt_probability(Cipher.ddt)
     log.info(f"loaded characteristic with {characteristic.num_rounds} rounds from {characteristic_path} with ddt probability 2**{ddt_prob_log2:.1f}")
 
@@ -131,7 +132,8 @@ def count_tweakeys(obj: GlobalArgs, epsilon: float, delta: float, kind: Literal[
 @cli.command()
 @click.pass_obj
 @click.option('-k', '--kind', type=click.Choice(['tweakey', 'key', 'tweak']), default=None)
-def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['key', 'tweak', 'tweakey']|None) -> None:
+@click.option('--explain', is_flag=True)
+def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['key', 'tweak', 'tweakey']|None, explain: bool) -> None:
     """find the affine hull of the set of valid tweakeys"""
     cipher = obj.cipher
 
@@ -142,8 +144,8 @@ def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['key', 'tweak', 'tweakey']
     ensure_executables('cryptominisat5')
     cipher.find_affine_hull(kind)
 
-
-
+    if explain:
+        cipher.explain_affine_hull(kind)
 
 @cli.command()
 @click.option('-n', '--trials', type=int, default=1_000, help="number of tweakeys to test")
