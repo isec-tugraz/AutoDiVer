@@ -8,15 +8,47 @@ import logging
 
 import numpy as np
 from typing import Any
+from pathlib import Path
 from sat_toolkit.formula import XorCNF
 
 from .ddt import DDT
-from .util import SBOX, RC, do_shift_cols, update_key
+from .util import SBOX, RC, do_shift_cols, do_mix_cols, update_key
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
 log = logging.getLogger(__name__)
 
 class Speedy192Characteristic(DifferentialCharacteristic):
+    def verify_linear_layer(self):
+        # verify even rounds (ShiftColumns)
+        for rnd in range(0, len(self.sbox_in) - 1, 2):
+            sc_in = self.sbox_out[rnd]
+            sc_out = self.sbox_in[rnd+1]
+
+            unpacked_sc_in = np.unpackbits(sc_in[:, np.newaxis], axis=-1, bitorder='little')[..., :6]
+            unpacked_sc_out = np.unpackbits(sc_out[:, np.newaxis], axis=-1, bitorder='little')[..., :6]
+            shifted = do_shift_cols(unpacked_sc_in)
+
+            if not np.all(shifted == unpacked_sc_out):
+                # from IPython import embed; embed()
+                raise ValueError(f'invalid ShiftColumns: sbox_in[{rnd}] -> sbox_out[{rnd+1}]')
+
+        # verify odd rounds (MixColumns)
+        for rnd in range(1, len(self.sbox_in) - 1, 2):
+            alpha = (0, 1, 5, 9, 15, 21, 26)
+            ll_in = self.sbox_out[rnd]
+            mc_out = self.sbox_in[rnd+1]
+
+            unpacked_ll_in = np.unpackbits(ll_in[:, np.newaxis], axis=-1, bitorder='little')[..., :6]
+            unpacked_mc_in = do_shift_cols(unpacked_ll_in)
+            unpacked_mc_out = np.unpackbits(mc_out[:, np.newaxis], axis=-1, bitorder='little')[..., :6]
+
+            mixed = do_mix_cols(unpacked_mc_in)
+
+            if not np.all(mixed == unpacked_mc_out):
+                # from IPython import embed; embed()
+                raise ValueError(f'invalid MixColumns: sbox_in[{rnd}] -> sbox_out[{rnd+1}]')
+
+
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         trail = []
@@ -39,7 +71,9 @@ class Speedy192Characteristic(DifferentialCharacteristic):
         sbox_in = trail[0::2]
         sbox_out = trail[1::2]
 
-        return cls(sbox_in, sbox_out, file_path=characteristic_path)
+        res = cls(sbox_in, sbox_out, file_path=characteristic_path)
+        res.verify_linear_layer()
+        return res
 
 class Speedy192(SboxCipher):
     cipher_name = "SPEEDY192"
@@ -52,8 +86,7 @@ class Speedy192(SboxCipher):
     sbox_bits = 6
     sbox_count = 32
 
-    # key: np.ndarray[Any, np.dtype[np.int32]]
-    # mc_out: np.ndarray[Any, np.dtype[np.int32]]
+    mc_out: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
