@@ -26,7 +26,7 @@ from pycryptosat import Solver
 
 from . import version
 from .util import IndexSet, Model, fmt_log2
-from .gf2_util import affine_hull
+from .gf2_util import affine_hull, AffineSpace
 from .sat_util import UnsatException, count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
 from .characteristic import DifferentialCharacteristic
 
@@ -149,13 +149,23 @@ class SboxCipher(IndexSet):
         if model_type == 'solution_set':
             lut[x_set, sbox[x_set]] = 1
             assert lut.sum() == len(x_set)
+            return lut_to_cnf(lut)
         elif model_type == 'split_solution_set':
-            lut[x_set, :] = 1
-            lut[:, sbox[x_set]] = 1
+            input_lut = np.zeros(len(sbox), dtype=np.uint8)
+            output_lut = np.zeros(len(sbox), dtype=np.uint8)
+
+            input_lut[x_set] = 1
+            output_lut[sbox[x_set]] = 1
+
+            input_cnf = lut_to_cnf(input_lut)
+            output_cnf = lut_to_cnf(output_lut)
+
+            mapping = [0] + list(range(input_cnf.nvars + 1, input_cnf.nvars + output_cnf.nvars + 1))
+            cnf = input_cnf + output_cnf.translate(mapping)
+            return cnf
         else:
             raise ValueError(f'unknown model_type {model_type}')
 
-        return lut_to_cnf(lut)
 
     def _get_sbox_cnf(self, delta_in, delta_out) -> CNF:
         x = np.arange(len(self.sbox), dtype=np.uint8)
