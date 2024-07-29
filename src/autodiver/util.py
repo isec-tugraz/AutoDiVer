@@ -4,6 +4,7 @@ from math import log2
 from typing import Any, Literal
 
 import numpy as np
+import numpy.typing as npt
 
 def fmt_log2(number: float, width: int=0) -> str:
     if number == 0:
@@ -97,7 +98,7 @@ class IndexSet:
                 assert False, f"index {needle} not found?"
         return np.array(res, dtype=object).reshape(index_array.shape)
 
-    def format_clause(self, clause: np.ndarray[Any, np.dtype[np.int32]], invert=False) -> str:
+    def format_clause(self, clause: npt.ArrayLike, invert=False) -> str:
         if not invert:
             EMPTY = '⊥'
             JOINER = ' ⋁ '
@@ -109,6 +110,8 @@ class IndexSet:
             NEGATIVE = ''
             POSITIVE = '￢'
 
+        clause = np.array(clause, dtype=np.int32)
+        assert len(clause.shape) == 1
         if len(clause) == 0:
             return EMPTY
 

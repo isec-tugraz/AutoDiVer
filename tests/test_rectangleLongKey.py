@@ -28,8 +28,10 @@ def test_zero_characteristic():
     model = rectangle.solve(seed=6024)
 
     round_keys = np.empty(char.num_rounds+1, dtype=np.uint64)
+    model_key: np.ndarray = model.key # type: ignore
+
     for i in range(char.num_rounds+1):
-        round_keys[i] = nibble_to_block(model.key[i])
+        round_keys[i] = nibble_to_block(model_key[i])
     print(round_keys)
     pt = model.pt # type: ignore
     pt = nibble_to_block(pt)
@@ -64,8 +66,10 @@ def test_nonzero_characteristic():
     model = rectangle.solve(seed=8284)
 
     round_keys = np.empty(char.num_rounds+1, dtype=np.uint64)
+    model_key: np.ndarray = model.key # type: ignore
+
     for i in range(char.num_rounds+1):
-        round_keys[i] = nibble_to_block(model.key[i])
+        round_keys[i] = nibble_to_block(model_key[i])
     print(round_keys)
     pt = model.pt # type: ignore
     pt = nibble_to_block(pt)

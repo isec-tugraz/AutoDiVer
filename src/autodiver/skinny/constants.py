@@ -86,7 +86,9 @@ inv_mixing_mat = np.array([
 ddt8 = get_ddt(sbox8)
 
 
-def apply_perm(vec: list, perm: list[int], repeats: int):
+def apply_perm(vec: list|np.ndarray, perm: list[int]|np.ndarray, repeats: int):
+    if isinstance(vec, np.ndarray) and vec.ndim > 1:
+        raise ValueError("only 1-d array supported")
     for _ in range(repeats):
         new_vec = [None] * len(vec)
         for i, e in enumerate(perm):
@@ -117,8 +119,10 @@ def do_mix_cols(state):
     return result
 
 
-def update_tweakey(tweakeys: list[np.ndarray], block_size: int = 128):
-    tweakeys: np.ndarray = np.array(tweakeys, dtype=np.uint8).reshape(3, 16)
+def update_tweakey(tweakeys: list[np.ndarray]|np.ndarray, block_size: int = 128):
+    tweakeys = np.array(tweakeys, dtype=np.uint8)
+    assert tweakeys.shape in ((3, 16), (3, 4, 4))
+    tweakeys = tweakeys.reshape(3, 16)
 
     # permute
     tweakeys = tweakeys[:, tweakey_perm]

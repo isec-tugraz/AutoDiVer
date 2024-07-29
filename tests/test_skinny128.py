@@ -74,7 +74,7 @@ def test_unique_solution():
         cnf += CNF(extra_clauses)
 
         is_sat, model = cnf.solve_dimacs()
-        assert(is_sat)
+        assert is_sat and model is not None
 
         ct = model[ct_idxes]
 

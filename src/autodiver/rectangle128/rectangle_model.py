@@ -21,6 +21,10 @@ class Rectangle(SboxCipher):
     sbox_count = 16
     key: np.ndarray[Any, np.dtype[np.int32]]
 
+    _round_keys: np.ndarray[Any, np.dtype[np.int32]]
+    s_key: np.ndarray[Any, np.dtype[np.int32]]
+    r_key: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
@@ -62,7 +66,7 @@ class Rectangle(SboxCipher):
 
     def apply_perm_nibble(self, instate):
         outstate = instate.copy()
-        array = np.empty((16, 4), dtype=np.uint32)
+        array = np.empty((16, 4), dtype=np.int32)
         #first get bit state from nibble state
         # print(f"{instate = }")
         for i in range(16):
@@ -118,9 +122,9 @@ class Rectangle128(Rectangle):
         for i in range(self.num_rounds):
             RK.append(keyWords[:16, :])
 
-            array = np.empty((32, 4), dtype=np.uint32)
-            row = np.empty((4, 32), dtype=np.uint32)
-            rk_row = np.empty((4, 32), dtype=np.uint32)
+            array = np.empty((32, 4), dtype=np.int32)
+            row = np.empty((4, 32), dtype=np.int32)
+            rk_row = np.empty((4, 32), dtype=np.int32)
 
             #first compute the sbox operations
             for j in range(8):

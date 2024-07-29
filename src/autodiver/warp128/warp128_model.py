@@ -24,6 +24,10 @@ class WARP128(SboxCipher):
 
     sbox_bits = 4
     sbox_count = 16
+
+    X: np.ndarray[Any, np.dtype[np.int32]]
+    Y: np.ndarray[Any, np.dtype[np.int32]]
+
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
         self.char = char
@@ -66,7 +70,7 @@ class WARP128(SboxCipher):
         #    self.rounds_out[i] = perm_nibble_inv(self.rounds_in[i])
         ##no permutation at the end
         #self.rounds_out[self.num_rounds-1] = self.get_round_var(self.sbox_in[self.num_rounds-1], self.Y[0])
-        # np.empty((2*self.sbox_count, 4), dtype=np.uint32)
+        # np.empty((2*self.sbox_count, 4), dtype=np.int32)
         # for i in range(self.sbox_count):
         #     self.pt[2*i] = self.sbox_in[0][i]
         #     self.pt[2*i+1] = self.X[0][i]
@@ -76,7 +80,7 @@ class WARP128(SboxCipher):
         # print(self.pt)
 
     def get_round_var(self, a, b):
-        v = np.empty((2*self.sbox_count, 4), dtype=np.uint32)
+        v = np.empty((2*self.sbox_count, 4), dtype=np.int32)
         for i in range(self.sbox_count):
             v[2*i] = a[i]
             v[2*i+1] = b[i]

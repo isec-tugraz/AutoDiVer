@@ -98,7 +98,7 @@ class SboxCipher(IndexSet):
     pt: np.ndarray[Any, np.dtype[np.int32]]
     tweak: np.ndarray[Any, np.dtype[np.int32]]
     sbox_assumptions: np.ndarray[Any, np.dtype[np.int32]]
-    cnf: CNF
+    cnf: XorCNF
 
     model_type: ModelType
     __affine_hull: dict[Literal['key', 'tweak', 'tweakey'], tuple[AffineSpace, np.ndarray[Any, np.dtype[np.int32]]]]
@@ -239,7 +239,7 @@ class SboxCipher(IndexSet):
     def _model_linear_layer(self):
         raise NotImplementedError("this should be implemented by subclasses")
 
-    def _solve(self, cnf: CNF=None, *, log_result: bool=True, seed: int|None=None, assumptions: np.ndarray|None=None) -> np.ndarray[Any, np.dtype[np.uint8]]:
+    def _solve(self, cnf: XorCNF|None=None, *, log_result: bool=True, seed: int|None=None, assumptions: np.ndarray|None=None) -> np.ndarray[Any, np.dtype[np.uint8]]:
         if assumptions is None:
             assumptions = self.sbox_assumptions
 
@@ -261,6 +261,8 @@ class SboxCipher(IndexSet):
             if log_result:
                 log.info('RESULT cnf is UNSAT')
             raise UnsatException('cnf is UNSAT')
+
+        assert model is not None
 
         if log_result:
             log.info('RESULT cnf is SAT')
@@ -335,7 +337,7 @@ class SboxCipher(IndexSet):
 
         return conflicts
 
-    def _find_conflics(self, cnf: CNF, assumptions: list[int]) -> CNF:
+    def _find_conflics(self, cnf: XorCNF, assumptions: list[int]) -> CNF:
         if any(assumption < 0 for assumption in assumptions):
             raise ValueError('only positive assumptions are supported')
 
