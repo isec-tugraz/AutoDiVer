@@ -8,7 +8,6 @@ import numpy as np
 from os import path
 
 from .constants import *
-from .read_sol import *
 from ..sat_util import XorClause
 
 
