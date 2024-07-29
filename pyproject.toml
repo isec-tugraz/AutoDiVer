@@ -13,7 +13,7 @@ dependencies = [
    "icecream",
    "ipython",
    "pyapproxmc",
-   "pycryptosat",
+   "pycryptosat!=5.11.23",
    "sat_toolkit>=0.4.6",
    "galois",
    "setuptools",
