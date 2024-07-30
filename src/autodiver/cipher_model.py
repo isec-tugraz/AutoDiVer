@@ -321,7 +321,7 @@ class SboxCipher(IndexSet):
         assumptions_list = self.sbox_assumptions.ravel().tolist()
 
         with Timer() as timer:
-            conflicts = self._find_conflics(self.cnf, assumptions_list)
+            conflicts = self._find_conflicts(self.cnf, assumptions_list)
 
         formatted_conflicts = [self.format_clause(clause, invert=True).replace("_assumptions", "") for clause in conflicts]
 
@@ -337,7 +337,7 @@ class SboxCipher(IndexSet):
 
         return conflicts
 
-    def _find_conflics(self, cnf: XorCNF, assumptions: list[int]) -> CNF:
+    def _find_conflicts(self, cnf: XorCNF, assumptions: list[int]) -> CNF:
         if any(assumption < 0 for assumption in assumptions):
             raise ValueError('only positive assumptions are supported')
 
@@ -362,7 +362,7 @@ class SboxCipher(IndexSet):
         for conflicting_var in conflict:
             new_assumptions = [assumption for assumption in assumptions if assumption != -conflicting_var]
             assert new_assumptions != assumptions, f'conflicting variable ({conflicting_var}) not found in assumptions ({assumptions})'
-            new_conflicts = self._find_conflics(cnf, new_assumptions)
+            new_conflicts = self._find_conflicts(cnf, new_assumptions)
             for new_conflict in new_conflicts:
                 if new_conflict not in conflicts:
                     conflicts.add_clause(new_conflict)
@@ -646,7 +646,7 @@ class SboxCipher(IndexSet):
             constr = f'{str_lhs} = {rhs}'
 
             log.info(f'finding conflicts when constraint {constr} is violated')
-            conflict = self._find_conflics(self.cnf + extra_constraint, self.sbox_assumptions.ravel().tolist())
+            conflict = self._find_conflicts(self.cnf + extra_constraint, self.sbox_assumptions.ravel().tolist())
 
             # usually there is only one clause in the conflict
             # but there may be multiple s-boxes causing the same dependency
