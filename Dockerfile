@@ -95,6 +95,7 @@ COPY --chown=user . .
 
 ARG APP_VERSION
 RUN pip install . \
+    && pip install ./tests \
     && rm -rf ~/.cache/pip
 
 

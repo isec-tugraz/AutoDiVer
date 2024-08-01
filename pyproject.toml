@@ -4,7 +4,6 @@ requires = ["setuptools>=64", "wheel", "Cython"]
 [project]
 name = "autodiver"
 version = "0.4"
-# dynamic = ["version"]
 dependencies = [
    "colorama",
    "click",
@@ -22,6 +21,13 @@ dependencies = [
 ]
 requires-python = ">=3.9"
 authors = [
+    {name = "Marcel Nageler"},
+    {name = "Shibam Ghosh"},
+    {name = "Maria Eichlseder"},
+]
+
+maintainers = [
+    {name = "Marcel Nageler", email = "marcel.nageler@iaik.tugraz.at"},
 ]
 
 description = "A tool for verifying differential characteristics in block ciphers"
