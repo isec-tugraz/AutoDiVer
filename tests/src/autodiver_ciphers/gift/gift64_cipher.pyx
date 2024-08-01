@@ -1,5 +1,9 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 Shibam Ghosh
+
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
 #distutils: sources = src/autodiver_ciphers/gift/gift64_ref.c
+
 cimport cython
 
 from libc.stdio cimport printf

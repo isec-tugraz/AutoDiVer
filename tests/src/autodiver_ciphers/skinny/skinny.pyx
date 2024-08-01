@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
 #distutils: sources = src/autodiver_ciphers/skinny/skinny-c/src/skinny128-cipher.c
 #distutils: include_dirs = src/autodiver_ciphers/skinny/skinny-c/include/

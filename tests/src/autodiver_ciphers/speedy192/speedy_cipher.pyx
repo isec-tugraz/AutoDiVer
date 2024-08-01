@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-only
+
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
 #distutils: sources = src/autodiver_ciphers/speedy192/speedy192.c
 cimport cython

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: CC0-1.0
 #
 # Ascon v1.2 implemention by Maria Eichlseder (https://github.com/meichlseder/pyascon)
 # Licensed under CC0 1.0 Universal.

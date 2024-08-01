@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
 #distutils: include_dirs = src/autodiver/skinny/skinny-c/include/
 cimport cython

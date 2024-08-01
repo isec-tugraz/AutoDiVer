@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: MIT
+
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
 #distutils: sources = src/autodiver_ciphers/rectangle128/rectangle_ref.c
 cimport cython
