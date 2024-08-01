@@ -1,5 +1,5 @@
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = src/autodiver/speedy192/speedy192.c
+#distutils: sources = src/autodiver_ciphers/warp128/warp128.c
 cimport cython
 
 from libc.stdio cimport printf
@@ -11,15 +11,15 @@ import numpy as np
 
 cdef extern from *:
     """
-    void Encrypt(uint8_t *plaintext, uint8_t *key, int rounds);
+    void enc(uint8_t *m, uint8_t *k, int rounds);
     """
-    void Encrypt(uint8_t *plaintext, uint8_t *key, int rounds) nogil;
+    void enc(uint8_t *m, uint8_t *k, int rounds) nogil;
 
-def speedy192_enc(const uint8_t[:] pt not None, const uint8_t[:] key not None, int rounds)-> uint8_t[:]:
+def warp_enc(const uint8_t[:] pt not None, uint8_t[:] key not None, int rounds)-> uint8_t[:]:
 
     cdef ssize_t i
 
     ct = bytearray(pt)
     cdef uint8_t[:] ct_view = ct
-    Encrypt(&ct_view[0], &key[0], rounds)
+    enc(&ct_view[0], &key[0], rounds)
     return np.array(ct)

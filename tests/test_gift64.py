@@ -6,7 +6,7 @@ from shutil import which
 
 from autodiver.cipher_model import count_solutions
 from autodiver.gift.gift_model import Gift64, Gift64Characteristic
-from autodiver.gift.gift64_cipher import gift64_enc
+from autodiver_ciphers.gift.gift64_cipher import gift64_enc
 
 from sat_toolkit.formula import CNF
 

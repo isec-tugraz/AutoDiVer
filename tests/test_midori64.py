@@ -5,7 +5,7 @@ import pytest
 from shutil import which
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.midori64.midori64_model import Midori64, matrix_as_uint64
-from autodiver.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr
+from autodiver_ciphers.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr
 
 from sat_toolkit.formula import CNF
 from icecream import ic

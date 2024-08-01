@@ -7,7 +7,7 @@ import numpy as np
 from sat_toolkit.formula import XorCNF
 
 from autodiver.cipher_model import count_solutions
-from autodiver.present.present_cipher import present_enc80, present_enc128, key_function_80, key_function_128
+from autodiver_ciphers.present.present_cipher import present_enc80, present_enc128, key_function_80, key_function_128
 from autodiver.present.present_model import Present80, PresentCharacteristic
 
 approxmc = which("approxmc")

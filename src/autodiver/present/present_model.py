@@ -7,7 +7,6 @@ import logging
 from typing import Any
 from pathlib import Path
 
-from .present_cipher import s_box, p_layer_order
 from .present_util import PERM, INV_PERM, bit_perm
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 

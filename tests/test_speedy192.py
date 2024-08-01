@@ -2,7 +2,7 @@ from random import seed, randint
 
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions, UnsatException
 from autodiver.speedy192.speedy192_model import Speedy192
-from autodiver.speedy192.speedy_cipher import speedy192_enc
+from autodiver_ciphers.speedy192.speedy_cipher import speedy192_enc
 
 
 from autodiver.speedy192.util import Add, prepare_round_keys

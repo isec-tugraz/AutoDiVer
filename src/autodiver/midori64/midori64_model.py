@@ -14,9 +14,33 @@ from sat_toolkit.formula import XorCNF
 from .util import DDT, RC, do_shift_rows, mixing_mat, do_linear_layer
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
-from .midori_cipher import midori64_mc, midori64_sr
-
 log = logging.getLogger(__name__)
+
+def midori64_mc(inp: int) -> int:
+    nibbles = np.array([inp >> (4*i) & 0xf for i in range(16)], dtype=np.uint8)
+    nibbles = nibbles[::-1]
+    nibbles = nibbles.reshape(4, 4).T
+
+    out = np.zeros_like(nibbles)
+    out[0, :] = nibbles[1, :] ^ nibbles[2, :] ^ nibbles[3, :]
+    out[1, :] = nibbles[0, :] ^ nibbles[2, :] ^ nibbles[3, :]
+    out[2, :] = nibbles[0, :] ^ nibbles[1, :] ^ nibbles[3, :]
+    out[3, :] = nibbles[0, :] ^ nibbles[1, :] ^ nibbles[2, :]
+
+    out = out.T.ravel()
+    out = out[::-1]
+    return sum(int(out[i]) << (4*i) for i in range(16))
+
+def midori64_sr(inp: int) -> int:
+    nibbles = np.array([inp >> (4*i) & 0xf for i in range(16)], dtype=np.uint8)
+    nibbles = nibbles[::-1]
+
+    perm = np.array([0, 10, 5, 15, 14, 4, 11, 1, 9, 3, 12, 6, 7, 13, 2, 8])
+    out = nibbles[perm]
+
+    out = out[::-1]
+    return sum(int(out[i]) << (4*i) for i in range(16))
+
 
 def matrix_as_uint64(matrix: np.ndarray) -> int:
     assert np.all(matrix >= 0) and np.all(matrix < 16)

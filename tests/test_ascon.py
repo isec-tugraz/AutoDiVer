@@ -8,7 +8,7 @@ import numpy as np
 from autodiver.ascon.ascon_model import Ascon, AsconCharacteristic
 from autodiver.cipher_model import count_solutions
 
-from autodiver.ascon.pyascon import ascon_permutation
+from autodiver_ciphers.ascon.pyascon import ascon_permutation
 from shutil import which
 
 import pytest

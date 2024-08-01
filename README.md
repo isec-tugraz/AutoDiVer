@@ -35,10 +35,27 @@ verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-twea
 verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-sat
 ```
 
+## Licensing
+
+The source code of AutoDiVer in `src/` is licensed under the MIT license.
+
+The test cases in `tests/` are licensed under GPL to provide compatibility with some of the cipher implementations.
+This includes the cipher implementations which are originally distributed under various licenses.
+
 
 ## Running the tests
 
-Running the tests can be done by starting `pytest` in his directory.
+To run the tests, you first need to install the GPL licensed cipher implementations:
+
+```bash
+pip install ./tests
+```
+
+Then, you can run all tests by running
+
+```bash
+pytest
+```
 
 
 ## Manual Installation

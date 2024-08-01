@@ -2,7 +2,7 @@ from random import seed, randint
 
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.midori128.midori128_model import Midori128, Midori128Characteristic
-from autodiver.midori128.midori_cipher import midori128_enc
+from autodiver_ciphers.midori128.midori_cipher import midori128_enc
 
 
 from autodiver.midori128.util import sr_mapping, postPermute

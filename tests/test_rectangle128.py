@@ -5,7 +5,7 @@ from shutil import which
 
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.rectangle128.rectangle_model import Rectangle128
-from autodiver.rectangle128.rectangle_cipher import rectangle_enc, nibble_to_block, nibble_to_key
+from autodiver_ciphers.rectangle128.rectangle_cipher import rectangle_enc, nibble_to_block, nibble_to_key
 from sat_toolkit.formula import CNF
 
 approxmc = which("approxmc")

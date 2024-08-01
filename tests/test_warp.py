@@ -5,7 +5,7 @@ import pytest
 from shutil import which
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
 from autodiver.warp128.warp128_model import WARP128
-from autodiver.warp128.warp_cipher import warp_enc
+from autodiver_ciphers.warp128.warp_cipher import warp_enc
 from autodiver.warp128.util import get_round_in_out, perm_nibble_inv
 
 from sat_toolkit.formula import CNF

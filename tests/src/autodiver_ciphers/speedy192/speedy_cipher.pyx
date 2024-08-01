@@ -1,5 +1,5 @@
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = src/autodiver/midori128/midori128.c
+#distutils: sources = src/autodiver_ciphers/speedy192/speedy192.c
 cimport cython
 
 from libc.stdio cimport printf
@@ -11,15 +11,15 @@ import numpy as np
 
 cdef extern from *:
     """
-    void enc_midori128(uint8_t *msg, uint8_t *key, int rounds);
+    void Encrypt(uint8_t *plaintext, uint8_t *key, int rounds);
     """
-    void enc_midori128(uint8_t *msg, uint8_t *key, int rounds) nogil;
+    void Encrypt(uint8_t *plaintext, uint8_t *key, int rounds) nogil;
 
-def midori128_enc(const uint8_t[:] pt not None, const uint8_t[:] key not None, int rounds)-> uint8_t[:]:
+def speedy192_enc(const uint8_t[:] pt not None, const uint8_t[:] key not None, int rounds)-> uint8_t[:]:
 
     cdef ssize_t i
 
     ct = bytearray(pt)
     cdef uint8_t[:] ct_view = ct
-    enc_midori128(&ct_view[0], &key[0], rounds)
-    return bytes(ct)
+    Encrypt(&ct_view[0], &key[0], rounds)
+    return np.array(ct)

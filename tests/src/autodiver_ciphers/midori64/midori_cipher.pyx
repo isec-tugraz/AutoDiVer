@@ -1,5 +1,5 @@
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = src/autodiver/midori64/midori64.c
+#distutils: sources = src/autodiver_ciphers/midori64/midori64.c
 cimport cython
 
 from libc.stdio cimport printf
