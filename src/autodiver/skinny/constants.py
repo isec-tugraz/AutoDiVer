@@ -87,8 +87,6 @@ ddt8 = get_ddt(sbox8)
 
 
 def apply_perm(vec: list|np.ndarray, perm: list[int]|np.ndarray, repeats: int):
-    if isinstance(vec, np.ndarray) and vec.ndim > 1:
-        raise ValueError("only 1-d array supported")
     for _ in range(repeats):
         new_vec = [None] * len(vec)
         for i, e in enumerate(perm):
