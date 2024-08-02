@@ -14,4 +14,4 @@ This is a collection of cipher implementations under various licenses.
 | Rectangle | MIT       | Shibam Ghosh                                                             |
 | SKINNY    | MIT       | [Rhys Weatherley](https://github.com/rweather/skinny-c)                  |
 | SPEEDY    | GPL-3.0   | [Thorben Moos](https://github.com/Chair-for-Security-Engineering/SPEEDY) |
-| WARP      | ?         | [Zhenzhen Bao](https://github.com/WARP-Block-Cipher/Software)            |
+| WARP      | MIT       | [Zhenzhen Bao](https://github.com/WARP-Block-Cipher/Software)            |
