@@ -18,6 +18,7 @@ dependencies = [
    "setuptools",
    "tqdm",
    "numpy",
+   "scipy"
 ]
 requires-python = ">=3.9"
 authors = [

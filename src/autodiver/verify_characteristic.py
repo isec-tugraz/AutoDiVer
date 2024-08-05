@@ -24,6 +24,8 @@ from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from .ascon.ascon_model import Ascon, AsconCharacteristic
 from .skinny.skinny_model import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
 from .present.present_model import Present80, PresentLongKey, PresentCharacteristic
+from .pyjamask.pyjamask96_model import Pyjamask_Longkey, Pyjamask_with_Keyschedule, Pyjamask96Characteristic
+
 
 log = logging.getLogger(__name__)
 
@@ -59,6 +61,8 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
     "ascon": (Ascon, AsconCharacteristic),
     "rectangle128": (Rectangle128, DifferentialCharacteristic),
     "rectangle-long-key": (RectangleLongKey, DifferentialCharacteristic),
+    "pyjamask": (Pyjamask_with_Keyschedule, Pyjamask96Characteristic),
+    "pyjamask-long-key": (Pyjamask_Longkey, Pyjamask96Characteristic),
 }
 
 
