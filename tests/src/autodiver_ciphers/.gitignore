@@ -9,3 +9,4 @@ skinny/skinny.c
 speedy192/speedy_cipher.c
 warp128/warp_cipher.c
 rectangle128/rectangle_cipher.c
+pyjamask/pyjamask96.c
