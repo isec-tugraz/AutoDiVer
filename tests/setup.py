@@ -13,5 +13,7 @@ setup(
         Extension("autodiver_ciphers.warp128.warp_cipher", ["src/autodiver_ciphers/warp128/warp_cipher.pyx"]),
         Extension("autodiver_ciphers.speedy192.speedy_cipher", ["src/autodiver_ciphers/speedy192/speedy_cipher.pyx"]),
         Extension("autodiver_ciphers.rectangle128.rectangle_cipher", ["src/autodiver_ciphers/rectangle128/rectangle_cipher.pyx"]),
+        Extension("autodiver_ciphers.pyjamask.pyjamask_cipher", ["src/autodiver_ciphers/pyjamask/pyjamask96.pyx"]),
+
     ]),
 )
