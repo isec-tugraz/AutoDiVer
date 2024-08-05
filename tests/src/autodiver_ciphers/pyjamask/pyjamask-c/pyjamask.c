@@ -1,4 +1,6 @@
 /*
+SPDX-License-Identifier: GPL-3.0-or-newer
+
 ===============================================================================
 
     Reference implementation of Pyjamask block ciphers in C

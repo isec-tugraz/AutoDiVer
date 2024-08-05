@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: GPL-3.0-or-newer
+
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
 #distutils: sources = src/autodiver_ciphers/pyjamask/pyjamask-c/pyjamask.c
 #distutils: include_dirs = src/autodiver_ciphers/pyjamask/pyjamask-c/

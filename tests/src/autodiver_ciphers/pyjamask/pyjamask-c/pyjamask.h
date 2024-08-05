@@ -1,4 +1,6 @@
 /*
+SPDX-License-Identifier: GPL-3.0-or-newer
+
 ===============================================================================
 
     Header file for Pyjamsk block ciphers in C
