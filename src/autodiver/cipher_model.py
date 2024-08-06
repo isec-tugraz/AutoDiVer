@@ -665,18 +665,30 @@ class SboxCipher(IndexSet):
                 log.info(f'RESULT     effect: {constr}')
 
 
-    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey']):
+    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey'], use_affine_hull: bool=False):
         """
         Use repeated SAT solving to estimate the number of tweakeys for which
         the characteristic is not impossible.
+
+        :param trials: int: number of trials
+        :param kind: str: 'key', 'tweak', or 'tweakey'
+        :param use_affine_hull: bool: only generate keys within the affine hull
         """
         if kind not in ('key', 'tweak', 'tweakey'):
             raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
 
-        sampling_set_list = self.get_tweak_or_key_variables(kind)
+        sampling_set_list = np.array(self.get_tweak_or_key_variables(kind), dtype=np.int32)
         sampling_set = set(sampling_set_list)
 
         solver = xor_cnf_as_cryptominisat_solver(self.cnf)
+
+        if use_affine_hull:
+            affine_hull, other_sampling_set = self._affine_hull[kind]
+            assert np.all(sampling_set_list == other_sampling_set)
+        else:
+            offset = GF2(np.zeros(len(sampling_set_list), dtype=np.uint8))
+            basis_matrix = GF2(np.eye(len(sampling_set_list), dtype=np.uint8))
+            affine_hull = AffineSpace(offset, basis_matrix)
 
         log.info(f'solving with CryptoMiniSat #Clauses: {len(self.cnf._clauses)}, #XORs: {len(self.cnf._xor_clauses)}, #Vars: {self.cnf.nvars}')
 
@@ -689,8 +701,10 @@ class SboxCipher(IndexSet):
         with Timer() as timer:
             pbar = tqdm(range(trials))
             for i in pbar:
-                sampling_new = [x * (-1)**random.randint(0, 1) for x in sampling_set_list]
-                is_sat, _ = solver.solve(self.sbox_assumptions.ravel().tolist() + sampling_new)
+                rnd = np.array(affine_hull.random_sample(), dtype=np.int32)
+                sampling_new = (-1)**(1 - rnd) * sampling_set_list
+
+                is_sat, _ = solver.solve(self.sbox_assumptions.ravel().tolist() + sampling_new.tolist())
                 count_sat += is_sat
                 count_unsat += not is_sat
 
