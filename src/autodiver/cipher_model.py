@@ -101,7 +101,8 @@ class SboxCipher(IndexSet):
     cnf: XorCNF
 
     model_type: ModelType
-    __affine_hull: dict[Literal['key', 'tweak', 'tweakey'], tuple[AffineSpace, np.ndarray[Any, np.dtype[np.int32]]]]
+    _affine_hull: dict[Literal['key', 'tweak', 'tweakey'], tuple[AffineSpace, np.ndarray[Any, np.dtype[np.int32]]]]
+    _learned_clauses: dict[Literal['key', 'tweak', 'tweakey'], CNF]
 
     def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False):
         super().__init__()
@@ -116,7 +117,8 @@ class SboxCipher(IndexSet):
         self.model_type = model_type
         self.model_sbox_assumptions = model_sbox_assumptions
         self.__model_sboxes_called = False
-        self.__affine_hull = {}
+        self._affine_hull = {}
+        self._learned_clauses = {}
 
     def log_result(self, **kwargs):
         """log results in machine readable json"""
@@ -592,7 +594,7 @@ class SboxCipher(IndexSet):
                 break
         end_time = time.monotonic()
 
-        self.__affine_hull[kind] = affine_space, sampling_set_list
+        self._affine_hull[kind] = affine_space, sampling_set_list
 
         constraints = []
         for i, eq, rhs in zip(count(), A, b):
@@ -627,7 +629,7 @@ class SboxCipher(IndexSet):
             raise ValueError('model_sbox_assumptions must be True to explain affine hull')
 
         try:
-            affine_space, sampling_set_list = self.__affine_hull[kind]
+            affine_space, sampling_set_list = self._affine_hull[kind]
         except KeyError:
             raise ValueError(f'call self.find_affine_hull({kind!r}) first')
 
@@ -714,11 +716,25 @@ class SboxCipher(IndexSet):
         min_key_cnf = key_cnf.minimize_espresso()
         log.info(f'key conditions: {min_key_cnf!r}')
 
+        if kind not in self._learned_clauses:
+            self._learned_clauses[kind] = CNF()
+        learned_clauses = self._learned_clauses[kind]
+
         key_conditions = []
         for clause in min_key_cnf:
+            if clause not in self._learned_clauses[kind]:
+                learned_clauses.add_clause(clause)
             formatted = self.format_clause(np.array(clause))
             key_conditions.append(formatted)
             log.info(formatted)
+
+        try:
+            sols = count_solutions(XorCNF(key_cnf), 0.8, 0.2, verbosity=0)
+            ratio = sols / (1 << key_cnf.nvars)
+            log.info(f'key space: {fmt_log2(ratio)}')
+        except FileNotFoundError:
+            log.info('approxmc not found -> skipping key space estimation')
+
 
         count_tweakeys_sat_result = {
             'count_sat': count_sat,
