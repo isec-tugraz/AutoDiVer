@@ -141,6 +141,9 @@ def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['key', 'tweak', 'tweakey']
     """find the affine hull of the set of valid tweakeys"""
     cipher = obj.cipher
 
+    if explain and not cipher.model_sbox_assumptions:
+        raise click.UsageError("option '--explain' requires --sbox-assumptions")
+
     if kind is None:
         kind = default_kind(cipher)
 
