@@ -89,8 +89,9 @@ RUN mkdir /home/user/autodiver
 WORKDIR /home/user/autodiver
 
 RUN mkdir tests/
-COPY --chown=user tests/pyproject.toml tests/
-COPY --chown=user tests/src tests/
+COPY --chown=user tests/pyproject.toml tests/setup.py tests/
+COPY --chown=user tests/src tests/src
+
 
 RUN pip install ./tests \
     && rm -rf ~/.cache/pip
