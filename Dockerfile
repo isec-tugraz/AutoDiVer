@@ -88,11 +88,16 @@ RUN pip install colorama click cython galois icecream ipython pyapproxmc pycrypt
 RUN mkdir /home/user/autodiver
 WORKDIR /home/user/autodiver
 
-COPY --chown=user . .
+RUN mkdir tests/
+COPY --chown=user tests/pyproject.toml tests/
+COPY --chown=user tests/src tests/
 
-ARG APP_VERSION
+RUN pip install ./tests \
+    && rm -rf ~/.cache/pip
+
+COPY --chown=user src/ .
+COPY --chown=user pyproject.toml .
 RUN pip install . \
-    && pip install ./tests \
     && rm -rf ~/.cache/pip
 
 
@@ -120,14 +125,14 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=build_solvers /usr/bin/espresso /usr/bin/espresso
-COPY --from=build_solvers /usr/local/bin/cryptominisat5 /usr/bin/cryptominisat5
-COPY --from=build_solvers /usr/local/bin/arjun /usr/bin/arjun
-COPY --from=build_solvers /usr/local/bin/approxmc /usr/bin/approxmc
+COPY --link --from=build_solvers /usr/bin/espresso /usr/bin/espresso
+COPY --link --from=build_solvers /usr/local/bin/cryptominisat5 /usr/bin/cryptominisat5
+COPY --link --from=build_solvers /usr/local/bin/arjun /usr/bin/arjun
+COPY --link --from=build_solvers /usr/local/bin/approxmc /usr/bin/approxmc
 
-COPY --from=build_solvers /usr/local/lib/libcryptominisat5.so* /usr/lib/
-COPY --from=build_solvers /usr/local/lib/libarjun.so* /usr/lib/
-COPY --from=build_solvers /usr/local/lib/libapproxmc.so* /usr/lib/
+COPY --link --from=build_solvers /usr/local/lib/libcryptominisat5.so* /usr/lib/
+COPY --link --from=build_solvers /usr/local/lib/libarjun.so* /usr/lib/
+COPY --link --from=build_solvers /usr/local/lib/libapproxmc.so* /usr/lib/
 
 RUN useradd -m -s /usr/bin/zsh -G sudo -u 1000 user \
     && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
@@ -135,7 +140,7 @@ RUN useradd -m -s /usr/bin/zsh -G sudo -u 1000 user \
 USER user
 WORKDIR /home/user
 
-COPY --from=build_venv /opt/venv /opt/venv
+COPY --link --from=build_venv /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # ENTRYPOINT ["verify-characteristic"]
