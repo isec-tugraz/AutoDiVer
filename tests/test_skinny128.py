@@ -20,9 +20,8 @@ def test_zero_characteristic():
     model = cipher.solve(seed=9789)
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
-    round_tweakeys = model.round_tweakeys #type: ignore
 
-    key, tk2, tk3 = round_tweakeys[0]
+    key, tk2, tk3 = model.key, model.tk2, model.tk3 #type: ignore
 
     sbox_in = sbox_in[:-1]
     sbox = cipher.sbox
@@ -132,10 +131,9 @@ def test_nonzero_characteristic(rounds):
     model = cipher.solve(seed=2006)
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
-    round_tweakeys = model.round_tweakeys #type: ignore
+    round_tweakeys = model._round_tweakeys #type: ignore
 
-    print(round_tweakeys.shape)
-    key, tk2, tk3 = round_tweakeys[0]
+    key, tk2, tk3 = model.key, model.tk2, model.tk3 #type: ignore
 
     sbox = cipher.sbox
 
@@ -241,10 +239,9 @@ def test_acns2021_characteristic(rounds):
     model = cipher.solve(seed=1159)
     sbox_in = model.sbox_in #type: ignore
     sbox_out = model.sbox_out #type: ignore
-    round_tweakeys = model.round_tweakeys #type: ignore
+    round_tweakeys = model._round_tweakeys #type: ignore
 
-    print(round_tweakeys.shape)
-    key, tk2, tk3 = round_tweakeys[0]
+    key, tk2, tk3 = model.key, model.tk2, model.tk3 #type: ignore
 
     sbox = cipher.sbox
 

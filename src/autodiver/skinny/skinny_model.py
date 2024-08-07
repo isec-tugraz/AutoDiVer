@@ -6,21 +6,18 @@ characteristic in numpy's .npz file format.
 from __future__ import annotations
 
 
-from binascii import hexlify
 from itertools import product
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 import logging
-import zipfile
 
 from sat_toolkit.formula import XorCNF, CNF, Truthtable
 import numpy as np
 import numpy.typing as npt
 
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
-from ..util import Model
-from .constants import apply_perm, connection_poly_4, connection_poly_8, do_mix_cols, do_shift_rows, expanded_rc, get_ddt, mixing_mat, skinny_verbose, tweakey_mask, tweakey_perm, update_tweakey
-from .util import sbox8, sbox4, LfsrState, get_solution_set
+from .constants import apply_perm, connection_poly_4, connection_poly_8, do_mix_cols, do_shift_rows, expanded_rc, get_ddt, mixing_mat, tweakey_mask, tweakey_perm, update_tweakey
+from .util import sbox8, sbox4, LfsrState
 
 
 log = logging.getLogger(__name__)
@@ -89,8 +86,9 @@ class SkinnyBase(SboxCipher):
     sbox_bits = 8
     connection_poly: np.ndarray
 
-    _tk2: np.ndarray
-    _tk3: np.ndarray
+    _tk2: np.ndarray[Any, np.dtype[np.int32]]
+    _tk3: np.ndarray[Any, np.dtype[np.int32]]
+    round_tweakeys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: _SkinnyBaseCharacteristic, **kwargs):
         super().__init__(char, **kwargs)
@@ -124,7 +122,6 @@ class SkinnyBase(SboxCipher):
         self.cnf += lfsr_cnf
 
     def _create_vars(self):
-        rnds = self.numrounds
 
         self.add_index_array('sbox_in', (self.num_rounds + 1, 4, 4, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, 4, 4, self.sbox_bits))
@@ -135,6 +132,10 @@ class SkinnyBase(SboxCipher):
         self.ct = self.sbox_in[-1]
         self._fieldnames.add('ct')
 
+        self._model_key_schedule()
+
+    def _model_key_schedule(self):
+        rnds = self.numrounds
         lfsr_updates = (self.numrounds - 1) // 2 + 1
         self.add_index_array('key', (4, 4, self.sbox_bits))
         self.add_index_array('_tk2', (4, 4, self.sbox_bits + lfsr_updates))
@@ -150,7 +151,7 @@ class SkinnyBase(SboxCipher):
         self._tk3_lfsrs = [LfsrState(f'tk3_{i}', self.connection_poly[::-1].tolist(), tk3_tmp[i]) for i in range(16)]
 
 
-        self.round_tweakeys = []
+        round_tweakeys = []
         for rnd in range(rnds):
             key = self.key.reshape(16, self.sbox_bits)
 
@@ -166,25 +167,24 @@ class SkinnyBase(SboxCipher):
             tk2 = apply_perm(tk2, tweakey_perm, rnd)
             tk3 = apply_perm(tk3, tweakey_perm, rnd)
 
-            self.round_tweakeys.append((key, tk2, tk3))
+            round_tweakeys.append((key, tk2, tk3))
 
-        self.round_tweakeys = np.array(self.round_tweakeys).reshape(rnds, 3, 4, 4, self.sbox_bits)
+        round_tweakeys = np.array(round_tweakeys, dtype=np.int32).reshape(rnds, 3, 4, 4, self.sbox_bits)
 
-        # from IPython import embed; embed(); raise SystemExit()
+        self._round_tweakeys = round_tweakeys
+        self._fieldnames.add('_round_tweakeys')
 
-        self.m1 = self.round_tweakeys[0][1]
-        self.m2 = self.round_tweakeys[0][2]
+        self.add_index_array('round_tweakeys', (self.numrounds, 4, 4, self.sbox_bits))
+        self.cnf += XorCNF.create_xor(round_tweakeys[:, 0].flatten(), round_tweakeys[:, 1].flatten(), round_tweakeys[:, 2].flatten(), self.round_tweakeys.flatten())
 
-    def get_model(self, raw_model: np.ndarray[Any, np.dtype[np.uint8]], *, bitorder: Literal['big', 'little']='little') -> Model:
-        model = super().get_model(raw_model, bitorder=bitorder)
-        rtks = np.packbits(model.raw_model[self.round_tweakeys], axis=-1, bitorder='little')[..., 0]
-        model.round_tweakeys = rtks # type: ignore
-        return model
+        self.tk2 = np.array(round_tweakeys[0][1]).reshape(4, 4, self.sbox_bits)
+        self.tk3 = np.array(round_tweakeys[0][2]).reshape(4, 4, self.sbox_bits)
+        self._fieldnames.add('tk2')
+        self._fieldnames.add('tk3')
 
 
     def _model_linear_layer(self):
         for rnd in range(self.numrounds):
-            rtks = self.round_tweakeys[rnd]
             in_rcs = expanded_rc[rnd]
 
             sb_mc_input = np.zeros((4, 4), object)
@@ -192,8 +192,7 @@ class SkinnyBase(SboxCipher):
                 sb_mc_input[row, col] = [self.sbox_out[rnd, row, col]]
 
             for row, col in product(range(2), range(4)):
-                for i in range(3):
-                    sb_mc_input[row, col].append(rtks[i, row, col])
+                sb_mc_input[row, col].append(self.round_tweakeys[rnd, row, col])
 
 
             sb_mc_input = do_shift_rows(sb_mc_input)
@@ -212,9 +211,6 @@ class SkinnyBase(SboxCipher):
                     lin_layer_cnf += XorCNF.create_xor(mc_out_var, *mc_in_vars, rhs=constant.astype(np.int32))
 
             self.cnf += lin_layer_cnf
-
-    def get_rtk_value(self, m: Model, rnd: int):
-        return np.array([rtk.get_value(m) for rtk in self.round_tweakeys[rnd]])
 
 
 class Skinny128(SkinnyBase):
