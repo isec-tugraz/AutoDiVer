@@ -5,13 +5,13 @@ import pytest
 import numpy as np
 from sat_toolkit.formula import CNF, XorCNF
 
-from autodiver.skinny.skinny_model import Skinny128, Skinny128Characteristic
-from autodiver.skinny.constants import do_mix_cols, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
+from autodiver.skinny.skinny_model import Skinny128, Skinny128Characteristic, Skinny128LongKey
+from autodiver.skinny.constants import do_mix_cols, expanded_rc, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
 
 
 def test_zero_characteristic():
     numrounds = 4
-    sbox_in_delta = sbox_out_delta   = np.zeros((numrounds, 4, 4), dtype=np.uint8)
+    sbox_in_delta = sbox_out_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
     tweakeys = np.zeros((numrounds, 3, 4, 4), dtype=np.uint8)
 
     char = Skinny128Characteristic(sbox_in_delta, sbox_out_delta, tweakeys)
@@ -45,6 +45,36 @@ def test_zero_characteristic():
             mc_input = do_shift_rows(sbo ^ this_rtk ^ rc)
             assert np.all(mc_output == do_mix_cols(mc_input))
         rtk = update_tweakey(rtk)
+
+def test_zero_characteristic_long_key():
+    numrounds = 7
+    sbox_in_delta = sbox_out_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
+    tweakeys = np.zeros((numrounds, 3, 4, 4), dtype=np.uint8)
+
+    char = Skinny128Characteristic(sbox_in_delta, sbox_out_delta, tweakeys)
+    cipher = Skinny128LongKey(char)
+
+    model = cipher.solve(seed=9789)
+    sbox_in = model.sbox_in #type: ignore
+    sbox_out = model.sbox_out #type: ignore
+    round_tweakeys = model.round_tweakeys #type: ignore
+
+    pt = sbox_in[0]
+    ct = sbox_in[-1]
+
+    sbox_in = sbox_in[:-1]
+    assert np.all(cipher.sbox[sbox_in] == sbox_out)
+
+    state = pt
+    for rnd in range(numrounds):
+        state = cipher.sbox[state]
+
+        state ^= expanded_rc[rnd]
+        state[:2] ^= round_tweakeys[rnd]
+        state = do_mix_cols(do_shift_rows(state))
+
+    assert np.all(ct == state)
+
 
 def test_unique_solution():
     random.seed("test_skinny128::test_unique_solution")

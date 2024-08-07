@@ -110,17 +110,6 @@ class SkinnyBase(SboxCipher):
         self._model_linear_layer()
         self._model_sboxes()
 
-        # add lfsr model
-        lfsr_cnf = CNF()
-        for lfsr in self._tk2_lfsrs:
-            for constraint in lfsr.get_constraints():
-                lfsr_cnf += constraint.to_cnf()
-        for lfsr in self._tk3_lfsrs:
-            for constraint in lfsr.get_constraints():
-                lfsr_cnf += constraint.to_cnf()
-
-        self.cnf += lfsr_cnf
-
     def _create_vars(self):
 
         self.add_index_array('sbox_in', (self.num_rounds + 1, 4, 4, self.sbox_bits))
@@ -182,6 +171,18 @@ class SkinnyBase(SboxCipher):
         self._fieldnames.add('tk2')
         self._fieldnames.add('tk3')
 
+        # add lfsr model
+        lfsr_cnf = CNF()
+        for lfsr in self._tk2_lfsrs:
+            for constraint in lfsr.get_constraints():
+                lfsr_cnf += constraint.to_cnf()
+        for lfsr in self._tk3_lfsrs:
+            for constraint in lfsr.get_constraints():
+                lfsr_cnf += constraint.to_cnf()
+
+        self.cnf += lfsr_cnf
+
+
 
     def _model_linear_layer(self):
         for rnd in range(self.numrounds):
@@ -222,6 +223,18 @@ class Skinny128(SkinnyBase):
     tweak_size = 256
     sbox_bits = 8
 
+class Skinny128LongKey(Skinny128):
+    key_size: int = None # type: ignore
+    tweak_size = 0
+
+    def _model_key_schedule(self):
+        self.add_index_array('round_tweakeys', (self.numrounds, 2, 4, self.sbox_bits))
+        self.add_index_array('tweak', (0, ))
+        self.key_size = self.round_tweakeys.size
+
+        self.key = self.round_tweakeys.reshape(-1, self.sbox_bits)
+        self._fieldnames.add('key')
+
 class Skinny64(SkinnyBase):
     sbox = sbox4
     ddt = get_ddt(sbox4)
@@ -230,3 +243,15 @@ class Skinny64(SkinnyBase):
     key_size = 64
     tweak_size = 128
     sbox_bits = 4
+
+class Skinny64LongKey(Skinny64):
+    key_size: int = None # type: ignore
+    tweak_size = 0
+
+    def _model_key_schedule(self):
+        self.add_index_array('round_tweakeys', (self.numrounds, 2, 4, self.sbox_bits))
+        self.add_index_array('tweak', (0, ))
+        self.key_size = self.round_tweakeys.size
+
+        self.key = self.round_tweakeys.reshape(-1, self.sbox_bits)
+        self._fieldnames.add('key')
