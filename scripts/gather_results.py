@@ -118,9 +118,9 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
     count_tweakey_lin_results = []
     count_tweakey_sat_results = {}
 
-    KEY_COUNT_LIN = r'$\left|\aff(\validkeys)\right|$'
-    KEY_COUNT_SAT = r'$\left|\validkeys\right|^\ddagger$'
-    KEY_COUNT = r'$\left|\validkeys\right|^\dagger$'
+    KEY_COUNT_LIN = 'aff.\\ hull'
+    KEY_COUNT_SAT = 'exp.\\ est.\\'
+    KEY_COUNT = 'AMC'
     ROUNDS = r'\# rounds'
     DDT_PROB = r'DDT prob.'
 
