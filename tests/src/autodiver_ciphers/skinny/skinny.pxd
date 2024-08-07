@@ -5,7 +5,7 @@
 cimport cython
 from libc.stdint cimport uint8_t, uint32_t, uint64_t
 
-cdef extern from "skinny-c/include/skinny128-cipher.h":
+cdef extern from "skinny128-cipher.h":
     ctypedef union Skinny128HalfCells_t:
         uint32_t row[2]
         uint64_t lrow

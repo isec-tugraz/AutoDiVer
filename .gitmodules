@@ -1,3 +1,0 @@
-[submodule "tests/src/autodiver_ciphers/skinny/skinny-c"]
-	path = tests/src/autodiver_ciphers/skinny/skinny-c
-	url = https://github.com/fanosta/skinny-c

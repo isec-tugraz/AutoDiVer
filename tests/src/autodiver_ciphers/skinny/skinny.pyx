@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = src/autodiver_ciphers/skinny/skinny-c/src/skinny128-cipher.c
-#distutils: include_dirs = src/autodiver_ciphers/skinny/skinny-c/include/
+#distutils: sources = src/autodiver_ciphers/skinny/skinny128-cipher.c
+#distutils: include_dirs = src/autodiver_ciphers/skinny/include/
 cimport cython
 
 from libc.stdint cimport uint8_t, uint32_t, uint64_t
@@ -10,7 +10,7 @@ from libc.stdio cimport printf
 from libc.string cimport memcpy, memset
 from libc.stdint cimport uint8_t, uint32_t, uint64_t
 
-cdef extern from "skinny-c/include/skinny128-cipher.h":
+cdef extern from "skinny128-cipher.h":
     ctypedef union Skinny128HalfCells_t:
         uint32_t row[2]
         uint64_t lrow
