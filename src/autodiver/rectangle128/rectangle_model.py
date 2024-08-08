@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-model the solutions of a differential characteristic for GIFT64 and count them.
+model the solutions of a differential characteristic for RECTANGLE
 """
 from __future__ import annotations
 import logging
@@ -13,7 +13,7 @@ from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
 log = logging.getLogger(__name__)
 
-class Rectangle(SboxCipher):
+class _RectangleBase(SboxCipher):
     sbox = np.array([int(x, 16) for x in "65CA1E79B03D8F42"], dtype=np.uint8)
     ddt  = DDT
     block_size = 64
@@ -60,7 +60,7 @@ class Rectangle(SboxCipher):
         # print(f'{array = }')
         #for each row
         for i in range(4):
-           arrayOut = rotate_column_down(arrayOut, i, offset[i])
+            arrayOut[:, i] = np.roll(array[:, i], offset[i])
         # print(f'{arrayOut = }')
         return arrayOut
 
@@ -107,7 +107,7 @@ class Rectangle(SboxCipher):
             permOut = self.applyPerm(self.sbox_out[r])
             self._addKey(self.sbox_in[r+1], permOut,  self._round_keys[r+1])
 
-class Rectangle128(Rectangle):
+class Rectangle128(_RectangleBase):
     cipher_name = "RECTANGLE128"
     key_size = 128
 
@@ -157,14 +157,14 @@ class Rectangle128(Rectangle):
         self.cnf += key_cnf
         self._round_keys = np.array(RK)
 
-class RectangleLongKey(Rectangle):
+class RectangleLongKey(_RectangleBase):
     cipher_name = "RECTANGLE-long-key"
     key_size = 128
 
     def _model_key_schedule(self) -> None:
         self._fieldnames.add('key')
         self.key_size = (self.num_rounds + 1) * self.block_size
-        self.add_index_array('_round_keys', (self.num_rounds + 1, self.block_size))
+        self.add_index_array('_round_keys', (self.num_rounds + 1, self.sbox_count, self.sbox_bits))
         assert self.key_size == self._round_keys.size
         self.key = self._round_keys.reshape(self.num_rounds + 1, self.sbox_count, self.sbox_bits)
 
