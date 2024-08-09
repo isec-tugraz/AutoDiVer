@@ -102,7 +102,6 @@ class Midori64(SboxCipher):
         self._model_add_key()
 
     def _create_vars(self):
-        self.add_index_array('key', (2, 4, 4, self.sbox_bits))
         self.add_index_array('sbox_in', (self.num_rounds+1, 4, 4, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, 4, 4, self.sbox_bits))
         self.add_index_array('mc_out', (self.num_rounds, 4, 4, self.sbox_bits))
@@ -112,25 +111,7 @@ class Midori64(SboxCipher):
         self._fieldnames.add('pt')
 
     def _model_add_key(self):
-        # we omit the round key addition at the first and last round
-        # as the do not influence the number of solutions and the corresponding
-        # values can always be calculated in a post-processing step
-        key_words = self.key.reshape(2, 64)
-
-        for r in range(self.num_rounds):
-            inp = self.mc_out[r].swapaxes(0, 1).flatten()
-            out = self.sbox_in[r + 1].swapaxes(0, 1).flatten()
-            key = self.key[r % 2].swapaxes(0, 1).flatten()
-            rc = RC[r].swapaxes(0, 1).flatten()
-
-            for i in range(16):
-                inp[4*i]  *= np.int8(-1)**(rc[i] & 0x1)
-
-            if r < self.num_rounds - 1:
-                self.cnf += XorCNF.create_xor(inp, out, key)
-            else:
-                # all equal
-                self.cnf += XorCNF.create_xor(inp, out)
+        raise NotImplementedError("Subclasses must implement _model_add_key")
 
     @staticmethod
     def model_mix_cols(A, B):
@@ -158,3 +139,53 @@ class Midori64(SboxCipher):
             else:
                 # no mix columns in the last round
                 self.cnf += XorCNF.create_xor(mc_input.flatten(), mc_output.flatten())
+
+
+class Midori64RealKey(Midori64):
+
+    def _model_add_key(self):
+        # we omit the round key addition at the first and last round
+        # as the do not influence the number of solutions and the corresponding
+        # values can always be calculated in a post-processing step
+        self.add_index_array('key', (2, 4, 4, self.sbox_bits)) # different amount of model vars depending on version
+
+        for r in range(self.num_rounds):
+            inp = self.mc_out[r].swapaxes(0, 1).flatten()
+            out = self.sbox_in[r + 1].swapaxes(0, 1).flatten()
+            key = self.key[r % 2].swapaxes(0, 1).flatten()
+            rc = RC[r].swapaxes(0, 1).flatten()
+
+            for i in range(16):
+                inp[4*i]  *= np.int8(-1)**(rc[i] & 0x1)
+
+            if r < self.num_rounds - 1:
+                self.cnf += XorCNF.create_xor(inp, out, key)
+            else:
+                # all equal
+                self.cnf += XorCNF.create_xor(inp, out)
+
+
+class Midori64LongKey(Midori64):
+
+    def _model_add_key(self):
+        # we omit the round key addition at the first and last round
+        # as the do not influence the number of solutions and the corresponding
+        # values can always be calculated in a post-processing step
+        self.add_index_array('key', (self.num_rounds - 1, 4, 4, self.sbox_bits)) # different amount of model vars depending on version
+
+        for r in range(self.num_rounds):
+            inp = self.mc_out[r].swapaxes(0, 1).flatten()
+            out = self.sbox_in[r + 1].swapaxes(0, 1).flatten()
+
+            if r == self.num_rounds - 1:
+                # all equal
+                self.cnf += XorCNF.create_xor(inp, out)
+                return
+
+            key = self.key[r].swapaxes(0, 1).flatten()
+            # rc = RC[r].swapaxes(0, 1).flatten()
+
+            # for i in range(16):
+            #     inp[4*i]  *= np.int8(-1)**(rc[i] & 0x1)
+
+            self.cnf += XorCNF.create_xor(inp, out, key)

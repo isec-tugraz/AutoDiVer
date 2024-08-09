@@ -4,8 +4,8 @@ import numpy as np
 import pytest
 from shutil import which
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.midori64.midori64_model import Midori64, matrix_as_uint64
-from autodiver_ciphers.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr
+from autodiver.midori64.midori64_model import Midori64RealKey, Midori64LongKey, matrix_as_uint64
+from autodiver_ciphers.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr, midori64_enc_longkey
 
 from sat_toolkit.formula import CNF
 from icecream import ic
@@ -49,7 +49,7 @@ def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
-    midori = Midori64(char)
+    midori = Midori64RealKey(char)
 
 
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
@@ -128,7 +128,7 @@ def test_nonzero_characteristic():
 
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
 
-    midori = Midori64(char)
+    midori = Midori64RealKey(char)
     model = midori.solve(seed=8284)
 
     key = model.key # type: ignore
@@ -161,9 +161,137 @@ def test_nonzero_characteristic():
         ic(out, ref_xor)
         assert expected_diff == ref ^ ref_xor
 
+
+
+@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
+def test_zero_characteristic_longkey():
+    numrounds = 4
+    sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    midori = Midori64LongKey(char)
+
+    num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    assert num_solutions == 1 << (64*(numrounds - 1) + 64)
+
+    for bit_var in midori.key.flatten():
+        midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+
+    num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    assert num_solutions == 1 << 64
+
+    for bit_var in midori.sbox_in[0].flatten():
+        midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+
+
+
+    model = midori.solve(seed=6022)
+
+    # construct long key with additional whitening keys that are currently not modeled
+    whitening_key = np.zeros([2], dtype=np.uint64) # adaptable
+
+    key = np.zeros([numrounds + 1], dtype=np.uint64)
+    key[0] = whitening_key[0]
+    key[numrounds] = whitening_key[1]
+
+    for i in range(numrounds - 1):
+        key[i + 1] = matrix_as_uint64(model.key[i])
+
+    sbi = model.sbox_in # type: ignore
+    sbo = model.sbox_out # type: ignore
+
+    assert np.all(midori.sbox[sbi[:midori.num_rounds]] == sbo)
+
+    # we need to add the key here in post-processing
+    pt = matrix_as_uint64(sbi[0]) ^ key[0]
+
+    sbiR = matrix_as_uint64(sbo[numrounds - 1])
+
+    # we need to add the key here in post-processing
+    out = sbiR ^ key[numrounds]
+
+    ref = midori64_enc_longkey(pt, key, numrounds)
+
+    print(f" round {numrounds} ".center(80, '='))
+    print(f'{pt   = :016x}')
+    print(f'{sbiR = :016x}')
+    print(f'{out  = :016x}')
+    print(f'{ref  = :016x}')
+    print(f'diff = {out ^ ref:016x}')
+
+    assert out == ref
+
+    num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    assert num_solutions == 1
+
+
+@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
+def test_nonzero_characteristic_longkey():
+    # characteristic from https://doi.org/10.1109/ACCESS.2020.2995795 (Figure 3)
+    # with alpha = beta = 1
+    char = (
+        ("1000000000100000", "2000000000200000"),
+        ("2200000000000000", "4100000000000000"),
+        ("0444111000000000", "0222222000000000"),
+        ("2202020202022202", "4101040101011104"),
+        ("0400001100011100", "0200002200022200"),
+    )
+    numrounds = 5
+    sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
+    sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
+
+    sbi_delta = sbi_delta.reshape(-1, 4, 4).swapaxes(-1, -2)
+    sbo_delta = sbo_delta.reshape(-1, 4, 4).swapaxes(-1, -2)
+
+    ic(sbi_delta[1])
+    ic(sbo_delta[1])
+
+    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+
+    midori = Midori64LongKey(char)
+
+    model = midori.solve(seed=6022)
+
+    # construct long key with additional whitening keys that are currently not modeled
+    whitening_key = np.zeros([2], dtype=np.uint64) # adaptable
+
+    key = np.zeros([numrounds + 1], dtype=np.uint64)
+    key[0] = whitening_key[0]
+    key[numrounds] = whitening_key[1]
+
+    for i in range(numrounds - 1):
+        key[i + 1] = matrix_as_uint64(model.key[i])
+
+    sbi = model.sbox_in # type: ignore
+    sbo = model.sbox_out # type: ignore
+
+    assert np.all(midori.sbox[sbi[:midori.num_rounds]] == sbo)
+
+    # we need to add the key here in post-processing
+    pt = matrix_as_uint64(sbi[0]) ^ key[0]
+
+    sbiR = matrix_as_uint64(sbo[numrounds - 1])
+
+    # we need to add the key here in post-processing
+    out = sbiR ^ key[numrounds]
+
+    ref = midori64_enc_longkey(pt, key, numrounds)
+
+    print(f" round {numrounds} ".center(80, '='))
+    print(f'{pt   = :016x}')
+    print(f'{sbiR = :016x}')
+    print(f'{out  = :016x}')
+    print(f'{ref  = :016x}')
+    print(f'diff = {out ^ ref:016x}')
+
+    assert out == ref
+
+
+
+
+
+
 if __name__ == "__main__":
-    test_zero_characteristic()
-    test_nonzero_characteristic()
+    test_nonzero_characteristic_longkey()
 
     # for tv in midori64_testvectors:
     #     test_tv(*tv)

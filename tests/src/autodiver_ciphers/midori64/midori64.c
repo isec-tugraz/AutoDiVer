@@ -120,6 +120,37 @@ uint64_t enc_midori64(uint64_t msg, const uint64_t *key, int rounds){
     return cip;
 }
 
+uint64_t enc_midori64_longkey(uint64_t msg, const uint64_t *key, int rounds){
+    if (rounds > ROUNDS) {
+        fprintf(stderr, "rounds should be less than or equal to %d\n", ROUNDS);
+        abort();
+    }
+
+    /* allocating mem for round keys */
+    //uint64_t rnd_key[ROUNDS];
+    //generate_rnd_key(key, rnd_key, rounds);
+
+    if (rounds == 0) {
+      return msg;
+    }
+
+    uint64_t cip = msg;
+
+    cip = cip ^ key[0]; // long key version of whitening key
+    for (uint8_t i = 0; i < rounds - 1; i++){
+        cip = sbox(cip);
+        cip = sr(cip);
+        cip = mc(cip);
+        cip = add_round_key(cip, key[i + 1]);
+    }
+
+    cip = sbox(cip);
+
+    cip = cip ^ key[rounds];
+
+    return cip;
+}
+
 // int main(){
 //     uint64_t msg;
 //     uint64_t cip;
