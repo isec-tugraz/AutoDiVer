@@ -7,6 +7,7 @@ from sat_toolkit.formula import CNF, XorCNF
 
 from autodiver.skinny.skinny_model import Skinny128, Skinny128Characteristic, Skinny128LongKey
 from autodiver.skinny.constants import do_mix_cols, expanded_rc, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
+from autodiver_ciphers.skinny.skinny import skinny_enc_ecb
 
 
 def test_zero_characteristic():
@@ -22,6 +23,10 @@ def test_zero_characteristic():
     sbox_out = model.sbox_out #type: ignore
 
     key, tk2, tk3 = model.key, model.tk2, model.tk3 #type: ignore
+
+    pt = sbox_in[0].flatten()
+    ct = sbox_in[-1].flatten()
+    tweakey = np.array([key, tk2, tk3]).flatten()
 
     sbox_in = sbox_in[:-1]
     sbox = cipher.sbox
@@ -45,6 +50,15 @@ def test_zero_characteristic():
             mc_input = do_shift_rows(sbo ^ this_rtk ^ rc)
             assert np.all(mc_output == do_mix_cols(mc_input))
         rtk = update_tweakey(rtk)
+
+    ct_ref = np.array(bytearray(skinny_enc_ecb(pt, tweakey, numrounds)))
+
+    print(f"pt: {pt}")
+    print(f"ct: {ct}")
+    print(f"ct_ref: {ct_ref}")
+    print(f"diff: {ct_ref ^ ct}")
+    assert np.all(ct_ref == ct)
+
 
 def test_zero_characteristic_long_key():
     numrounds = 7
@@ -165,9 +179,21 @@ def test_nonzero_characteristic(rounds):
 
     key, tk2, tk3 = model.key, model.tk2, model.tk3 #type: ignore
 
+    pt1 = sbox_in[0].flatten()
+    ct1 = sbox_in[-1].flatten()
+
+    pt2 = pt1 ^ char.sbox_in[0].flatten()
+    last_tk_delta = np.bitwise_xor.reduce(tweakeys[-1], axis=0) & tweakey_mask
+    ct_delta = do_mix_cols(do_shift_rows(char.sbox_out[-1] ^ last_tk_delta))
+    ct2 = ct1 ^ ct_delta.flatten()
+
+    tweakey1 = np.array([key, tk2, tk3]).flatten()
+    tweakey2 = (tweakey1 ^ char.tweakeys[0].flatten())
+
     sbox = cipher.sbox
 
     assert np.all(sbox[sbox_in[:-1]] == sbox_out)
+    assert np.all(sbox[sbox_in[:-1] ^ char.sbox_in] == sbox_out ^ char.sbox_out)
 
     np.set_printoptions(formatter={'int': lambda x: f'{x:02x}'})
 
@@ -177,6 +203,7 @@ def test_nonzero_characteristic(rounds):
         sbi = sbox_in[i]
         sbo = sbox_out[i]
         assert np.all(sbo == sbox[sbi])
+        assert np.all(sbo ^ char.sbox_out[i] == sbox[sbi ^ char.sbox_in[i]])
 
         actual_rtk = round_tweakeys[i]
         print(f"round {i}".center(80, '-'))
@@ -199,6 +226,17 @@ def test_nonzero_characteristic(rounds):
         assert np.all(mc_output == do_mix_cols(mc_input))
 
         rtk = update_tweakey(rtk)
+
+    ct1_ref = np.array(bytearray(skinny_enc_ecb(pt1, tweakey1, numrounds)))
+    ct2_ref = np.array(bytearray(skinny_enc_ecb(pt2, tweakey2, numrounds)))
+
+    print(f"pt diff:           {pt1 ^ pt2}")
+    print(f"tweakey diff:      {tweakey1 ^ tweakey2}")
+    print(f"exptected ct diff: {ct_delta.flatten()}")
+    print(f"actual ct diff:    {ct1_ref ^ ct2_ref}")
+
+    assert np.all(ct1_ref == ct1)
+    assert np.all(ct2_ref == ct2)
 
 
 
