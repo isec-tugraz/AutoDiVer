@@ -4,7 +4,7 @@ import numpy as np
 import pytest
 from shutil import which
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.midori64.midori64_model import Midori64RealKey, Midori64LongKey, matrix_as_uint64
+from autodiver.midori64.midori64_model import Midori64, Midori64LongKey, matrix_as_uint64
 from autodiver_ciphers.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr, midori64_enc_longkey
 
 from sat_toolkit.formula import CNF
@@ -49,7 +49,7 @@ def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
-    midori = Midori64RealKey(char)
+    midori = Midori64(char)
 
 
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
@@ -128,7 +128,7 @@ def test_nonzero_characteristic():
 
     char = DifferentialCharacteristic(sbi_delta, sbo_delta)
 
-    midori = Midori64RealKey(char)
+    midori = Midori64(char)
     model = midori.solve(seed=8284)
 
     key = model.key # type: ignore

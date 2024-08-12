@@ -65,7 +65,7 @@ class Midori64Characteristic(DifferentialCharacteristic):
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
 
 
-class Midori64(SboxCipher):
+class _Midori64Base(SboxCipher):
     cipher_name = "MIDORI64"
     sbox = np.array([int(x, 16) for x in "cad3ebf789150246"], dtype=np.uint8)
     ddt  = DDT
@@ -141,8 +141,7 @@ class Midori64(SboxCipher):
                 self.cnf += XorCNF.create_xor(mc_input.flatten(), mc_output.flatten())
 
 
-class Midori64RealKey(Midori64):
-
+class Midori64(_Midori64Base):
     def _model_add_key(self):
         # we omit the round key addition at the first and last round
         # as the do not influence the number of solutions and the corresponding
@@ -165,7 +164,7 @@ class Midori64RealKey(Midori64):
                 self.cnf += XorCNF.create_xor(inp, out)
 
 
-class Midori64LongKey(Midori64):
+class Midori64LongKey(_Midori64Base):
 
     def _model_add_key(self):
         # we omit the round key addition at the first and last round
