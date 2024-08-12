@@ -22,7 +22,7 @@ from .midori128.midori128_model import Midori128, Midori128Characteristic
 from .warp128.warp128_model import WARP128
 from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from .ascon.ascon_model import Ascon, AsconCharacteristic
-from .skinny.skinny_model import Skinny128, Skinny64, Skinny128Characteristic, Skinny64Characteristic
+from .skinny.skinny_model import Skinny128, Skinny128LongKey, Skinny64, Skinny128Characteristic, Skinny64Characteristic
 from .present.present_model import Present80, PresentLongKey, PresentCharacteristic
 from .pyjamask.pyjamask96_model import Pyjamask_Longkey, Pyjamask_with_Keyschedule, Pyjamask96Characteristic
 
@@ -58,6 +58,7 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
     "midori64-long-key": (Midori64LongKey, Midori64Characteristic),
     "midori128": (Midori128, Midori128Characteristic),
     "skinny128": (Skinny128, Skinny128Characteristic),
+    "skinny128-long-key": (Skinny128LongKey, Skinny128Characteristic),
     "skinny64": (Skinny64, Skinny64Characteristic),
     "ascon": (Ascon, AsconCharacteristic),
     "rectangle128": (Rectangle128, DifferentialCharacteristic),
