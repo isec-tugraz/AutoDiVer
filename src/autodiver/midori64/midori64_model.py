@@ -165,12 +165,14 @@ class Midori64(_Midori64Base):
 
 
 class Midori64LongKey(_Midori64Base):
+    round_key: np.ndarray[Any, np.dtype[np.int32]]
 
     def _model_add_key(self):
         # we omit the round key addition at the first and last round
         # as the do not influence the number of solutions and the corresponding
         # values can always be calculated in a post-processing step
-        self.add_index_array('key', (self.num_rounds - 1, 4, 4, self.sbox_bits)) # different amount of model vars depending on version
+        self.add_index_array('round_key', (self.num_rounds - 1, 4, 4, self.sbox_bits)) # different amount of model vars depending on version
+        self.key = self.round_key
 
         for r in range(self.num_rounds):
             inp = self.mc_out[r].swapaxes(0, 1).flatten()
