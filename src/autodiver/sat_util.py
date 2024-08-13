@@ -213,6 +213,9 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
         ctr = Counter(seed=seed, epsilon=epsilon, delta=delta)
         ctr.add_clauses(cnf.to_cnf())
 
+        # add tautological clause to ensure the number of variables is correct
+        ctr.add_clause([cnf.nvars, -cnf.nvars])
+
         if sampling_set is not None:
             solution_count, hash_count = ctr.count(sampling_set)
         else:
