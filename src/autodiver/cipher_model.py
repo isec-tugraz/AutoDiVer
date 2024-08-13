@@ -761,6 +761,8 @@ class SboxCipher(IndexSet):
             'count_key': 'key' in kind,
             'count_tweak': 'tweak' in kind,
             'tweakey_conditions': key_conditions,
+            'use_affine_hull': use_affine_hull,
+            'num_affine_hull_conditions': affine_hull.element_size() - affine_hull.dimension(),
             'time': timer.elapsed(),
         }
 
