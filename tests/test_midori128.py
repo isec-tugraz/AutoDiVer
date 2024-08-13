@@ -16,8 +16,6 @@ from icecream import ic
 
 #0th bit is the LSB
 
-approxmc = which("approxmc")
-
 def print_state(key):
     for k in key:
         print(hex(k)[2:], end = " ")
@@ -48,7 +46,6 @@ def nibble_to_byte(key_arr):
     key = np.asarray(key, dtype=np.uint8)
     return key
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     seed("test_midori128::test_zero_characteristic")
     numrounds = 3

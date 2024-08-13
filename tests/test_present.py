@@ -10,8 +10,6 @@ from autodiver.cipher_model import count_solutions
 from autodiver_ciphers.present.present_cipher import present_enc80, present_enc128, key_function_80, key_function_128
 from autodiver.present.present_model import Present80, PresentCharacteristic
 
-approxmc = which("approxmc")
-
 
 test_vectors_80 = [(0x00000000000000000000, 0x0000000000000000, 0x5579C1387B228445),
                    (0xFFFFFFFFFFFFFFFFFFFF, 0x0000000000000000, 0xE72C46C0F5945049),
@@ -33,7 +31,6 @@ def test_present_enc128(key, pt, ct_ref):
     ct = present_enc128(pt, key)
     assert ct == ct_ref
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_count_present80():
     num_rounds = 2
     sbi_delta = sbo_delta = np.zeros((num_rounds, 16), dtype=np.uint8)

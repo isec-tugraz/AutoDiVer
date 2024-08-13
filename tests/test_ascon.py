@@ -15,9 +15,6 @@ import pytest
 from icecream import ic
 
 
-approxmc = which("approxmc")
-
-
 def rotr(val: np.uint64, r: int):
     val_int = int(val)
     res_int = (val_int >> r) | ((val_int & (1<<r)-1) << (64-r))
@@ -73,7 +70,6 @@ def ascon_sbox(sbi: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[Any, np.
     return S
 
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 5
     sbi = sbo = np.zeros((numrounds, 5), dtype=np.uint64)

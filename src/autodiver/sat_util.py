@@ -193,13 +193,33 @@ class _ApproxMcLoggingContext:
             self.pbar.__exit__(exc_type, exc_value, traceback)
 
 
+_warning_emited = False
 def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2, sampling_set: list[int] | None=None, seed: int|None=None) -> int:
-    approxmc = shutil.which('approxmc')
-    if approxmc is None:
-        raise FileNotFoundError('approxmc not found in $PATH')
+    global _warning_emited
+
+    if seed is None:
+        seed = int.from_bytes(os.urandom(4), 'little')
 
     sampling_set_log = f" over {len(sampling_set)} variables" if sampling_set is not None else ""
     log.info(f'counting solutions to cnf with {cnf.nvars} variables, {cnf.nclauses} clauses, and {cnf.nxor_clauses} xor clauses{sampling_set_log}, {epsilon=}, {delta=}')
+
+    approxmc = shutil.which('approxmc')
+    if approxmc is None:
+        if not _warning_emited:
+            log.warning('approxmc not found in $PATH, falling back to pyapproxmc. Cannot provide progress updates.')
+            _warning_emited = True
+
+        from pyapproxmc import Counter
+        ctr = Counter(seed=seed, epsilon=epsilon, delta=delta)
+        ctr.add_clauses(cnf.to_cnf())
+
+        if sampling_set is not None:
+            solution_count, hash_count = ctr.count(sampling_set)
+        else:
+            solution_count, hash_count = ctr.count()
+
+        return solution_count * 2**hash_count
+
 
     # create temporary file for cnf
     with tempfile.NamedTemporaryFile(mode='w', suffix='.cnf') as f:
@@ -212,8 +232,6 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
         f.flush()
 
         # run approxmc
-        if seed is None:
-            seed = int.from_bytes(os.urandom(4), 'little')
         args = [approxmc, f'--seed={seed}', f'--{epsilon=}', f'--{delta=}', '--sparse=1', f'--verb={verbosity}', f.name]
 
         log.info(f'running: {" ".join(args)}')

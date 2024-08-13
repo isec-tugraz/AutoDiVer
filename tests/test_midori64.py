@@ -11,8 +11,6 @@ from sat_toolkit.formula import CNF
 from icecream import ic
 
 
-approxmc = which("approxmc")
-
 ##0th bit is the LSB
 #def nibble_to_block(key_arr):
 #    ic()
@@ -44,7 +42,6 @@ def test_tv(pt, key, ct_ref):
     assert ct == ct_ref
 
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
@@ -163,7 +160,6 @@ def test_nonzero_characteristic():
 
 
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic_longkey():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
@@ -224,7 +220,6 @@ def test_zero_characteristic_longkey():
     assert num_solutions == 1
 
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_nonzero_characteristic_longkey():
     # characteristic from https://doi.org/10.1109/ACCESS.2020.2995795 (Figure 3)
     # with alpha = beta = 1

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
+TYPE_CHECKING=False
+if TYPE_CHECKING:
+    from typing import Any, Self
+
 from pathlib import Path
 import logging
 
@@ -19,7 +22,7 @@ class DifferentialCharacteristic():
     file_path: Path|None
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load_txt(cls, characteristic_path: Path) -> Self:
         trail_list = []
         with open(characteristic_path, 'r') as f:
             for line in f:
@@ -38,6 +41,13 @@ class DifferentialCharacteristic():
         sbox_in = trail[0::2]
         sbox_out = trail[1::2]
 
+        return cls(sbox_in, sbox_out, file_path=characteristic_path)
+
+    @classmethod
+    def load_npz(cls, characteristic_path: Path) -> Self:
+        with np.load(characteristic_path) as f:
+            sbox_in = f['sbox_in']
+            sbox_out = f['sbox_out']
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
 
     def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, file_path: Path|None=None):

@@ -3,15 +3,27 @@
 model the solutions of a differential characteristic for RECTANGLE
 """
 from __future__ import annotations
+
+TYPE_CHECKING=False
+if TYPE_CHECKING:
+    from typing import Any, Self
+
 import logging
+from pathlib import Path
+
 import numpy as np
-from typing import Any
 from sat_toolkit.formula import XorCNF
+
 from .util import DDT, RC
 from .util import rotate_left, rotate_column_down, get_col, add_round_constants
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
 log = logging.getLogger(__name__)
+
+class RectangleCharacteristic(DifferentialCharacteristic):
+    @classmethod
+    def load(cls, characteristic_path: Path) -> Self:
+        return cls.load_txt(characteristic_path)
 
 class _RectangleBase(SboxCipher):
     sbox = np.array([int(x, 16) for x in "65CA1E79B03D8F42"], dtype=np.uint8)
@@ -25,7 +37,10 @@ class _RectangleBase(SboxCipher):
     s_key: np.ndarray[Any, np.dtype[np.int32]]
     r_key: np.ndarray[Any, np.dtype[np.int32]]
 
-    def __init__(self, char: DifferentialCharacteristic, **kwargs):
+    def __init__(self, char: RectangleCharacteristic, **kwargs):
+        if not isinstance(char, RectangleCharacteristic):
+            raise ValueError('char must be of type RectangleCharacteristic')
+
         super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds

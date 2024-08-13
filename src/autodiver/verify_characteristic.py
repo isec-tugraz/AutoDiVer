@@ -16,10 +16,10 @@ import click
 from .import version
 from .cipher_model import SboxCipher, ModelType, DifferentialCharacteristic, UnsatException
 from .gift.gift_model import Gift64, Gift64Characteristic, Gift128, Gift128Characteristic
-from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey
+from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey, RectangleCharacteristic
 from .midori64.midori64_model import Midori64, Midori64LongKey, Midori64Characteristic
 from .midori128.midori128_model import Midori128, Midori128Characteristic
-from .warp128.warp128_model import WARP128
+from .warp128.warp128_model import WARP128, WarpCharacteristic
 from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from .ascon.ascon_model import Ascon, AsconCharacteristic
 from .skinny.skinny_model import Skinny128, Skinny128LongKey, Skinny64, Skinny128Characteristic, Skinny64Characteristic
@@ -48,7 +48,7 @@ def setup_logging(filename: Optional[Path] = None):
 
 
 _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
-    "warp": (WARP128, DifferentialCharacteristic),
+    "warp": (WARP128, WarpCharacteristic),
     "speedy192": (Speedy192, Speedy192Characteristic),
     "gift64": (Gift64, Gift64Characteristic),
     "gift128": (Gift128, Gift128Characteristic),
@@ -61,7 +61,7 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
     "skinny128-long-key": (Skinny128LongKey, Skinny128Characteristic),
     "skinny64": (Skinny64, Skinny64Characteristic),
     "ascon": (Ascon, AsconCharacteristic),
-    "rectangle128": (Rectangle128, DifferentialCharacteristic),
+    "rectangle128": (Rectangle128, RectangleCharacteristic),
     "rectangle-long-key": (RectangleLongKey, DifferentialCharacteristic),
     "pyjamask": (Pyjamask_with_Keyschedule, Pyjamask96Characteristic),
     "pyjamask-long-key": (Pyjamask_Longkey, Pyjamask96Characteristic),
@@ -131,7 +131,6 @@ def count_tweakeys(obj: GlobalArgs, epsilon: float, delta: float, kind: Literal[
         kind = default_kind(cipher)
 
     ensure_cipher_comatible(cipher, kind)
-    ensure_executables('approxmc')
     cipher.count_tweakey_space(epsilon, delta, kind=kind)
 
 

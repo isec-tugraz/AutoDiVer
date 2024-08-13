@@ -3,19 +3,16 @@ import numpy as np
 import pytest
 from shutil import which
 
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.rectangle128.rectangle_model import Rectangle128
+from autodiver.cipher_model import count_solutions
+from autodiver.rectangle128.rectangle_model import Rectangle128, RectangleCharacteristic
 from autodiver_ciphers.rectangle128.rectangle_cipher import rectangle_enc, nibble_to_block, nibble_to_key
 from sat_toolkit.formula import CNF
 
-approxmc = which("approxmc")
 
-
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 16), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = RectangleCharacteristic(sbi_delta, sbo_delta)
     rectangle = Rectangle128(char)
 
     for bit_var in rectangle.key.flatten():
@@ -67,7 +64,7 @@ def test_nonzero_characteristic():
     # sbi_delta = sbi_delta[:, ::-1]
     # sbo_delta = sbo_delta[:, ::-1]
 
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = RectangleCharacteristic(sbi_delta, sbo_delta)
     rectangle = Rectangle128(char)
     model = rectangle.solve(seed=8284)
 

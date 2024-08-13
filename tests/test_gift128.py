@@ -9,8 +9,6 @@ from autodiver_ciphers.gift.gift128_cipher import gift128_enc
 
 from sat_toolkit.formula import CNF
 
-approxmc = which("approxmc")
-
 
 def print_state(S, state = "s"):
     print(state, ":", end = " ")
@@ -39,7 +37,6 @@ def test_tv(pt, key, ct_ref):
     print_state(ct, "C")
     assert np.all(ct == ct_ref)
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 2
     sbi = sbo = np.zeros((numrounds, 32), dtype=np.uint8)

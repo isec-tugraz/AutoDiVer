@@ -11,8 +11,6 @@ from autodiver.pyjamask.util import load_state, unload_state
 from autodiver.pyjamask.pyjamask96_model import Pyjamask96Characteristic, Pyjamask_Longkey, Pyjamask_with_Keyschedule
 from autodiver_ciphers.pyjamask.pyjamask_cipher import pypyjamask_96_enc_longkey, pypyjamask_96_enc
 
-approxmc = which("approxmc")
-
 
 def expand_roundkeys(roundkeys: np.ndarray[Any, np.dtype[np.uint32]], numrounds)  -> np.ndarray[Any, np.dtype[np.uint8]]:
     new_roundkeys = np.zeros([numrounds + 1, 4], dtype=np.uint32)
@@ -80,7 +78,6 @@ def test_nonzero_characteristic_pyjama96_longkey():
 
     assert bytearray(ct) == ct_ref
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_count_pyjama96():
     num_rounds = 2
     sbi = sbo = np.zeros((num_rounds, 3), dtype=np.uint32)

@@ -41,7 +41,6 @@ def test_tv(pt, key, ct_ref):
     ct = speedy192_enc(pt, key, 7)
     assert np.all(ct == ct_ref)
 
-@pytest.mark.skipif(which("approxmc") is None, reason="approxmc not found")
 def test_zero_characteristic():
     seed("test_speedy192::test_zero_characteristic")
     numrounds = 2

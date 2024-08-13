@@ -3,15 +3,13 @@ from random import randint
 import numpy as np
 import pytest
 from shutil import which
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.warp128.warp128_model import WARP128
+from autodiver.cipher_model import count_solutions
+from autodiver.warp128.warp128_model import WARP128, WarpCharacteristic
 from autodiver_ciphers.warp128.warp_cipher import warp_enc
 from autodiver.warp128.util import get_round_in_out, perm_nibble_inv
 
 from sat_toolkit.formula import CNF
 from icecream import ic
-
-approxmc = which("approxmc")
 
 
 def print_state(S, state = "s"):
@@ -50,11 +48,10 @@ def test_tv(pt, key, ct_ref):
     print_state(ct, "C")
     assert np.all(ct == ct_ref)
 
-@pytest.mark.skipif(approxmc is None, reason="approxmc not found")
 def test_zero_characteristic():
     numrounds = 3
     sbi = sbo = np.zeros((numrounds, 16), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi, sbo)
+    char = WarpCharacteristic(sbi, sbo)
     char.sbox_in = sbi
     char.sbox_out = sbo
     char.num_rounds = numrounds
@@ -125,7 +122,7 @@ def test_nonzero_characteristic():
 
     sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = WarpCharacteristic(sbi_delta, sbo_delta)
 
     warp = WARP128(char)
     model = warp.solve(seed=3983)
