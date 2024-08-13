@@ -139,6 +139,7 @@ class SboxCipher(IndexSet):
                 'num_rounds': self.char.num_rounds,
                 'file_path': self.char.file_path,
                 'type': type(self.char).__name__,
+                'log2_ddt_prob': self.char.log2_ddt_probability(),
             },
             'argv': sys.argv,
             'git': {

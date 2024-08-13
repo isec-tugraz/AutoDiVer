@@ -18,6 +18,8 @@ from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
 
 class Speedy192Characteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+
     def verify_linear_layer(self):
         # verify even rounds (ShiftColumns)
         for rnd in range(0, len(self.sbox_in) - 1, 2):
@@ -88,7 +90,10 @@ class Speedy192(SboxCipher):
 
     mc_out: np.ndarray[Any, np.dtype[np.int32]]
 
-    def __init__(self, char: DifferentialCharacteristic, **kwargs):
+    def __init__(self, char: Speedy192Characteristic, **kwargs):
+        if not isinstance(char, Speedy192Characteristic):
+            raise ValueError('char must be of type Speedy192Characteristic')
+
         super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds # this is actually number of sboxes

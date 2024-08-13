@@ -22,9 +22,13 @@ from pathlib import Path
 
 
 log = logging.getLogger(__name__)
+SBOX = np.array([1, 3, 6, 5, 2, 4, 7, 0], dtype=np.uint8)
+DDT = get_ddt(SBOX)
 
 
 class Pyjamask96Characteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT
+
     def __init__(self, sbox_in: np.ndarray[Any, np.dtype[np.uint32]], sbox_out: np.ndarray[Any, np.dtype[np.uint32]], **kwargs):
         # do reverse bit slicing
         assert sys.byteorder == 'little'
@@ -72,8 +76,8 @@ class Pyjamask96Characteristic(DifferentialCharacteristic):
 
 class Pyjamask96(SboxCipher):
     cipher_name = "Pyjamask96"
-    sbox = np.array([1, 3, 6, 5, 2, 4, 7, 0])
-    ddt = get_ddt(sbox)
+    sbox = SBOX
+    ddt = DDT
     block_size = 96
     key_size = 128
 

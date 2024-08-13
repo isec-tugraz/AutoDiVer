@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+TYPE_CHECKING=False
+if TYPE_CHECKING:
+    from typing import Any, Literal
+
 from math import log2
-from typing import Any, Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -14,8 +17,8 @@ def fmt_log2(number: float, width: int=0) -> str:
 
     return num_str.rjust(width)
 
-def get_ddt(sbox):
-    ddt = np.zeros((len(sbox), len(sbox)), dtype=np.int16)
+def get_ddt(sbox) -> np.ndarray[Any, np.dtype[np.uint16]]:
+    ddt = np.zeros((len(sbox), len(sbox)), dtype=np.uint16)
 
     for in_delta in range(len(sbox)):
         in_val = np.arange(len(sbox), dtype=sbox.dtype)

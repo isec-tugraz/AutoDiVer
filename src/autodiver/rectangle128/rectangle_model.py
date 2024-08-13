@@ -21,6 +21,8 @@ from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
 
 class RectangleCharacteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+
     @classmethod
     def load(cls, characteristic_path: Path) -> Self:
         return cls.load_txt(characteristic_path)

@@ -34,6 +34,9 @@ sbox4_cnf = sbox4_dnf.to_cnf()
 sboxes = {8: sbox8, 4: sbox4}
 sbox_cnfs = {8: sbox8_cnf, 4: sbox4_cnf}
 
+DDT4 = get_ddt(sbox4)
+DDT8 = get_ddt(sbox8)
+
 class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
     block_size = 0
     tweakeys: np.ndarray
@@ -71,9 +74,11 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
         self.num_rounds = len(self.sbox_in)
 
 class Skinny128Characteristic(_SkinnyBaseCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT8
     block_size = 128
 
 class Skinny64Characteristic(_SkinnyBaseCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT4
     block_size = 64
 
 
@@ -216,7 +221,7 @@ class SkinnyBase(SboxCipher):
 
 class Skinny128(SkinnyBase):
     sbox = sbox8
-    ddt = get_ddt(sbox8)
+    ddt = DDT8
     connection_poly = connection_poly_8
     block_size = 128
     key_size = 128
@@ -237,7 +242,7 @@ class Skinny128LongKey(Skinny128):
 
 class Skinny64(SkinnyBase):
     sbox = sbox4
-    ddt = get_ddt(sbox4)
+    ddt = DDT4
     connection_poly = connection_poly_4
     block_size = 64
     key_size = 64

@@ -3,8 +3,12 @@
 model the solutions of a differential characteristic for GIFT64 and count them.
 """
 from __future__ import annotations
+
+TYPE_CHECKING=False
+if TYPE_CHECKING:
+    from typing import Any
+
 import logging
-from typing import Any
 from pathlib import Path
 
 from .present_util import PERM, INV_PERM, bit_perm
@@ -31,10 +35,12 @@ PRESENT_DDT = np.array(
      [ 0,  0,  2,  0,  0,  4,  0,  2,  2,  2,  2,  0,  0,  0,  2,  0],
      [ 0,  2,  4,  2,  2,  0,  0,  2,  0,  0,  2,  2,  0,  0,  0,  0],
      [ 0,  0,  2,  2,  0,  0,  2,  2,  2,  2,  0,  0,  2,  2,  0,  0],
-     [ 0,  4,  0,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4]])
+     [ 0,  4,  0,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4]], dtype=np.uint8)
 
 
 class PresentCharacteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint8]] = PRESENT_DDT
+
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         with np.load(characteristic_path) as f:

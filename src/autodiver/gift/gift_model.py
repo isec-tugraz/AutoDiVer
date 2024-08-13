@@ -33,6 +33,8 @@ _DOCUMENT_END = r"""
 
 
 class _GiftCharacteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint8]] = GIFT_DDT
+
     num_sboxes: int
     block_size: int
     permutation: np.ndarray

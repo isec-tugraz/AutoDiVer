@@ -4,11 +4,14 @@ model the solutions of a differential characteristic for GIFT64 and count them.
 """
 from __future__ import annotations
 
+TYPE_CHECKING=False
+if TYPE_CHECKING:
+    from typing import Any, Self
+
 import logging
 from pathlib import Path
 
 import numpy as np
-from typing import Any
 from sat_toolkit.formula import XorCNF
 
 from .util import DDT, RC, do_shift_rows, mixing_mat, do_linear_layer
@@ -50,8 +53,10 @@ def matrix_as_uint64(matrix: np.ndarray) -> int:
     return int(''.join(f'{x:01x}' for x in flat), 16)
 
 class Midori64Characteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         with np.load(characteristic_path) as f:
             sbox_in = f['sbox_in']
             sbox_out = f['sbox_out']
@@ -78,6 +83,8 @@ class _Midori64Base(SboxCipher):
     mc_out: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
+        if not isinstance(char, Midori64Characteristic):
+            raise ValueError('char must be of type Midori64Characteristic')
         super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds

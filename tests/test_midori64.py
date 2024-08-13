@@ -3,8 +3,8 @@ from random import randint
 import numpy as np
 import pytest
 from shutil import which
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.midori64.midori64_model import Midori64, Midori64LongKey, matrix_as_uint64
+from autodiver.cipher_model import count_solutions
+from autodiver.midori64.midori64_model import Midori64, Midori64LongKey, Midori64Characteristic, matrix_as_uint64
 from autodiver_ciphers.midori64.midori_cipher import midori64_enc, midori64_mc, midori64_sr, midori64_enc_longkey
 
 from sat_toolkit.formula import CNF
@@ -45,7 +45,7 @@ def test_tv(pt, key, ct_ref):
 def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Midori64Characteristic(sbi_delta, sbo_delta)
     midori = Midori64(char)
 
 
@@ -123,7 +123,7 @@ def test_nonzero_characteristic():
     ic(sbi_delta[1])
     ic(sbo_delta[1])
 
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Midori64Characteristic(sbi_delta, sbo_delta)
 
     midori = Midori64(char)
     model = midori.solve(seed=8284)
@@ -163,7 +163,7 @@ def test_nonzero_characteristic():
 def test_zero_characteristic_longkey():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Midori64Characteristic(sbi_delta, sbo_delta)
     midori = Midori64LongKey(char)
 
     num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
@@ -240,7 +240,7 @@ def test_nonzero_characteristic_longkey():
     ic(sbi_delta[1])
     ic(sbo_delta[1])
 
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Midori64Characteristic(sbi_delta, sbo_delta)
 
     midori = Midori64LongKey(char)
 

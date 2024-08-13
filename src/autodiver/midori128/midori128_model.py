@@ -18,17 +18,20 @@ from ..cipher_model import SboxCipher, DifferentialCharacteristic
 log = logging.getLogger(__name__)
 
 class Midori128Characteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+
     def __init__(self, sbox_in: np.ndarray, sbox_out: np.ndarray, file_path: Path|None):
         assert sbox_in.dtype == sbox_out.dtype == np.uint8
         assert sbox_in.shape == sbox_out.shape
         assert sbox_in.shape[-2:] == sbox_out.shape[-2:] == (4, 4)
         assert np.all((sbox_in == 0) == (sbox_out == 0))
+        assert len(sbox_in) == len(sbox_out)
 
-        super().__init__(sbox_in, sbox_out, file_path=file_path)
+        num_rounds = len(sbox_in)
 
         # verify linear layer
-        for i in range(0, self.num_rounds - 1):
-            if not np.all(do_mix_columns(do_shift_rows(self.sbox_out[i])) == self.sbox_in[i + 1]):
+        for i in range(0, num_rounds - 1):
+            if not np.all(do_mix_columns(do_shift_rows(sbox_out[i])) == sbox_in[i + 1]):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i}] -> sbox_in[{i + 1}]')
 
         self.original_sbox_in = sbox_in
@@ -53,11 +56,7 @@ class Midori128Characteristic(DifferentialCharacteristic):
         sbox_in = sbox_in[..., 0]
         sbox_out = sbox_out[..., 0]
 
-        self.sbox_in = sbox_in
-        self.sbox_out = sbox_out
-
-        # np.set_printoptions(formatter={'int': lambda x: f"{x:x}"}, linewidth=300)
-        # from IPython import embed; embed(); exit()
+        super().__init__(sbox_in, sbox_out, file_path=file_path)
 
 
     @classmethod

@@ -107,7 +107,7 @@ def test_nonzero_characteristic():
 
     char = Gift128Characteristic(sbi_delta, sbo_delta)
 
-    print(f'ddt probability: 2^{char.log2_ddt_probability(Gift128.ddt):.1f}')
+    print(f'ddt probability: 2^{char.log2_ddt_probability():.1f}')
 
     gift = Gift128(char)
     model = gift.solve(seed=4402)

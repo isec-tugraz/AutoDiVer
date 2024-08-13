@@ -17,6 +17,9 @@ from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
 log = logging.getLogger(__name__)
 
+SBOX = np.array(bytearray.fromhex("040b1f141a1509021b0508121d03061c1e13070e000d1118100c0119160a0f17"))
+DDT = get_ddt(SBOX)
+
 def rotr(val: np.uint64, r: int):
     val_int = int(val)
     res_int = (val_int >> r) | ((val_int & (1<<r)-1) << (64-r))
@@ -34,6 +37,8 @@ def ascon_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[
     return S
 
 class AsconCharacteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT
+
     def __init__(self, sbox_in: np.ndarray[Any, np.dtype[np.uint64]], sbox_out: np.ndarray[Any, np.dtype[np.uint64]], **kwargs):
         # do reverse bit slicing
         assert sys.byteorder == 'little'
@@ -80,8 +85,8 @@ class AsconCharacteristic(DifferentialCharacteristic):
 
 class Ascon(SboxCipher):
     cipher_name = "Ascon"
-    sbox = np.array(bytearray.fromhex("040b1f141a1509021b0508121d03061c1e13070e000d1118100c0119160a0f17"))
-    ddt  = get_ddt(sbox)
+    sbox = SBOX
+    ddt  = DDT
     block_size = 320
     key_size = 0
 

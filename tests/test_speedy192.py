@@ -1,7 +1,7 @@
 from random import seed, randint
 
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions, UnsatException
-from autodiver.speedy192.speedy192_model import Speedy192
+from autodiver.cipher_model import count_solutions, UnsatException
+from autodiver.speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from autodiver_ciphers.speedy192.speedy_cipher import speedy192_enc
 
 
@@ -45,7 +45,7 @@ def test_zero_characteristic():
     seed("test_speedy192::test_zero_characteristic")
     numrounds = 2
     sbi_delta = sbo_delta = np.zeros((2*numrounds, 32), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Speedy192Characteristic(sbi_delta, sbo_delta)
     speedy = Speedy192(char)
 
 
@@ -109,11 +109,11 @@ def test_nonzero_characteristic():
     numrounds = len(char)//2  #Number of full rounds
     sbi_delta = np.array([[x for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[x for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Speedy192Characteristic(sbi_delta, sbo_delta)
 
     speedy = Speedy192(char)
 
-    print(f'ddt probability: 2^{char.log2_ddt_probability(speedy.ddt):.1f}')
+    print(f'ddt probability: 2^{char.log2_ddt_probability():.1f}')
 
     with pytest.raises(UnsatException):
         model = speedy.solve(seed=1)
@@ -143,11 +143,11 @@ def test_nonzero_characteristic_sat():
     numrounds = len(char)//2  #Number of full rounds
     sbi_delta = np.array([[x for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[x for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = Speedy192Characteristic(sbi_delta, sbo_delta)
 
     speedy = Speedy192(char)
 
-    print(f'ddt probability: 2^{char.log2_ddt_probability(speedy.ddt):.1f}')
+    print(f'ddt probability: 2^{char.log2_ddt_probability():.1f}')
 
     model = speedy.solve(seed=1)
     key = model.key[0] # type: ignore

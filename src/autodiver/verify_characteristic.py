@@ -86,7 +86,7 @@ def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: 
     Cipher, Characteristic = _ciphers[cipher_name]
     characteristic = Characteristic.load(characteristic_path)
     cipher = Cipher(characteristic, model_sbox_assumptions=sbox_assumptions, model_type=ModelType(model_type))
-    ddt_prob_log2 = characteristic.log2_ddt_probability(Cipher.ddt)
+    ddt_prob_log2 = characteristic.log2_ddt_probability()
     log.info(f"loaded characteristic with {characteristic.num_rounds} rounds from {characteristic_path} with ddt probability 2**{ddt_prob_log2:.1f}")
 
     if characteristic.file_path is None:

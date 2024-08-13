@@ -21,6 +21,8 @@ class DifferentialCharacteristic():
 
     file_path: Path|None
 
+    ddt: np.ndarray
+
     @classmethod
     def load(cls, characteristic_path: Path) -> Self:
         raise NotImplementedError("this must be implemented by subclasses")
@@ -61,9 +63,16 @@ class DifferentialCharacteristic():
         if self.sbox_in.shape != self.sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
 
+        ddt_probs = self.ddt[self.sbox_in, self.sbox_out]
+        if np.any(ddt_probs == 0):
+            invalid_sboxes = np.array(np.where(ddt_probs == 0)).T
+            raise ValueError(f'invalid s-boxes: {invalid_sboxes}')
+
+
         self.num_rounds = len(self.sbox_in)
 
-    def log2_ddt_probability(self, ddt: np.ndarray):
+    def log2_ddt_probability(self):
+        ddt = self.ddt
         ddt_prob = np.log2(ddt[self.sbox_in, self.sbox_out] / len(ddt)).sum()
         return ddt_prob
 
