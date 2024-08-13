@@ -65,6 +65,8 @@ def find_results_in_file(file: Path):
             if 'context' not in line or 'RESULT' not in line:
                 continue
             data = json.loads(line)
+            if 'context' not in data:
+                continue
             yield data
 
 
@@ -136,22 +138,30 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
             model_type = result['context'].get('model_type', 'solution_set')
             timestamp = datetime.fromisoformat(result['timestamp'])
 
-            if model_type != 'solution_set':
+            if model_type not in ('ModelType.solution_set', 'solution_set'):
                 continue
 
-            cipher_name = trail.split('/')[1]
-            has_tweak = cipher_name not in ['gift64', 'gift128', 'midori64', 'midori128', 'speedy192', 'warp', 'ascon']
-            tweakey_size = {
-                'gift64': 128,
-                'gift128': 128,
-                'midori64': 128,
-                'midori128': 128,
-                'warp': 128,
-                'ascon': 0,
-                'speedy192': 192,
-                'skinny64': 192,
-                'skinny128': 384,
-            }[cipher_name]
+            if 'key_size' in result['context'] and 'tweak_size' in result['context']:
+                key_size = result['context']['key_size']
+                tweak_size = result['context']['tweak_size']
+            else:
+                (key_size, tweak_size) = {
+                    'gift64': (128, 0),
+                    'gift128': (128, 0),
+                    'midori64': (128, 0),
+                    'midori128': (128, 0),
+                    'warp128': (128, 0),
+                    'ascon': (0, 0),
+                    'speedy192': (192, 0),
+                    'skinny64': (64, 128),
+                    'skinny128': (128, 256),
+                    'present80': (80, 0),
+                    'rectangle128': (128, 0),
+                    'presentlongkey': (0, 0),
+                    # 'skinnylongkey': (0, 0),
+                }[cipher.lower()]
+                tweakey_size = key_size + tweak_size
+            has_tweak = tweak_size > 0
 
             if 'solve_result' in result:
                 key = result['solve_result']['key']
@@ -167,14 +177,13 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
                 key = result['count_result']['key']
                 tweak = result['count_result']['tweak']
                 time = format_time(result['count_result']['time'])
-                pt = result['count_result']['pt']
 
                 epsilon = result['count_result']['epsilon']
                 delta = result['count_result']['delta']
 
                 prob_str = f'{fmt_log2(probability)}'
 
-                count_result = {'trail': trail, 'prob': prob_str, 'delta': delta, 'epsilon': epsilon, 'key': key, 'tweak': tweak, 'pt': pt, 'time': time}
+                count_result = {'trail': trail, 'prob': prob_str, 'delta': delta, 'epsilon': epsilon, 'key': key, 'tweak': tweak, 'time': time}
                 count_results.append({k: v for k, v in count_result.items() if v != ''})
 
             if 'count_tweakey_result' in result:
