@@ -76,7 +76,8 @@ class IndexSet:
         convenience function to return the underlying array name and unraveled
         index for each linear index in `index_array`.
         """
-        variables = {k: v for k, v in vars(self).items() if isinstance(v, np.ndarray)}
+        variables = [(k, v) for k, v in vars(self).items() if isinstance(v, np.ndarray) and v.dtype == np.int32]
+        variables = [(k, v) for k, v in variables if not k.startswith('_')] + [(k, v) for k, v in variables if k.startswith('_')]
 
         if np.any((index_array < 0) | (index_array >= self.numvars + 1)):
             raise IndexError("index out of bounds")
@@ -86,15 +87,17 @@ class IndexSet:
             if needle == self.numvars:
                 res[i] = "1"
                 continue
-            for k, v in variables.items():
+            for k, v in variables:
                 if v.size == 0:
                     continue
-                start, stop = v.flatten()[[0, -1]]
+                start, stop = v.min(), v.max()
                 rng = range(start, stop + 1)
 
                 if needle in rng:
-                    idx = np.unravel_index(rng.index(needle), v.shape)
+                    flat_idx, = np.where(v.flatten() == needle)[0]
+                    idx = np.unravel_index(flat_idx, v.shape)
                     res[i] = k + str(np.array(idx).tolist())
+                    assert getattr(self, k)[*idx] == needle
                     # res[i] = str(f'{idx[1]}{idx[2]}')
                     break
             else:
