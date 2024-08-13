@@ -130,7 +130,9 @@ class SboxCipher(IndexSet):
 
         context = {
             'cipher': type(self).__name__,
-            'model_type': self.model_type,
+            'key_size': self.key_size,
+            'tweak_size': self.tweak_size,
+            'model_type': self.model_type.name,
             'hostname': hostname,
             'available_cpus': available_cpus,
             'char': {
