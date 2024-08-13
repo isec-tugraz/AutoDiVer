@@ -173,6 +173,7 @@ class Midori64LongKey(_Midori64Base):
         # values can always be calculated in a post-processing step
         self.add_index_array('round_key', (self.num_rounds - 1, 4, 4, self.sbox_bits)) # different amount of model vars depending on version
         self.key = self.round_key
+        self._fieldnames.add('key')
 
         for r in range(self.num_rounds):
             inp = self.mc_out[r].swapaxes(0, 1).flatten()
