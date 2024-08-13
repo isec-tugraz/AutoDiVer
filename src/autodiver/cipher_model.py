@@ -129,6 +129,7 @@ class SboxCipher(IndexSet):
         available_cpus = _available_cpus()
 
         context = {
+            'cwd': os.getcwd(),
             'cipher': type(self).__name__,
             'key_size': self.key_size,
             'tweak_size': self.tweak_size,
