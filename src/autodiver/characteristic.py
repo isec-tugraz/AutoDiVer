@@ -22,6 +22,10 @@ class DifferentialCharacteristic():
     file_path: Path|None
 
     @classmethod
+    def load(cls, characteristic_path: Path) -> Self:
+        raise NotImplementedError("this must be implemented by subclasses")
+
+    @classmethod
     def load_txt(cls, characteristic_path: Path) -> Self:
         trail_list = []
         with open(characteristic_path, 'r') as f:

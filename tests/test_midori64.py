@@ -190,7 +190,7 @@ def test_zero_characteristic_longkey():
     key[numrounds] = whitening_key[1]
 
     for i in range(numrounds - 1):
-        key[i + 1] = matrix_as_uint64(model.key[i])
+        key[i + 1] = matrix_as_uint64(model.key[i]) # type: ignore
 
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
@@ -254,7 +254,7 @@ def test_nonzero_characteristic_longkey():
     key[numrounds] = whitening_key[1]
 
     for i in range(numrounds - 1):
-        key[i + 1] = matrix_as_uint64(model.key[i])
+        key[i + 1] = matrix_as_uint64(model.key[i]) # type: ignore
 
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore

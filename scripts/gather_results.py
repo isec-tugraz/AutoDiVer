@@ -160,7 +160,7 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
                     'presentlongkey': (0, 0),
                     # 'skinnylongkey': (0, 0),
                 }[cipher.lower()]
-                tweakey_size = key_size + tweak_size
+            tweakey_size = key_size + tweak_size
             has_tweak = tweak_size > 0
 
             if 'solve_result' in result:
