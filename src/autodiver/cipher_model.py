@@ -725,6 +725,19 @@ class SboxCipher(IndexSet):
                     pbar.set_description(f'valid {kind}s: {count_sat}/{i + 1}')
 
         log.info(f'RESULT {kind} count: {count_sat}/{trials}')
+        count_tweakeys_sat_result = {
+            'count_sat': count_sat,
+            'count_unsat': count_unsat,
+            'trials': trials,
+            'kind': kind,
+            'count_key': 'key' in kind,
+            'count_tweak': 'tweak' in kind,
+            'use_affine_hull': use_affine_hull,
+            'num_affine_hull_conditions': affine_hull.element_size() - affine_hull.dimension(),
+            'time': timer.elapsed(),
+        }
+
+        self.log_result(count_tweakeys_sat_result=count_tweakeys_sat_result)
 
         log.info(f'{kind} conditions (before minimization): {key_cnf!r}')
         min_key_cnf = key_cnf.minimize_espresso()
@@ -756,17 +769,17 @@ class SboxCipher(IndexSet):
 
 
 
-        count_tweakeys_sat_result = {
+        key_conditions_sat_result = {
             'count_sat': count_sat,
             'count_unsat': count_unsat,
             'trials': trials,
             'kind': kind,
             'count_key': 'key' in kind,
             'count_tweak': 'tweak' in kind,
-            'tweakey_conditions': key_conditions,
+            'key_conditions': key_conditions,
             'use_affine_hull': use_affine_hull,
             'num_affine_hull_conditions': affine_hull.element_size() - affine_hull.dimension(),
             'time': timer.elapsed(),
         }
 
-        self.log_result(count_tweakeys_sat_result=count_tweakeys_sat_result)
+        self.log_result(key_conditions_sat_result=key_conditions_sat_result)
