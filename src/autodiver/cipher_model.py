@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from enum import Enum, unique
 import os
 import logging
-import random
 import subprocess as sp
 import tempfile
 import time
@@ -18,6 +17,7 @@ from typing import Any, Literal
 from itertools import count
 import shutil
 import sys
+from math import log2
 
 from tqdm import tqdm
 import numpy as np
@@ -712,7 +712,9 @@ class SboxCipher(IndexSet):
                 count_unsat += not is_sat
 
                 if not is_sat:
-                    conflict = Clause(solver.get_conflict())
+                    conflict_list = solver.get_conflict()
+                    conflict_list = sorted(conflict_list, key=abs)
+                    conflict = Clause(conflict_list)
                     if conflict not in key_cnf:
                         key_cnf.add_clause(conflict)
                         tqdm.write(self.format_clause(conflict))
@@ -723,15 +725,9 @@ class SboxCipher(IndexSet):
 
         log.info(f'RESULT {kind} count: {count_sat}/{trials}')
 
-        for clause in self.get_small_clauses_over_set(solver, len(sampling_set), 1<<32 - 1, sampling_set):
-            clause = Clause(clause)
-
-            if clause not in key_cnf:
-                tqdm.write(self.format_clause(clause))
-                key_cnf.add_clause(clause)
-
+        log.info(f'{kind} conditions (before minimization): {key_cnf!r}')
         min_key_cnf = key_cnf.minimize_espresso()
-        log.info(f'key conditions: {min_key_cnf!r}')
+        log.info(f'RESULT {kind} conditions: {min_key_cnf!r}')
 
         if kind not in self._learned_clauses:
             self._learned_clauses[kind] = CNF()
@@ -745,12 +741,18 @@ class SboxCipher(IndexSet):
             key_conditions.append(formatted)
             log.info(formatted)
 
-        try:
-            sols = count_solutions(XorCNF(key_cnf), 0.8, 0.2, verbosity=0)
-            ratio = sols / (1 << key_cnf.nvars)
-            log.info(f'key space: {fmt_log2(ratio)}')
-        except FileNotFoundError:
-            log.info('approxmc not found -> skipping key space estimation')
+        key_size = len(sampling_set_list)
+        sols = count_solutions(XorCNF(key_cnf), 0.8, 0.2, verbosity=0, sampling_set=sampling_set_list.tolist())
+        ratio = sols / (1 << len(sampling_set_list))
+        log_ratio = log2(ratio)
+
+        num_lin_conditions = affine_hull.element_size() - affine_hull.dimension()
+        if use_affine_hull:
+            log.info(f'RESULT {kind} space due to discovered linear conditions: 2^{key_size} * 2^{log_ratio:.2f} = 2^{key_size + log_ratio:.2f}')
+        log.info(f'RESULT {kind} space due to discovered SAT clauses: 2^{key_size} * 2^{log_ratio:.2f} = 2^{key_size + log_ratio:.2f}')
+        if use_affine_hull:
+            log.info(f'RESULT overall {kind} space: 2^({key_size}-{num_lin_conditions}+{log_ratio:.2f}) = 2^{key_size - num_lin_conditions + log_ratio:.2f}')
+
 
 
         count_tweakeys_sat_result = {
