@@ -132,11 +132,12 @@ class SkinnyBase(SboxCipher):
         rnds = self.numrounds
         lfsr_updates = (self.numrounds - 1) // 2 + 1
         self.add_index_array('key', (4, 4, self.sbox_bits))
+
+        self._fieldnames.add('tk2')
+        self._fieldnames.add('tk3')
         self.add_index_array('_tk2', (4, 4, self.sbox_bits + lfsr_updates))
         self.add_index_array('_tk3', (4, 4, self.sbox_bits + lfsr_updates))
 
-        self.tweak = np.array([self._tk2[..., :self.sbox_bits], self._tk3[..., :self.sbox_bits]])
-        self._fieldnames.add('tweak')
 
         tk2_tmp = self._tk2.reshape(16, self.sbox_bits + lfsr_updates)
         tk3_tmp = self._tk3.reshape(16, self.sbox_bits + lfsr_updates)
@@ -173,8 +174,8 @@ class SkinnyBase(SboxCipher):
 
         self.tk2 = np.array(round_tweakeys[0][1]).reshape(4, 4, self.sbox_bits)
         self.tk3 = np.array(round_tweakeys[0][2]).reshape(4, 4, self.sbox_bits)
-        self._fieldnames.add('tk2')
-        self._fieldnames.add('tk3')
+        self.tweak = np.array([self.tk2, self.tk3])
+        self._fieldnames.add('tweak')
 
         # add lfsr model
         lfsr_cnf = CNF()
