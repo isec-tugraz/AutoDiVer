@@ -1,23 +1,38 @@
 import numpy as np
+from typing import Any
 
+SBOX = np.array(bytearray.fromhex('08000903381029130c0d0407300120231a1218323e162c361c1d14373405242702060b0f331721150a1b0e1f3111253522262a2e3a1e283c2b3b2f3f39192d3d'))
+RC = np.array(bytearray.fromhex(
+    '09033d2a22081623020d0c130618282e00370133110a10090e02082927330710'
+    '02023b3a260e310e1b0825050a0207260e0d00131d3b3914192c3c343a10312c'
+    '300a30292d3c253c140d343f210d16352d141c0905390816351d26091e1f2c1b'
+    '3413040b2929231f2d1a302f3f170b1b34012b1f2d3b23212b3e352a09273a16'
+    '2e273210111f042c1f392424281925072c39052c3d3020013c2e0a05232f3016'
+    '183624203607051713262624160f3a233d090c3d1f2036151d083d32232b1918')).reshape(-1, 32)
 
-SBOX =np.array([0x08,0x00,0x09,0x03,0x38,0x10,0x29,0x13,0x0c,0x0d,0x04,0x07,0x30,0x01,0x20,0x23,0x1a,0x12,0x18,0x32,0x3e,0x16,0x2c,0x36,0x1c,0x1d,0x14,0x37,0x34,0x05,0x24,0x27,0x02,0x06,0x0b,0x0f,0x33,0x17,0x21,0x15,0x0a,0x1b,0x0e,0x1f,0x31,0x11,0x25,0x35,0x22,0x26,0x2a,0x2e,0x3a,0x1e,0x28,0x3c,0x2b,0x3b,0x2f,0x3f,0x39,0x19,0x2d,0x3d], dtype=np.uint8)
-RC = np.array([[0x09, 0x03, 0x3D, 0x2A, 0x22, 0x08, 0x16, 0x23, 0x02, 0x0D, 0x0C, 0x13, 0x06, 0x18, 0x28, 0x2E, 0x00, 0x37, 0x01, 0x33, 0x11, 0x0A, 0x10, 0x09, 0x0E, 0x02, 0x08, 0x29, 0x27, 0x33, 0x07, 0x10],
-               [0x02, 0x02, 0x3B, 0x3A, 0x26, 0x0E, 0x31, 0x0E, 0x1B, 0x08, 0x25, 0x05, 0x0A, 0x02, 0x07, 0x26, 0x0E, 0x0D, 0x00, 0x13, 0x1D, 0x3B, 0x39, 0x14, 0x19, 0x2C, 0x3C, 0x34, 0x3A, 0x10, 0x31, 0x2C],
-               [0x30, 0x0A, 0x30, 0x29, 0x2D, 0x3C, 0x25, 0x3C, 0x14, 0x0D, 0x34, 0x3F, 0x21, 0x0D, 0x16, 0x35, 0x2D, 0x14, 0x1C, 0x09, 0x05, 0x39, 0x08, 0x16, 0x35, 0x1D, 0x26, 0x09, 0x1E, 0x1F, 0x2C, 0x1B],
-               [0x34, 0x13, 0x04, 0x0B, 0x29, 0x29, 0x23, 0x1F, 0x2D, 0x1A, 0x30, 0x2F, 0x3F, 0x17, 0x0B, 0x1B, 0x34, 0x01, 0x2B, 0x1F, 0x2D, 0x3B, 0x23, 0x21, 0x2B, 0x3E, 0x35, 0x2A, 0x09, 0x27, 0x3A, 0x16],
-               [0x2E, 0x27, 0x32, 0x10, 0x11, 0x1F, 0x04, 0x2C, 0x1F, 0x39, 0x24, 0x24, 0x28, 0x19, 0x25, 0x07, 0x2C, 0x39, 0x05, 0x2C, 0x3D, 0x30, 0x20, 0x01, 0x3C, 0x2E, 0x0A, 0x05, 0x23, 0x2F, 0x30, 0x16],
-               [0x18, 0x36, 0x24, 0x20, 0x36, 0x07, 0x05, 0x17, 0x13, 0x26, 0x26, 0x24, 0x16, 0x0F, 0x3A, 0x23, 0x3D, 0x09, 0x0C, 0x3D, 0x1F, 0x20, 0x36, 0x15, 0x1D, 0x08, 0x3D, 0x32, 0x23, 0x2B, 0x19, 0x18]],
-               dtype=np.uint8)
+def do_shift_cols(state: np.ndarray[Any, np.dtype[np.uint8]]) -> np.ndarray[Any, np.dtype[np.uint8]]:
+    """
+    Perform shift columns. Each row is layed out in little endian order.
+    I.e., the bit at index[0] is the LSB which is shifted by 5 places.
+    """
+    if state.shape != (32, 6):
+        raise ValueError('state must have shape (32, 6)')
 
+    result = np.zeros_like(state)
+    for i in range(6):
+        result[:, 5 - i] = np.roll(state[:, 5 - i], -i)
+    return result
 
-def do_shift_cols(state):
-    state1 = state.copy()
-    for i in range(32):
-        for j in range(6):
-            state1[i][j] = state[(i+5-j)%32][j]
-            # state1[i][j] = state[i][j]
-    return state1
+def do_mix_cols(state: np.ndarray[Any, np.dtype[np.uint8]]) -> np.ndarray[Any, np.dtype[np.uint8]]:
+    """ Perform mix columns on the state of bits. """
+    if state.shape != (32, 6):
+        raise ValueError('state must have shape (32, 6)')
+    alphas = (0, 1, 5, 9, 15, 21, 26)
+
+    mixed = np.zeros_like(state)
+    for alpha in alphas:
+        mixed ^= np.roll(state, -alpha, axis=0)
+    return mixed
 
 
 def update_key(key):
@@ -25,16 +40,17 @@ def update_key(key):
     for i in range(32):
         keyr[i] = key[i][::-1]
     k = keyr.flatten()
+
     key1 = key.copy().flatten()
     for i in range(192):
         key1[i] = k[(7*i + 1)%192]
     key1 = key1.reshape(32, 6)
     # print(key1)
+
     key2 = key1.copy()
     for i in range(32):
         key2[i] = key1[i][::-1]
     return key2
-
 
 def Add(A, B):
     # print(f'{A = }')
@@ -46,7 +62,6 @@ def Add(A, B):
         state.append(s)
     return np.asarray(state, np.uint8)
 
-
 def convert_statebool_to_statechar(input_state):
     output_state = [0 for i in range(32)]
     for i in range(32):
@@ -55,17 +70,19 @@ def convert_statebool_to_statechar(input_state):
             output_state[i] ^= input_state[6 * i + j]
     return output_state
 
-
 def prepare_round_keys(key):
     NR = 7
     round_keys = [[0 for i in range(32)] for j in range(NR)]
     temp_round_key_state = [[0 for _ in range(192)] for _ in range(2)]
     # print(f'{temp_round_key_state = }')
+
     #convert 32 nibble key to 192 bits
     for i in range(32):
         for j in range(6):
             temp_round_key_state[0][6 * i + j] = (key[i] >> (5 - j)) & 1
+
     round_keys[0] = convert_statebool_to_statechar(temp_round_key_state[0])
+
     for r in range(1, NR):
         ind_new = (r % 2)
         ind_old = ~ind_new
@@ -73,3 +90,4 @@ def prepare_round_keys(key):
             temp_round_key_state[ind_new][i] = temp_round_key_state[ind_old][(7 * i + 1) % 192]
         round_keys[r] = convert_statebool_to_statechar(temp_round_key_state[ind_new])
     return np.asarray(round_keys, np.uint8)
+

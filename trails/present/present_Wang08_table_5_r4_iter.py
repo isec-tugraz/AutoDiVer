@@ -54,7 +54,7 @@ if __name__ == '__main__':
     sbox_out[3, [2, 14]] = 1
 
     # sbox_in[3, [0, 3]] = 4
-    
+
     prob = np.log2(ddt[sbox_in, sbox_out] / 16).sum()
     print(f"probability: 2^{prob:.1f}")
 
@@ -64,8 +64,11 @@ if __name__ == '__main__':
     np.savez(dst_file, sbox_in=sbox_in, sbox_out=sbox_out)
     # numrounds = len(sbox_in)
 
+    dst_dir = script_file.parent / script_file.with_suffix('').name
+    dst_dir.mkdir(exist_ok = True)
+
     for iters in range(2, 5):
-        dst_file = script_file.with_name(script_file.stem.replace('r4', f'r{4*iters}').replace('iter', f'iter{iters}'))
+        dst_file = dst_dir / script_file.stem.replace('r4', f'r{4*iters}').replace('iter', f'iter{iters}')
         print(f'Writing to {dst_file} with {4*iters} rounds')
 
         sbox_in_rep = np.tile(sbox_in, (iters, 1))

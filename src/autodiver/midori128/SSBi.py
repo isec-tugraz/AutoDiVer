@@ -86,7 +86,6 @@ def Sb1(bitStringArray):
     newBitStringArray = list(map(str, [b0, b1, b2, b3]))
     return newBitStringArray
 
-
 def SSbi(x, i):
     """
     Implements the Sbox within midori.
@@ -112,10 +111,12 @@ def SSbi(x, i):
         n1 = Sb1(B)
         binResult = [n1[0], n0[1], n1[2], n0[3],
                      n0[0], n1[1], n0[2], n1[3]]
+
         # n0 = Sb1([x0, x1, x2, x3])
         # n1 = Sb1([x4, x5, x6, x7])
         # binResult = [n0[0], n0[1], n0[2], n0[3],
         #              n1[0], n1[1], n1[2], n1[3]]
+
     elif i == 1:
         n0 = Sb1([x1, x6, x7, x0])
         n1 = Sb1([x5, x2, x3, x4])
@@ -133,7 +134,6 @@ def SSbi(x, i):
                      n0[1], n1[2], n1[3], n0[0]]
     result = int("".join(binResult), 2)
     return result
-
 
 def sbox128():
     SSb0 = [hex(SSbi(i, 0)) for i in range(16)]

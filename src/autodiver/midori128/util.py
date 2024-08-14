@@ -16,6 +16,7 @@ DDT  = np.array([[16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                   [0, 0, 0, 2, 4, 0, 0, 2, 0, 2, 0, 0, 2, 0, 2, 2],
                   [0, 0, 2, 0, 0, 2, 2, 2, 0, 4, 0, 2, 0, 2, 0, 0],
                   [0, 0, 0, 0, 2, 4, 0, 2, 0, 0, 2, 2, 0, 2, 0, 2]], dtype=np.uint8)
+
 RC = np.array([[0,0,0,1,0,1,0,1,1,0,1,1,0,0,1,1],
                [0,1,1,1,1,0,0,0,1,1,0,0,0,0,0,0],
                [1,0,1,0,0,1,0,0,0,0,1,1,0,1,0,1],
@@ -37,7 +38,6 @@ RC = np.array([[0,0,0,1,0,1,0,1,1,0,1,1,0,0,1,1],
                [0,1,1,0,0,0,1,0,1,0,0,0,1,0,1,0]],
                dtype=np.uint8)
 
-
 def nibble_to_byte(state):
     out_state = []
     for i in range(16):
@@ -55,6 +55,7 @@ def byte_to_nibble(state):
         out_state[2*i + 1] = a
     out_state = np.asarray(out_state, dtype = np.uint8)
     return out_state
+
 # 0, 10, 5, 15,
 # 14, 4, 11, 1,
 # 9, 3, 12, 6,
@@ -63,6 +64,7 @@ sr_mapping = np.array([0, 10, 5, 15, 14, 4, 11, 1, 9, 3, 12, 6, 7, 13, 2, 8])
 sri_mapping = np.array([0, 7, 14, 9, 5, 2, 11, 12, 15, 8, 1, 6, 10, 13, 4, 3])
 sr_mapping = sr_mapping.reshape(4, 4).T
 sri_mapping = sri_mapping.reshape(4, 4).T
+
 mixing_mat = np.array([
             [0, 1, 1, 1],
             [1, 0, 1, 1],
@@ -80,6 +82,7 @@ def do_shift_rows_inv(state):
 def do_mix_columns(state):
     assert state.shape in [(4, 4), (16,)]
     in_shape = state.shape
+
     state = state.reshape(4, 4)
     out_state = np.zeros((4, 4), dtype=np.uint8)
     for c in range(4):
@@ -87,6 +90,7 @@ def do_mix_columns(state):
         col_out = out_state[:, c]
         for r in range(4):
             col_out[r] = np.bitwise_xor.reduce(col_in[mixing_mat[r] != 0])
+
     return out_state.reshape(in_shape)
 
 def do_linear_layer(state):
@@ -111,6 +115,7 @@ def postPermuteCell(cell, i):
     perm1 = [1,6,7,0,5,2,3,4]
     perm2 = [2,3,4,1,6,7,0,5]
     perm3 = [7,4,1,2,3,0,5,6]
+
     cellBinP = unpackBits(cell)
     cellBin = [0 for _ in range(8)]
     for j in range(8):
@@ -122,6 +127,7 @@ def postPermuteCell(cell, i):
             cellBin[perm2[j]] = cellBinP[j]
         if(i == 3):
             cellBin[perm3[j]] = cellBinP[j]
+
     cell = packBits(cellBin)
     return cell
 

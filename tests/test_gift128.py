@@ -1,9 +1,12 @@
 from random import randint
 import pytest
+from shutil import which
 import numpy as np
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.gift128.gift_model import Gift128
-from autodiver.gift128.gift_cipher import gift128_enc
+
+from autodiver.cipher_model import count_solutions
+from autodiver.gift.gift_model import Gift128, Gift128Characteristic
+from autodiver_ciphers.gift.gift128_cipher import gift128_enc
+
 from sat_toolkit.formula import CNF
 
 
@@ -13,12 +16,10 @@ def print_state(S, state = "s"):
         print(hex(s)[2:], end = "")
     print("")
 
-
 def read_hex(s: str) -> np.ndarray:
     a = [int(x, 16) for x in s]
     a.reverse()  #test vectors are given in MSB first
     return np.array(a, dtype=np.uint8)
-
 
 testvectors = [
     (read_hex("00000000000000000000000000000000"), read_hex("00000000000000000000000000000000"), read_hex("cd0bd738388ad3f668b15a36ceb6ff92")),
@@ -31,43 +32,52 @@ def test_tv(pt, key, ct_ref):
     print_state(pt, "M")
     print_state(key, "K")
     print_state(ct_ref, "C")
+
     ct = gift128_enc(pt, key, 40)
     print_state(ct, "C")
     assert np.all(ct == ct_ref)
 
-
 def test_zero_characteristic():
     numrounds = 2
     sbi = sbo = np.zeros((numrounds, 32), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi, sbo)
+    char = Gift128Characteristic(sbi, sbo)
     char.sbox_in = sbi
     char.sbox_out = sbo
     char.num_rounds = numrounds
     gift = Gift128(char)
     # print(gift.cnf)
+
+
     num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1 << (128 + 128)
+
     for bit_var in gift.key.flatten():
         gift.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+
     num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1 << 128
+
     for bit_var in gift.sbox_in[0].flatten():
         gift.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+
     model = gift.solve(seed=8837)
+
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     print_state(key, "key")
+
     assert np.all(gift.sbox[sbi[:gift.num_rounds]] == sbo)
+
     print_state(sbi[0])
     for r, round_sbi in enumerate(sbi):
         ref = gift128_enc(sbi[0], key, r)
         print_state(ref)
         print_state(round_sbi)
         assert np.all(round_sbi == ref)
+
     num_solutions = count_solutions(gift.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     assert num_solutions == 1
-
 
 def test_nonzero_characteristic():
     char = (
@@ -91,17 +101,24 @@ def test_nonzero_characteristic():
         # ("02000000050000000200000800000000", "060000000f0000000600000300000000"), # <--- these two rounds are UNSAT
     )
     np.set_printoptions(formatter={'int': lambda x: f'{x:01x}'})
+
     sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
-    print(f'ddt probability: 2^{char.log2_ddt_probability(Gift128.ddt):.1f}')
+
+    char = Gift128Characteristic(sbi_delta, sbo_delta)
+
+    print(f'ddt probability: 2^{char.log2_ddt_probability():.1f}')
+
     gift = Gift128(char)
     model = gift.solve(seed=4402)
+
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
+
     assert np.all(gift.sbox[sbi[:gift.num_rounds]] == sbo)
     assert np.all(gift.sbox[sbi[:gift.num_rounds] ^ char.sbox_in] == sbo ^ char.sbox_out)
+
     for r, round_sbi in enumerate(sbi):
         ref = gift128_enc(sbi[0], key, r)
         ref_xor = gift128_enc(sbi[0] ^ sbi_delta[0], key, r)

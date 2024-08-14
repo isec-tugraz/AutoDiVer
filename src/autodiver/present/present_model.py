@@ -3,11 +3,14 @@
 model the solutions of a differential characteristic for GIFT64 and count them.
 """
 from __future__ import annotations
+
+TYPE_CHECKING=False
+if TYPE_CHECKING:
+    from typing import Any
+
 import logging
-from typing import Any
 from pathlib import Path
 
-from .present_cipher import s_box, p_layer_order
 from .present_util import PERM, INV_PERM, bit_perm
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
@@ -32,10 +35,12 @@ PRESENT_DDT = np.array(
      [ 0,  0,  2,  0,  0,  4,  0,  2,  2,  2,  2,  0,  0,  0,  2,  0],
      [ 0,  2,  4,  2,  2,  0,  0,  2,  0,  0,  2,  2,  0,  0,  0,  0],
      [ 0,  0,  2,  2,  0,  0,  2,  2,  2,  2,  0,  0,  2,  2,  0,  0],
-     [ 0,  4,  0,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4]])
+     [ 0,  4,  0,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4]], dtype=np.uint8)
 
 
 class PresentCharacteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint8]] = PRESENT_DDT
+
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         with np.load(characteristic_path) as f:
@@ -132,16 +137,11 @@ class Present(SboxCipher):
     def _model_key_schedule(self) -> None:
         raise NotImplementedError("Subclasses must implement _model_key_schedule")
 
-    def _addKey(self, inp, out, key) -> None:
-        key_xor_cnf = XorCNF()
-        key_xor_cnf += XorCNF.create_xor(inp.flatten(), out.flatten(), key)
-        self.cnf += key_xor_cnf
-
     def _model_linear_layer(self) -> None:
         self.cnf += XorCNF.create_xor(self.pt.flatten(), self.sbox_in[0].flatten(), self.round_keys[0])
         for r in range(self.num_rounds):
             permOut = self.applyPerm(self.sbox_out[r])
-            self._addKey(permOut, self.sbox_in[r+1], self.round_keys[r + 1])
+            self.cnf += XorCNF.create_xor(permOut.flatten(), self.sbox_in[r+1].flatten(), self.round_keys[r + 1].flatten())
 
 class Present80(Present):
     cipher_name = 'PRESENT-80'

@@ -1,26 +1,36 @@
 [build-system]
 requires = ["setuptools>=64", "wheel", "Cython"]
+
 [project]
 name = "autodiver"
 version = "0.4"
-# dynamic = ["version"]
 dependencies = [
    "colorama",
+   "click",
    "cython",
    "galois",
    "icecream",
    "ipython",
    "pyapproxmc",
-   "pycryptosat",
-   "sat_toolkit>=0.4.3",
+   "pycryptosat!=5.11.23",
+   "sat_toolkit>=0.4.6",
    "galois",
    "setuptools",
    "tqdm",
-   "numpy<2.0",
+   "numpy",
+   "scipy"
 ]
 requires-python = ">=3.9"
 authors = [
+    {name = "Marcel Nageler"},
+    {name = "Shibam Ghosh"},
+    {name = "Maria Eichlseder"},
 ]
+
+maintainers = [
+    {name = "Marcel Nageler", email = "marcel.nageler@iaik.tugraz.at"},
+]
+
 description = "A tool for verifying differential characteristics in block ciphers"
 readme = "README.md"
 license = {file = "LICENSE.txt"}
@@ -33,7 +43,9 @@ classifiers = [
    "Programming Language :: C",
    "Framework :: Pytest",
 ]
+
 [tool.setuptools.package-data]
 autodiver = ["**/log_config.json"]
 [project.scripts]
-verify-characteristic = "autodiver.main:main"
+verify-characteristic = "autodiver.verify_characteristic:cli"
+tikzify = "autodiver.tikzify:main"

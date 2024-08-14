@@ -1,14 +1,14 @@
 from random import randint
 import pytest
+from shutil import which
 from copy import copy
 
 import numpy as np
 from sat_toolkit.formula import XorCNF
 
 from autodiver.cipher_model import count_solutions
-from autodiver.present.present_cipher import present_enc80, present_enc128, key_function_80, key_function_128
+from autodiver_ciphers.present.present_cipher import present_enc80, present_enc128, key_function_80, key_function_128
 from autodiver.present.present_model import Present80, PresentCharacteristic
-
 
 
 test_vectors_80 = [(0x00000000000000000000, 0x0000000000000000, 0x5579C1387B228445),
@@ -47,7 +47,7 @@ def test_count_present80():
     cnf_all = copy(present.cnf)
     sol_count = count_solutions(cnf_all, epsilon=0.2, delta=0.8)
     assert sol_count == 2**80 * 2**64
-    
+
 
 def test_zero_characteristic_present80():
     num_rounds = 7
@@ -60,7 +60,7 @@ def test_zero_characteristic_present80():
 
     print(present.key.shape, present.key.dtype)
     model = present.solve()
-    
+
     key = model.key # type: ignore
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
@@ -96,12 +96,12 @@ def test_zero_characteristic_present80():
         assert rk == ref_rk
         prev_rk = rk
 
-    
+
     for rk, long_rk in zip(round_keys, long_round_keys):
         long_rk = sum(int(x) << i * 8 for i, x in enumerate(long_rk))
         assert np.all(rk == long_rk >> 16)
 
-    
+
     print(' internal state '.center(80, '-'))
     for i in range(num_rounds):
         this_sbi = sum(int(x) << i * 4 for i, x in enumerate(sbi[i]))

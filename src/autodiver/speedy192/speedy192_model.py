@@ -3,15 +3,54 @@
 model the solutions of a differential characteristic for GIFT64 and count them.
 """
 from __future__ import annotations
+
 import logging
+
 import numpy as np
 from typing import Any
+from pathlib import Path
 from sat_toolkit.formula import XorCNF
+
 from .ddt import DDT
-from .util import SBOX, RC, do_shift_cols, update_key
+from .util import SBOX, RC, do_shift_cols, do_mix_cols, update_key
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
+
 log = logging.getLogger(__name__)
+
 class Speedy192Characteristic(DifferentialCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+
+    def verify_linear_layer(self):
+        # verify even rounds (ShiftColumns)
+        for rnd in range(0, len(self.sbox_in) - 1, 2):
+            sc_in = self.sbox_out[rnd]
+            sc_out = self.sbox_in[rnd+1]
+
+            unpacked_sc_in = np.unpackbits(sc_in[:, np.newaxis], axis=-1, bitorder='little')[..., :6]
+            unpacked_sc_out = np.unpackbits(sc_out[:, np.newaxis], axis=-1, bitorder='little')[..., :6]
+            shifted = do_shift_cols(unpacked_sc_in)
+
+            if not np.all(shifted == unpacked_sc_out):
+                # from IPython import embed; embed()
+                raise ValueError(f'invalid ShiftColumns: sbox_in[{rnd}] -> sbox_out[{rnd+1}]')
+
+        # verify odd rounds (MixColumns)
+        for rnd in range(1, len(self.sbox_in) - 1, 2):
+            alpha = (0, 1, 5, 9, 15, 21, 26)
+            ll_in = self.sbox_out[rnd]
+            mc_out = self.sbox_in[rnd+1]
+
+            unpacked_ll_in = np.unpackbits(ll_in[:, np.newaxis], axis=-1, bitorder='little')[..., :6]
+            unpacked_mc_in = do_shift_cols(unpacked_ll_in)
+            unpacked_mc_out = np.unpackbits(mc_out[:, np.newaxis], axis=-1, bitorder='little')[..., :6]
+
+            mixed = do_mix_cols(unpacked_mc_in)
+
+            if not np.all(mixed == unpacked_mc_out):
+                # from IPython import embed; embed()
+                raise ValueError(f'invalid MixColumns: sbox_in[{rnd}] -> sbox_out[{rnd+1}]')
+
+
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         trail = []
@@ -25,13 +64,19 @@ class Speedy192Characteristic(DifferentialCharacteristic):
                 line_deltas = [int(l, 16) for l in line2]
                 # print(line_deltas)
                 trail.append(line_deltas)
+
         trail = np.array(trail)
         if len(trail) % 2 != 0:
             log.error(f'expected an even number of differences in {characteristic_path!r}')
             raise ValueError(f'expected an even number of differences in {characteristic_path!r}')
+
         sbox_in = trail[0::2]
         sbox_out = trail[1::2]
-        return cls(sbox_in, sbox_out, file_path=characteristic_path)
+
+        res = cls(sbox_in, sbox_out, file_path=characteristic_path)
+        res.verify_linear_layer()
+        return res
+
 class Speedy192(SboxCipher):
     cipher_name = "SPEEDY192"
     sbox = SBOX.copy()
@@ -39,33 +84,44 @@ class Speedy192(SboxCipher):
     ddt  = DDT
     block_size = 192
     key_size = 192
+
     sbox_bits = 6
     sbox_count = 32
-    # key: np.ndarray[Any, np.dtype[np.int32]]
-    # mc_out: np.ndarray[Any, np.dtype[np.int32]]
-    def __init__(self, char: DifferentialCharacteristic, **kwargs):
+
+    mc_out: np.ndarray[Any, np.dtype[np.int32]]
+
+    def __init__(self, char: Speedy192Characteristic, **kwargs):
+        if not isinstance(char, Speedy192Characteristic):
+            raise ValueError('char must be of type Speedy192Characteristic')
+
         super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds # this is actually number of sboxes
         assert char.num_rounds%2 == 0 #nimber of sbox layers should be even
         self.num_rounds_full = char.num_rounds//2
         assert self.char.sbox_in.shape == self.char.sbox_out.shape
+
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
+
         self._create_vars()
         self._key_schedule()
         self._model_sboxes()
         self._model_sc()  #ShiftColumn
+
         self._model_add_key()
         self._model_linear_layer()
+
     def _create_vars(self):
         self.add_index_array('key', (1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_in', (self.num_rounds, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out',(self.num_rounds, self.sbox_count, self.sbox_bits))
         self.add_index_array('mc_out', (self.num_rounds_full - 1, self.sbox_count, self.sbox_bits))
+
         self.add_index_array('tweak', (0,))
         self.pt = self.sbox_in[0]
         self._fieldnames.add('pt')
+
     def _key_schedule(self) -> None:
         RK = []
         rk = self.key[0].copy()
@@ -74,6 +130,7 @@ class Speedy192(SboxCipher):
             rk = update_key(rk)
             RK.append(rk)
         self._round_keys = np.array(RK)
+
     def _model_sc(self):
         for i in range(self.num_rounds_full):
             """
@@ -85,22 +142,26 @@ class Speedy192(SboxCipher):
             scout_flat = self.sbox_in[2*i+1].flatten()
             sc_cnf = XorCNF.create_xor(scin_flat, scout_flat)
             self.cnf += sc_cnf
+
     def _addKey(self, Y, X, K, RC: np.ndarray):
         X_flat = X.copy().reshape(32, 6)
         for i in range(32):
-            X_flat[i][0]  *= (-1)**(RC[i] & 0x1)
-            X_flat[i][1]  *= (-1)**((RC[i]>>1) & 0x1)
-            X_flat[i][2]  *= (-1)**((RC[i]>>2) & 0x1)
-            X_flat[i][3]  *= (-1)**((RC[i]>>3) & 0x1)
-            X_flat[i][4]  *= (-1)**((RC[i]>>4) & 0x1)
-            X_flat[i][5]  *= (-1)**((RC[i]>>5) & 0x1)
+            X_flat[i][0]  *= np.int8(-1)**(RC[i] & 0x1)
+            X_flat[i][1]  *= np.int8(-1)**((RC[i]>>1) & 0x1)
+            X_flat[i][2]  *= np.int8(-1)**((RC[i]>>2) & 0x1)
+            X_flat[i][3]  *= np.int8(-1)**((RC[i]>>3) & 0x1)
+            X_flat[i][4]  *= np.int8(-1)**((RC[i]>>4) & 0x1)
+            X_flat[i][5]  *= np.int8(-1)**((RC[i]>>5) & 0x1)
+
         X_flat = X_flat.flatten()
         key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())
         return key_xor_cnf
+
     def _model_add_key(self):
         for r in range(self.num_rounds_full -1):
             #No need to model AddKey for first and last round
             self.cnf += self._addKey(self.mc_out[r], self.sbox_in[2*(r+1)], self._round_keys[r], RC[r])
+
     @staticmethod
     def model_mix_cols(A, B):
         alphas = [0, 1, 5, 9, 15, 21, 26]
@@ -116,19 +177,23 @@ class Speedy192(SboxCipher):
                 # print(f'{colB[r]}', "===>", f'{colA_red}')
                 mc_cnf += XorCNF.create_xor([colB[r]], *colA_red)
         return mc_cnf
+
     def _model_linear_layer(self):
         for r in range(self.num_rounds_full - 1):
             mc_input = do_shift_cols(self.sbox_out[2*r + 1])
             mc_output = self.mc_out[r].copy()
             self.cnf += self.model_mix_cols(mc_input, mc_output)
+
     @classmethod
     def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
         if cellsize == 0 and len(arr) == 0:
             return ''
+
         if cellsize == 4:
             return ''.join(f'{x:01x}' for x in arr.flatten())
         if cellsize == 8:
             return ''.join(f'{x:02x}' for x in arr.flatten())
         if cellsize == 6:
             return ''.join(f'{x:02x}' for x in arr.flatten())
+
         raise ValueError(f'cellsize must be 4, 6, or 8 not {cellsize}')

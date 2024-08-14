@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
     # sbox_in[14, [0, 8]] = 0
     print(np.where(ddt[sbox_in, sbox_out] == 0))
-    
+
     prob = np.log2(ddt[sbox_in, sbox_out] / 16).sum()
     print(f"probability: 2^{prob:.1f}")
 
@@ -94,12 +94,15 @@ if __name__ == '__main__':
     print(f'Writing to {dst_file}')
     np.savez(dst_file, sbox_in=sbox_in, sbox_out=sbox_out)
 
-    for i in [8, 10, 12]:
-        dst_file = script_file.with_name(script_file.stem.replace('r14', f'r{i}.npz'))
+    dst_dir = script_file.parent / script_file.with_suffix('').name
+    dst_dir.mkdir(exist_ok = True)
+
+    for i in range(1, 14):
+        dst_file = dst_dir / script_file.stem.replace('r14', f'r{i:02d}.npz')
         print(f'Writing to {dst_file}')
         np.savez(dst_file, sbox_in=sbox_in[:i], sbox_out=sbox_out[:i])
 
-    for i in [8, 10, 12]:
-        dst_file = script_file.with_name(script_file.stem.replace('r14', f'r{i}_last.npz'))
+    for i in range(1, 14):
+        dst_file = dst_dir / script_file.stem.replace('r14', f'r{i:02d}_last.npz')
         print(f'Writing to {dst_file}')
         np.savez(dst_file, sbox_in=sbox_in[-i:], sbox_out=sbox_out[-i:])

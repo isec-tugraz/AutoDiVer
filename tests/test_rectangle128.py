@@ -1,16 +1,20 @@
 from random import randint
 import numpy as np
 import pytest
-from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.rectangle128.rectangle_model import Rectangle128
-from autodiver.rectangle128.rectangle_cipher import rectangle_enc, nibble_to_block, nibble_to_key
+from shutil import which
+
+from autodiver.cipher_model import count_solutions
+from autodiver.rectangle128.rectangle_model import Rectangle128, RectangleCharacteristic
+from autodiver_ciphers.rectangle128.rectangle_cipher import rectangle_enc, nibble_to_block, nibble_to_key
 from sat_toolkit.formula import CNF
+
+
 def test_zero_characteristic():
     numrounds = 4
     sbi_delta = sbo_delta = np.zeros((numrounds, 16), dtype=np.uint8)
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+    char = RectangleCharacteristic(sbi_delta, sbo_delta)
     rectangle = Rectangle128(char)
-    
+
     for bit_var in rectangle.key.flatten():
         rectangle.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
     num_solutions = count_solutions(rectangle.cnf, epsilon=0.8, delta=0.2, verbosity=0)
@@ -39,6 +43,8 @@ def test_zero_characteristic():
         assert out == ref
     # num_solutions = count_solutions(rectangle.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     # assert num_solutions == 1
+
+
 def test_nonzero_characteristic():
     # characteristic from https://eprint.iacr.org/2022/837 (Table 11)
     # char = (
@@ -46,7 +52,7 @@ def test_nonzero_characteristic():
     #     ("0200006000000000", "0600002000000000"),
     #     ("2000060000000000", "6000020000000000"),
     # )
-    
+
     char = (
         ("0000000060000200", "0000000020000600"),
         ("0000000006000020", "0000000002000060"),
@@ -57,8 +63,8 @@ def test_nonzero_characteristic():
     sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
     # sbi_delta = sbi_delta[:, ::-1]
     # sbo_delta = sbo_delta[:, ::-1]
-    
-    char = DifferentialCharacteristic(sbi_delta, sbo_delta)
+
+    char = RectangleCharacteristic(sbi_delta, sbo_delta)
     rectangle = Rectangle128(char)
     model = rectangle.solve(seed=8284)
 
@@ -69,7 +75,7 @@ def test_nonzero_characteristic():
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
     assert np.all(rectangle.sbox[sbi[:rectangle.num_rounds]] == sbo)
-    
+
     delta_0 = nibble_to_block(sbi_delta[0])
     for r in range(1, char.num_rounds):
         out = nibble_to_block(sbi[r])
