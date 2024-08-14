@@ -147,24 +147,26 @@ class Present80(Present):
     cipher_name = 'PRESENT-80'
     key_size = 80
 
-    long_round_keys: np.ndarray[Any, np.dtype[np.int32]]
+    _long_round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def _model_key_schedule(self):
-        self.add_index_array('long_round_keys', (self.num_rounds + 1, self.key_size))
-        self.round_keys = self.long_round_keys[:, self.key_size-self.block_size:]
-        self.key = self.long_round_keys[0]
+        self.add_index_array('_long_round_keys', (self.num_rounds + 1, self.key_size))
+
+        self.key = self._long_round_keys[0]
+        self.round_keys = self._long_round_keys[:, self.key_size-self.block_size:]
+
 
         self._fieldnames.add('round_keys')
         self._fieldnames.add('key')
 
         key_schedule_cnf = XorCNF()
         for rnd in range(self.num_rounds):
-            in_key = self.long_round_keys[rnd]
+            in_key = self._long_round_keys[rnd]
             rotated_key = np.roll(in_key, 61)
             rc = (rnd + 1) << 15
             rc_arr = np.array([(rc >> i) & 1 for i in range(80)], dtype=np.int8)
             sb_inp_key = rotated_key * (-1)**rc_arr
-            sb_out_key = self.long_round_keys[rnd + 1]
+            sb_out_key = self._long_round_keys[rnd + 1]
 
             # the lower bits are equal
             key_schedule_cnf += XorCNF.create_xor(sb_inp_key[:76], sb_out_key[:76])
