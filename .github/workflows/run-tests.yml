@@ -17,13 +17,58 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install
+      - name: Install Espresso
         run: |
           git clone https://github.com/classabbyamp/espresso-logic.git /tmp/espresso-logic
           cd /tmp/espresso-logic/espresso-src
           make CFLAGS=-O3
           sudo install -m 755 ../bin/espresso /usr/bin/espresso
           rm -rf /tmp/espresso-logic
+
+      - name: Install Cryptominisat
+        run: |
+          export CRYPTOMINISAT_VERSION=5.11.21
+          mkdir /tmp/sat
+          cd /tmp/sat
+          git clone https://github.com/msoos/cryptominisat
+          cd cryptominisat
+          git checkout tags/${CRYPTOMINISAT_VERSION}
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make
+          sudo make install
+          sudo ldconfig
+          rm -rf /tmp/sat
+
+      - name: Install Arjun
+        run: |
+          mkdir /tmp/sat
+          cd /tmp/sat
+          git clone https://github.com/meelgroup/arjun
+          cd arjun
+          git checkout tags/${ARJUN_VERSION}
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make
+          sudo make install
+          sudo ldconfig
+          rm -rf /tmp/sat
+
+      - name: Install ApproxMC
+        run: |
+          mkdir /tmp/sat
+          cd /tmp/sat
+          git clone https://github.com/meelgroup/approxmc
+          cd approxmc
+          git checkout tags/${APPROXMC_VERSION}
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make
+          sudo make install
+          sudo ldconfig
+          rm -rf /tmp/sat
+
+
       - name: Install dependencies
         run: pip install . ./tests
       - name: Install dependencies
