@@ -42,6 +42,7 @@ jobs:
 
       - name: Install Arjun
         run: |
+          export ARJUN_VERSION=2.5.4
           mkdir /tmp/sat
           cd /tmp/sat
           git clone https://github.com/meelgroup/arjun
@@ -56,6 +57,7 @@ jobs:
 
       - name: Install ApproxMC
         run: |
+          export APPROXMC_VERSION=4.1.24
           mkdir /tmp/sat
           cd /tmp/sat
           git clone https://github.com/meelgroup/approxmc
@@ -72,9 +74,9 @@ jobs:
       - name: Install dependencies
         run: pip install . ./tests
       - name: Install dependencies
-        run: pip install pytest pytest-md pytest-emoji
+        run: pip install pytest pytest-md
       - uses: pavelzw/pytest-action@v2
         with:
-          emoji: true
+          emoji: false
           verbose: false
           job-summary: true
