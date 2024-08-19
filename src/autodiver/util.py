@@ -97,7 +97,7 @@ class IndexSet:
                     flat_idx, = np.where(v.flatten() == needle)[0]
                     idx = np.unravel_index(flat_idx, v.shape)
                     res[i] = k + str(np.array(idx).tolist())
-                    assert getattr(self, k)[*idx] == needle
+                    assert getattr(self, k)[tuple(idx)] == needle
                     # res[i] = str(f'{idx[1]}{idx[2]}')
                     break
             else:
