@@ -22,7 +22,7 @@ jobs:
           git clone https://github.com/classabbyamp/espresso-logic.git /tmp/espresso-logic
           cd /tmp/espresso-logic/espresso-src
           make CFLAGS=-O3
-          install -m 755 ../bin/espresso /usr/bin/espresso
+          sudo install -m 755 ../bin/espresso /usr/bin/espresso
           rm -rf /tmp/espresso-logic
       - name: Install dependencies
         run: pip install . ./tests
