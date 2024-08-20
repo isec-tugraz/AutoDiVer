@@ -18,7 +18,7 @@ from .cipher_model import SboxCipher, ModelType, DifferentialCharacteristic, Uns
 from .gift.gift_model import Gift64, Gift64Characteristic, Gift128, Gift128Characteristic
 from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey, RectangleCharacteristic
 from .midori64.midori64_model import Midori64, Midori64LongKey, Midori64Characteristic
-from .midori128.midori128_model import Midori128, Midori128Characteristic
+from .midori128.midori128_model import Midori128, Midori128LongKey, Midori128Characteristic
 from .warp128.warp128_model import WARP128, WarpCharacteristic
 from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
 from .ascon.ascon_model import Ascon, AsconCharacteristic
@@ -57,6 +57,7 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
     "midori64": (Midori64, Midori64Characteristic),
     "midori64-long-key": (Midori64LongKey, Midori64Characteristic),
     "midori128": (Midori128, Midori128Characteristic),
+    "midori128-long-key": (Midori128LongKey, Midori128Characteristic),
     "skinny128": (Skinny128, Skinny128Characteristic),
     "skinny128-long-key": (Skinny128LongKey, Skinny128Characteristic),
     "skinny64": (Skinny64, Skinny64Characteristic),
