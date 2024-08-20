@@ -152,13 +152,14 @@ class _Midori128Base(SboxCipher):
 
     def _model_linear_layer(self):
         for r in range(self.num_rounds):
-            mc_input = do_shift_rows(self.sbox_out[r].reshape(4, 4, 8).swapaxes(0, 1))
             mc_output = self.mc_out[r].reshape(4, 4, 8).swapaxes(0, 1)
 
             if r < self.num_rounds - 1:
+                mc_input = do_shift_rows(self.sbox_out[r].reshape(4, 4, 8).swapaxes(0, 1))
                 self.cnf += self.model_mix_cols(mc_input, mc_output)
             else:
-                # no mix columns in the last round
+                # no shift rows and mix columns in the last round
+                mc_input = self.sbox_out[r].reshape(4, 4, 8).swapaxes(0, 1)
                 self.cnf += XorCNF.create_xor(mc_input.flatten(), mc_output.flatten())
 
 
