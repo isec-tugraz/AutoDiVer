@@ -63,7 +63,7 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
     "skinny64-long-key": (Skinny64LongKey, Skinny64Characteristic),
     "ascon": (Ascon, AsconCharacteristic),
     "rectangle128": (Rectangle128, RectangleCharacteristic),
-    "rectangle-long-key": (RectangleLongKey, DifferentialCharacteristic),
+    "rectangle-long-key": (RectangleLongKey, RectangleCharacteristic),
     "pyjamask": (Pyjamask_with_Keyschedule, Pyjamask96Characteristic),
     "pyjamask-long-key": (Pyjamask_Longkey, Pyjamask96Characteristic),
 }
