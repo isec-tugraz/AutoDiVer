@@ -1,8 +1,8 @@
 from random import seed, randint
 
 from autodiver.cipher_model import DifferentialCharacteristic, count_solutions
-from autodiver.midori128.midori128_model import Midori128, Midori128Characteristic
-from autodiver_ciphers.midori128.midori_cipher import midori128_enc
+from autodiver.midori128.midori128_model import Midori128, Midori128LongKey, Midori128Characteristic
+from autodiver_ciphers.midori128.midori_cipher import midori128_enc, midori128_enc_longkey
 
 
 from autodiver.midori128.util import sr_mapping, postPermute
@@ -58,8 +58,8 @@ def test_zero_characteristic():
     assert num_solutions == 1 << (128 + 128)
 
     for bit_var in midori.key.flatten():
-        # midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
-        midori.cnf += CNF([-bit_var, 0])
+        midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+        #midori.cnf += CNF([-bit_var, 0])
 
     # num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
     # assert num_solutions == 1 << 128
@@ -69,15 +69,17 @@ def test_zero_characteristic():
         midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
         # midori.cnf += CNF([-bit_var, 0])
 
-    for bit_var in midori.sbox_out[0, :1].flatten():
+    for bit_var in midori.sbox_out[0, :1].flatten(): # ?
         midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
         # midori.cnf += CNF([bit_var, 0])
 
     model = midori.solve(seed=6405)
 
     key = model.key # type: ignore
+    print(key)
 
     key = nibble_to_byte(key[0])
+    print(key)
     sbi = model.sbox_in # type: ignore
     sbo = model.sbox_out # type: ignore
 
@@ -88,7 +90,7 @@ def test_zero_characteristic():
 
     # from IPython import embed; embed()
 
-    for r in range(1, numrounds):
+    for r in range(1, numrounds + 1):
         sbiR = nibble_to_byte(sbo[r - 1])
         # we need to add the key here in post-processing
         out = sbiR ^ key
@@ -171,6 +173,143 @@ def test_nonzero_characteristic():
         print_state(expected_diff)
         assert np.all(expected_diff == found_diff)
 
-if __name__ == "__main__":
-    test_zero_characteristic()
-    test_nonzero_characteristic()
+
+
+def test_zero_characteristic_longkey():
+    seed("test_midori128::test_zero_characteristic")
+    numrounds = 3
+    sbi_delta = sbo_delta = np.zeros((numrounds, 4, 4), dtype=np.uint8)
+    char = Midori128Characteristic(sbi_delta, sbo_delta, file_path=None)
+    midori = Midori128LongKey(char)
+
+
+    num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    assert num_solutions == 1 << (128 + 128*(numrounds - 1))
+
+    for bit_var in midori.key.flatten():
+        midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+        # midori.cnf += CNF([-bit_var, 0])
+
+    # num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    # assert num_solutions == 1 << 128
+
+    ic(midori.sbox_in[0].shape)
+    for bit_var in midori.sbox_out[0].flatten():
+        midori.cnf += CNF([bit_var * (-1)**randint(0,1), 0])
+        # midori.cnf += CNF([-bit_var, 0])
+
+    model = midori.solve(seed=6405)
+
+    # construct long key with additional whitening keys that are currently not modeled
+    whitening_key = np.zeros([2*16], dtype=np.uint8)  # adaptable
+
+    key = np.zeros([(numrounds + 1)*16], dtype=np.uint8)
+    key[0:16] = whitening_key[0:16]
+    key[numrounds*16:(numrounds + 1)*16] = whitening_key[16:32]
+
+    for i in range(numrounds - 1):
+        key[(i + 1)*16:(i + 2)*16] = nibble_to_byte(model.key[i])  # type: ignore
+
+    print(key)
+
+    sbi = model.sbox_in # type: ignore
+    sbo = model.sbox_out # type: ignore
+
+    # assert np.all(midori.sbox[sbi[:midori.num_rounds]] == sbo)
+    np.set_printoptions(formatter={'int': lambda x: f'{x:02x}'})
+
+    pt = nibble_to_byte(sbi[0]) ^ key[0:16]
+
+    # from IPython import embed; embed()
+
+    #for r in range(1, numrounds + 1):
+    sbiR = nibble_to_byte(sbo[numrounds - 1])
+    # we need to add the key here in post-processing
+    out = sbiR ^ key[numrounds*16:(numrounds + 1)*16]
+
+    ref = midori128_enc_longkey(pt, key, numrounds)
+    ref = np.array(bytearray(ref))
+
+    ic(sbiR.reshape(4, 4), out.reshape(4, 4), ref.reshape(4, 4))
+    ic(out ^ ref)
+
+    assert np.all(out == ref)
+    print("--------------------------------------")
+
+    num_solutions = count_solutions(midori.cnf, epsilon=0.8, delta=0.2, verbosity=0)
+    assert num_solutions == 1
+
+
+
+def test_nonzero_characteristic_longkey():
+    seed("test_midori128::test_nonzero_characteristic")
+    sbi_delta = np.array(bytearray.fromhex(
+        '00002000000000800000000000410000'
+        '00000000000000000000000100000000'
+        '00000000008000000080000000800000'
+        '01000400010004040000040401000004'
+        # '00802000000024048000040000800404'
+        # '00000000808004000080040580000401'
+        # '01000000008000000000040000000000'
+        # '00000000000000000000000080000000'
+        # '00000400000000000000040000000400'
+        # '80020020000200208000002080020000'
+    )).reshape(-1, 4, 4)
+
+    sbo_delta = np.array(bytearray.fromhex(
+        '00000100000000010000000000010000'
+        '00000000000000000000008000000000'
+        '00000000000100000004000000040000'
+        '80000400800024040000808020000080'
+        # '00800500000004040100800000048080'
+        # '00000000800104000004018004008001'
+        # '80000000008000000000800000000000'
+        # '00000000000000000000000004000000'
+        # '00002000000000000000800000000200'
+        # '84100001000100100100002804040000'
+    )).reshape(-1, 4, 4)
+
+
+    char = Midori128Characteristic(sbi_delta, sbo_delta, file_path=None)
+    midori = Midori128LongKey(char)
+
+    model = midori.solve(seed=6405)
+
+    numrounds = len(sbi_delta)
+
+    # construct long key with additional whitening keys that are currently not modeled
+    whitening_key = np.zeros([2*16], dtype=np.uint8)  # adaptable
+
+    key = np.zeros([(numrounds + 1)*16], dtype=np.uint8)
+    key[0:16] = whitening_key[0:16]
+    key[numrounds*16:(numrounds + 1)*16] = whitening_key[16:32]
+
+    for i in range(numrounds - 1):
+        key[(i + 1)*16:(i + 2)*16] = nibble_to_byte(model.key[i])  # type: ignore
+
+    print(key)
+
+    sbi = model.sbox_in # type: ignore
+    sbo = model.sbox_out # type: ignore
+
+    # assert np.all(midori.sbox[sbi[:midori.num_rounds]] == sbo)
+    np.set_printoptions(formatter={'int': lambda x: f'{x:02x}'})
+
+    pt = nibble_to_byte(sbi[0]) ^ key[0:16]
+
+    # from IPython import embed; embed()
+
+    #for r in range(1, numrounds + 1):
+    sbiR = nibble_to_byte(sbo[numrounds - 1])
+    # we need to add the key here in post-processing
+    out = sbiR ^ key[numrounds*16:(numrounds + 1)*16]
+
+    ref = midori128_enc_longkey(pt, key, numrounds)
+    ref = np.array(bytearray(ref))
+
+    ic(sbiR.reshape(4, 4), out.reshape(4, 4), ref.reshape(4, 4))
+    ic(out ^ ref)
+
+    assert np.all(out == ref)
+    print("--------------------------------------")
+

@@ -70,7 +70,7 @@ class Midori128Characteristic(DifferentialCharacteristic):
 
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
 
-class Midori128(SboxCipher):
+class _Midori128Base(SboxCipher):
     cipher_name = "MIDORI128"
     sbox = np.array([int(x, 16) for x in "1053e2f7da9bc846"], dtype=np.uint8)
     ddt  = DDT
@@ -103,7 +103,6 @@ class Midori128(SboxCipher):
         self._model_sboxes()
 
     def _create_vars(self):
-        self.add_index_array('key', (1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
         self.add_index_array('mc_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
@@ -113,11 +112,8 @@ class Midori128(SboxCipher):
         self._fieldnames.add('pt')
 
     def _key_schedule(self) -> None:
-        RK = []
-        for i in range(self.num_rounds):
-            rk = self.key.copy()
-            RK.append(rk)
-        self._round_keys = np.array(RK)
+        raise NotImplementedError("Subclasses must implement _key_schedule")
+
 
     def _model_sboxes(self):
         perm = permutation()
@@ -134,16 +130,13 @@ class Midori128(SboxCipher):
         super()._model_sboxes(sbox_in_permuted, sbox_out_permuted)
 
     def _addKey(self, Y, X, K, RC: np.ndarray):
-        X_flat = X.copy().reshape(16, 8)
-        for i in range(16):
-            X_flat[i][4]  *= np.int8(-1)**(RC[i] & 0x1)
-        X_flat = X_flat.flatten()
-        key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())
-        return key_xor_cnf
+        raise NotImplementedError("Subclasses must implement _addKey")
+
 
     def _model_add_key(self):
-        for r in range(self.num_rounds):
-            self.cnf += self._addKey(self.mc_out[r], self.sbox_in[r+1], self._round_keys[r], RC[r])
+        for r in range(self.num_rounds - 1):
+            self.cnf += self._addKey(self.mc_out[r], self.sbox_in[r+1], self.round_keys[r], RC[r])
+        self.cnf += XorCNF.create_xor(self.mc_out[self.num_rounds - 1].flatten(), self.sbox_in[self.num_rounds].reshape(16, 8).flatten())
 
     @staticmethod
     def model_mix_cols(A, B):
@@ -167,3 +160,39 @@ class Midori128(SboxCipher):
             else:
                 # no mix columns in the last round
                 self.cnf += XorCNF.create_xor(mc_input.flatten(), mc_output.flatten())
+
+
+class Midori128(_Midori128Base):
+    def _key_schedule(self) -> None:
+
+        self.add_index_array('key', (1, self.sbox_count, self.sbox_bits))
+
+        RK = []
+        for i in range(self.num_rounds):
+            rk = self.key.copy()
+            RK.append(rk)
+        self.round_keys = np.array(RK)
+
+
+    def _addKey(self, Y, X, K, RC: np.ndarray):
+        X_flat = X.copy().reshape(16, 8)
+        for i in range(16):
+            X_flat[i][4]  *= np.int8(-1)**(RC[i] & 0x1)
+        X_flat = X_flat.flatten()
+        key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())
+        return key_xor_cnf
+
+class Midori128LongKey(_Midori128Base):
+    round_keys: np.ndarray[Any, np.dtype[np.int32]]
+
+    def _key_schedule(self) -> None:
+
+        self.add_index_array('round_keys', (self.num_rounds - 1, self.sbox_count, self.sbox_bits))
+        self.key = self.round_keys
+        self._fieldnames.add('key')
+
+    def _addKey(self, Y, X, K, RC: np.ndarray):
+        X_flat = X.copy().reshape(16, 8).flatten()
+        key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())
+        return key_xor_cnf
+

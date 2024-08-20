@@ -135,6 +135,37 @@ void add_round_key(uint8_t *msg, uint8_t *key){
     }
 }
 
+void enc_midori128_longkey(uint8_t *cip, uint8_t *key, int rounds){
+
+    if (rounds > ROUNDS){
+        fprintf(stderr, "Number of rounds is too high\n");
+        abort();
+    }
+
+    add_round_key(cip, &key[0]);
+    /* printState(cip); */
+
+    for (uint8_t i = 0; i < rounds - 1; i++){
+
+    /* for (uint8_t i = 0; i < rounds; i++){ */
+    /* printf("------------------------------------------\n"); */
+        sbox(cip);
+    /* printState(cip); */
+        sr(cip);
+    /* printState(cip); */
+        mc(cip);
+    /* printState(cip); */
+        add_round_key(cip, &key[(i + 1)*16]);
+    /* printState(cip); */
+    /* printf("------------------------------------------\n"); */
+    }
+    sbox(cip);
+    add_round_key(cip, &key[rounds*16]);
+    /* printState(cip); */
+    /* printf("------------------------------------------\n"); */
+}
+
+
 void enc_midori128(uint8_t *cip, uint8_t *key, int rounds){
     uint8_t beta[][16] = {
         {0, 0, 0, 1, 0, 1, 0, 1, 1, 0, 1, 1, 0, 0, 1, 1},
