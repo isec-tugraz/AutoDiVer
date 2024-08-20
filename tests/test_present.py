@@ -67,7 +67,7 @@ def test_zero_characteristic_present80():
     pt = model.pt # type: ignore
 
     round_keys = model.round_keys # type: ignore
-    long_round_keys = model.long_round_keys # type: ignore
+    long_round_keys = model._long_round_keys # type: ignore
 
     print('key', key.shape, key.dtype)
     print('sbi', sbi.shape, sbi.dtype)
