@@ -13,8 +13,9 @@ import numpy as np
 cdef extern from *:
     """
     void enc_midori128(uint8_t *msg, uint8_t *key, int rounds);
+    void enc_midori128_longkey(uint8_t *cip, uint8_t *key, int rounds);
     """
-    void enc_midori128(uint8_t *msg, uint8_t *key, int rounds) nogil;
+    void enc_midori128(uint8_t *msg, uint8_t *key, int rounds) noexcept nogil;
     void enc_midori128_longkey(uint8_t *cip, uint8_t *key, int rounds) noexcept nogil;
 
 
