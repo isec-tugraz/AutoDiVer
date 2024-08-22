@@ -7,7 +7,7 @@ from sat_toolkit.formula import CNF, XorCNF
 
 from autodiver.skinny.skinny_model import Skinny128, Skinny128Characteristic, Skinny128LongKey
 from autodiver.skinny.constants import do_mix_cols, expanded_rc, do_inv_mix_cols, do_shift_rows, expanded_rc, update_tweakey, tweakey_mask
-from autodiver_ciphers.skinny.skinny import skinny_enc_ecb
+from autodiver_ciphers.skinny.skinny import skinny128_enc_ecb
 
 
 def test_zero_characteristic():
@@ -51,7 +51,7 @@ def test_zero_characteristic():
             assert np.all(mc_output == do_mix_cols(mc_input))
         rtk = update_tweakey(rtk)
 
-    ct_ref = np.array(bytearray(skinny_enc_ecb(pt, tweakey, numrounds)))
+    ct_ref = np.array(bytearray(skinny128_enc_ecb(pt, tweakey, numrounds)))
 
     print(f"pt: {pt}")
     print(f"ct: {ct}")
@@ -227,8 +227,8 @@ def test_nonzero_characteristic(rounds):
 
         rtk = update_tweakey(rtk)
 
-    ct1_ref = np.array(bytearray(skinny_enc_ecb(pt1, tweakey1, numrounds)))
-    ct2_ref = np.array(bytearray(skinny_enc_ecb(pt2, tweakey2, numrounds)))
+    ct1_ref = np.array(bytearray(skinny128_enc_ecb(pt1, tweakey1, numrounds)))
+    ct2_ref = np.array(bytearray(skinny128_enc_ecb(pt2, tweakey2, numrounds)))
 
     print(f"pt diff:           {pt1 ^ pt2}")
     print(f"tweakey diff:      {tweakey1 ^ tweakey2}")

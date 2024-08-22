@@ -1,14 +1,15 @@
 # SPDX-License-Identifier: MIT
 
 #cython: language_level=3, annotation_typing=True, embedsignature=True, boundscheck=False, wraparound=False, cdivision=True
-#distutils: sources = src/autodiver_ciphers/skinny/skinny128-cipher.c
-#distutils: include_dirs = src/autodiver_ciphers/skinny/include/
+# distutils: sources= src/autodiver_ciphers/skinny/skinny64-cipher.c src/autodiver_ciphers/skinny/skinny128-cipher.c
+# distutils: include_dirs = tests/src/autodiver_ciphers/skinny/
 cimport cython
 
-from libc.stdint cimport uint8_t, uint32_t, uint64_t
+from libc.stdint cimport uint8_t, uint16_t, uint32_t, uint64_t
 from libc.stdio cimport printf
 from libc.string cimport memcpy, memset
 from libc.stdint cimport uint8_t, uint32_t, uint64_t
+
 
 cdef extern from "skinny128-cipher.h":
     ctypedef union Skinny128HalfCells_t:
@@ -17,16 +18,27 @@ cdef extern from "skinny128-cipher.h":
     ctypedef struct Skinny128Key_t:
         unsigned rounds
         Skinny128HalfCells_t schedule[56]
-
-    int skinny128_set_key(Skinny128Key_t *ks, const void *key, unsigned size) nogil
+    int skinny128_set_key(Skinny128Key_t *ks, const void *key, unsigned size) nogil;
     void skinny128_ecb_encrypt(void *output, const void *input, const Skinny128Key_t *ks) nogil;
     void skinny128_ecb_decrypt(void *output, const void *input, const Skinny128Key_t *ks) nogil;
+
+
+cdef extern from "skinny64-cipher.h":
+    ctypedef union Skinny64HalfCells_t:
+        uint16_t row[2]
+        uint32_t lrow
+    ctypedef struct Skinny64Key_t:
+        unsigned rounds
+        Skinny64HalfCells_t schedule[40]
+    int skinny64_set_key(Skinny64Key_t *ks, const void *key, unsigned size) nogil;
+    void skinny64_ecb_encrypt (void *output, const void *input, const Skinny64Key_t *ks) nogil;
+    void skinny64_ecb_decrypt (void *output, const void *input, const Skinny64Key_t *ks) nogil;
 
 
 # from skinny cimport *
 
 
-cdef int _skinny_enc_ecb(uint8_t *ct, const uint8_t *pt, const uint8_t tweakey[48], unsigned int ct_len, unsigned int numrounds) noexcept nogil:
+cdef int _skinny128_enc_ecb(uint8_t *ct, const uint8_t *pt, const uint8_t tweakey[48], unsigned int ct_len, unsigned int numrounds) noexcept nogil:
     if numrounds > 56 or ct_len % 16 != 0:
         return 0
 
@@ -40,11 +52,35 @@ cdef int _skinny_enc_ecb(uint8_t *ct, const uint8_t *pt, const uint8_t tweakey[4
     return 1
 
 
-def skinny_enc_ecb(const uint8_t[::1] pt not None, const uint8_t[::1] tweakey not None, unsigned int numrounds) -> uint8_t[:]:
+def skinny128_enc_ecb(const uint8_t[::1] pt not None, const uint8_t[::1] tweakey not None, unsigned int numrounds) -> uint8_t[:]:
 
     ct = bytearray(pt.shape[0])
     cdef uint8_t[::1] ct_view = ct
-    if not _skinny_enc_ecb(&ct_view[0], &pt[0], &tweakey[0], pt.shape[0], numrounds):
+    if not _skinny128_enc_ecb(&ct_view[0], &pt[0], &tweakey[0], pt.shape[0], numrounds):
+        raise ValueError('invalid parameter')
+
+    return bytes(ct)
+
+
+cdef int _skinny64_enc_ecb(uint8_t *ct, const uint8_t *pt, const uint8_t tweakey[24], unsigned int ct_len, unsigned int numrounds) noexcept nogil:
+    if numrounds > 40 or ct_len % 8 != 0:
+        return 0
+
+    cdef Skinny64Key_t _key;
+    skinny64_set_key(&_key, &tweakey[0], 24)
+    _key.rounds = numrounds
+
+    for i in range(0, ct_len, 8):
+        skinny64_ecb_encrypt(&ct[i], &pt[i], &_key)
+
+    return 1
+
+
+def skinny64_enc_ecb(const uint8_t[::1] pt not None, const uint8_t[::1] tweakey not None, unsigned int numrounds) -> uint8_t[:]:
+
+    ct = bytearray(pt.shape[0])
+    cdef uint8_t[::1] ct_view = ct
+    if not _skinny64_enc_ecb(&ct_view[0], &pt[0], &tweakey[0], pt.shape[0], numrounds):
         raise ValueError('invalid parameter')
 
     return bytes(ct)
@@ -60,7 +96,7 @@ cdef int _romulush_reduce(uint8_t result[32], const uint8_t lr[32], const uint8_
     memcpy(&tweakey[0], &lr[16], 16)
     memcpy(&tweakey[16], &msg[0], 32)
 
-    if not _skinny_enc_ecb(result, pt, tweakey, 32, numrounds):
+    if not _skinny128_enc_ecb(result, pt, tweakey, 32, numrounds):
         return 0
 
     for i in range(32):
