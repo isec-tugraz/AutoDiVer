@@ -111,7 +111,7 @@ class SboxCipher(IndexSet):
             raise ValueError(f'unknown model_type {model_type}')
 
         if rounds_from_to is not None:
-            assert rounds_from_to[1] <= char.sbox_in.shape[0]
+            assert rounds_from_to[1] < char.sbox_in.shape[0]
             char.sbox_in = char.sbox_in[rounds_from_to[0]:rounds_from_to[1] + 1]
             char.sbox_out = char.sbox_out[rounds_from_to[0]:rounds_from_to[1] + 1]
             char.num_rounds = rounds_from_to[1] + 1 - rounds_from_to[0]
