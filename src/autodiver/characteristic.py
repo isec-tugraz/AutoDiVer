@@ -60,6 +60,7 @@ class DifferentialCharacteristic():
     def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, file_path: Path|None=None):
         self.sbox_in = np.array(sbox_in, dtype=np.uint8)
         self.sbox_out = np.array(sbox_out, dtype=np.uint8)
+        self.rounds_from_to = tuple((0, self.sbox_in.shape[0]))
         self.file_path = file_path
         if self.sbox_in.shape != self.sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
