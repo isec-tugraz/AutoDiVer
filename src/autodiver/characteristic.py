@@ -22,6 +22,7 @@ class DifferentialCharacteristic():
     file_path: Path|None
 
     ddt: np.ndarray
+    rounds_from_to: tuple[int, int]
 
     @classmethod
     def load(cls, characteristic_path: Path) -> Self:

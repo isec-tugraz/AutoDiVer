@@ -115,6 +115,7 @@ class SboxCipher(IndexSet):
             char.sbox_in = char.sbox_in[rounds_from_to[0]:rounds_from_to[1] + 1]
             char.sbox_out = char.sbox_out[rounds_from_to[0]:rounds_from_to[1] + 1]
             char.num_rounds = rounds_from_to[1] + 1 - rounds_from_to[0]
+            char.rounds_from_to = rounds_from_to
 
         self.char = char
         self.num_rounds = char.num_rounds
@@ -147,6 +148,7 @@ class SboxCipher(IndexSet):
                 'file_path': self.char.file_path,
                 'type': type(self.char).__name__,
                 'log2_ddt_prob': self.char.log2_ddt_probability(),
+                'rounds_from_to': self.char.rounds_from_to,
             },
             'argv': sys.argv,
             'git': {
