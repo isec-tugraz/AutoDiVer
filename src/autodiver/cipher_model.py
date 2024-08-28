@@ -104,7 +104,7 @@ class SboxCipher(IndexSet):
     _affine_hull: dict[Literal['key', 'tweak', 'tweakey'], tuple[AffineSpace, np.ndarray[Any, np.dtype[np.int32]]]]
     _learned_clauses: dict[Literal['key', 'tweak', 'tweakey'], CNF]
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, rounds_from_to: tuple):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, rounds_from_to: tuple = None):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
