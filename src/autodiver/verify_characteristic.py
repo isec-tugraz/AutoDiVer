@@ -15,7 +15,7 @@ import click
 
 from .import version
 from .cipher_model import SboxCipher, ModelType, DifferentialCharacteristic, UnsatException
-from .gift.gift_model import Gift64, Gift64Characteristic, Gift128, Gift128Characteristic
+from .gift.gift_model import Gift64, Gift64Characteristic, Gift64FullKey, Gift128, Gift128FullKey, Gift128Characteristic
 from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey, RectangleCharacteristic
 from .midori64.midori64_model import Midori64, Midori64LongKey, Midori64Characteristic
 from .midori128.midori128_model import Midori128, Midori128LongKey, Midori128Characteristic
@@ -51,7 +51,9 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
     "warp": (WARP128, WarpCharacteristic),
     "speedy192": (Speedy192, Speedy192Characteristic),
     "gift64": (Gift64, Gift64Characteristic),
+    "gift64-full-key": (Gift64FullKey, Gift64Characteristic),
     "gift128": (Gift128, Gift128Characteristic),
+    "gift128-full-key": (Gift128FullKey, Gift128Characteristic),
     "present80": (Present80, PresentCharacteristic),
     "present-long-key": (PresentLongKey, PresentCharacteristic),
     "midori64": (Midori64, Midori64Characteristic),
