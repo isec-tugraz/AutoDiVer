@@ -138,7 +138,10 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
     for log_file in find_log_files(args.path):
         for line_number, result in find_results_in_file(log_file):
             trail = Path(result['context']['char']['file_path'])
+            rounds_from_to: tuple[int, int]|None = result['context']['char'].get('rounds_from_to')
+            log2_ddt_probability: float|None = result['context']['char'].get('log2_ddt_prob')
             cwd = result['context'].get('cwd')
+
             if cwd:
                 cwd = Path(cwd)
 
@@ -151,6 +154,12 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
             cipher = result['context']['cipher']
             model_type = result['context'].get('model_type', 'solution_set')
             timestamp = datetime.fromisoformat(result['timestamp'])
+
+            original_trail = trail
+            if rounds_from_to is not None:
+                from_rnd, to_rnd = rounds_from_to
+                trail = trail.with_stem(f'{trail.stem}_rnd_{from_rnd}-{to_rnd}')
+
 
             if model_type not in ('ModelType.solution_set', 'solution_set'):
                 continue
@@ -192,13 +201,17 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
                     key = result['count_result']['key']
                     tweak = result['count_result']['tweak']
                     time = format_time(result['count_result']['time'])
+                    if 'rounds_from_to' in result['context']['char'] and result['context']['char']['rounds_from_to'] is not None:
+                        rounds = f"{result['context']['char']['rounds_from_to'][0]} - {result['context']['char']['rounds_from_to'][1]}"
+                    else:
+                        rounds = '-'
 
                     epsilon = result['count_result']['epsilon']
                     delta = result['count_result']['delta']
 
                     prob_str = f'{fmt_log2(probability)}'
 
-                    count_result = {'cipher': cipher, 'trail': trail, 'prob': prob_str, 'delta': delta, 'epsilon': epsilon, 'key': key, 'tweak': tweak, 'time': time}
+                    count_result = {'cipher': cipher, 'trail': original_trail, 'rounds': rounds, 'measured_prob': prob_str, 'stated_prob': f"2^{log2_ddt_probability}", 'delta': delta, 'epsilon': epsilon, 'key': key, 'tweak': tweak, 'time': time}
                     count_results.append({k: v for k, v in count_result.items() if v != ''})
 
                 if 'count_tweakey_result' in result:

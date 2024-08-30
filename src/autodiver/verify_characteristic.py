@@ -77,8 +77,9 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
 @click.argument('characteristic_path', type=click.Path(exists=True, dir_okay=False, resolve_path=True), required=True)
 @click.option('--sbox-assumptions', is_flag=True, help="add assumption variables for all S-boxes")
 @click.option('--model-type', type=click.Choice([mt.value for mt in ModelType]), default=ModelType.solution_set.value, help="using split-solution set allows for more efficient but less accurate modeling")
+@click.option('--rounds-from-to', nargs=2, type=int, help='For example: 2 4 - use rounds 2 to 4 (3 rounds) of this characteristic.')
 @click.pass_context
-def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: bool, model_type: str) -> None:
+def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: bool, model_type: str, rounds_from_to: tuple[int, int]) -> None:
     characteristic_path = Path(characteristic_path)
     setup_logging(characteristic_path.with_suffix('.jsonl'))
     git_cmd = shutil.which('git')
@@ -89,6 +90,8 @@ def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: 
 
     Cipher, Characteristic = _ciphers[cipher_name]
     characteristic = Characteristic.load(characteristic_path)
+    if rounds_from_to is not None:
+        characteristic.truncate_rounds(rounds_from_to)
     cipher = Cipher(characteristic, model_sbox_assumptions=sbox_assumptions, model_type=ModelType(model_type))
     ddt_prob_log2 = characteristic.log2_ddt_probability()
     log.info(f"loaded characteristic with {characteristic.num_rounds} rounds from {characteristic_path} with ddt probability 2**{ddt_prob_log2:.1f}")
@@ -107,7 +110,7 @@ def ensure_executables(*executables: str) -> None:
             raise click.UsageError(f"missing executable in $PATH: {missing[0]}")
         raise click.UsageError(f"missing executables in $PATH: {', '.join(missing)}")
 
-def ensure_cipher_comatible(cipher: SboxCipher, kind: Literal['key', 'tweak', 'tweakey']) -> None:
+def ensure_cipher_compatible(cipher: SboxCipher, kind: Literal['key', 'tweak', 'tweakey']) -> None:
     if cipher.key_size == 0 and 'key' in kind:
         raise click.UsageError(f"{cipher.cipher_name} has no key")
     if cipher.tweak_size == 0 and 'tweak' in kind:
@@ -134,7 +137,7 @@ def count_tweakeys(obj: GlobalArgs, epsilon: float, delta: float, kind: Literal[
     if kind is None:
         kind = default_kind(cipher)
 
-    ensure_cipher_comatible(cipher, kind)
+    ensure_cipher_compatible(cipher, kind)
     cipher.count_tweakey_space(epsilon, delta, kind=kind)
 
 
@@ -152,7 +155,7 @@ def count_tweakeys_lin(obj: GlobalArgs, kind: Literal['key', 'tweak', 'tweakey']
     if kind is None:
         kind = default_kind(cipher)
 
-    ensure_cipher_comatible(cipher, kind)
+    ensure_cipher_compatible(cipher, kind)
     ensure_executables('cryptominisat5')
     cipher.find_affine_hull(kind)
 
@@ -170,7 +173,7 @@ def count_tweakeys_sat(obj: GlobalArgs, trials: int, kind: Literal['key', 'tweak
     if kind is None:
         kind = default_kind(cipher)
 
-    ensure_cipher_comatible(cipher, kind)
+    ensure_cipher_compatible(cipher, kind)
     cipher.count_tweakey_space_sat_solver(trials, kind)
 
 
@@ -185,7 +188,7 @@ def count_tweakeys_combined(obj: GlobalArgs, kind: Literal['key', 'tweak', 'twea
     if kind is None:
         kind = default_kind(cipher)
 
-    ensure_cipher_comatible(cipher, kind)
+    ensure_cipher_compatible(cipher, kind)
     ensure_executables('cryptominisat5')
 
     cipher.find_affine_hull(kind)

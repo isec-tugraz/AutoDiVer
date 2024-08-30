@@ -73,6 +73,10 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
 
         self.num_rounds = len(self.sbox_in)
 
+    def truncate_rounds(self, rounds_from_to: tuple[int, int]):
+        super().truncate_rounds(rounds_from_to)
+        self.tweakeys = self.tweakeys[rounds_from_to[0]:rounds_from_to[1] + 1]
+
 class Skinny128Characteristic(_SkinnyBaseCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT8
     block_size = 128
