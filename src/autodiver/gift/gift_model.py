@@ -178,7 +178,7 @@ class Gift128FullKey(_Gift):
     cipher_name = "GIFT128-full-key"
     characteristic_type = Gift128Characteristic
     block_size = 128
-    sbox_count = 16
+    sbox_count = 32
     permutation = P128
 
     round_keys: np.ndarray[Any, np.dtype[np.int32]]
