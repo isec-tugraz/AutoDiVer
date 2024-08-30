@@ -9,6 +9,7 @@ import sys
 from math import log2, sqrt
 from datetime import datetime
 from typing import TextIO
+import re
 
 import scipy.stats as stats
 import tabulate
@@ -111,10 +112,10 @@ def fmt_ci_latex_log2(lower: float, upper: float):
 
 
 
-def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
+def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file: TextIO, prob_tex_file: TextIO):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('path', type=Path, nargs='?', default=Path('.'), help='Path to the directory containing the log files')
-    parser.add_argument('output', type=Path, nargs='?', default=Path('results.md'), help='Path to the output markdown file')
+    # parser.add_argument('output', type=Path, nargs='?', default=Path('results.md'), help='Path to the output markdown file')
     args = parser.parse_args(argv)
 
     solve_results = []
@@ -139,6 +140,8 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
         for line_number, result in find_results_in_file(log_file):
             trail = Path(result['context']['char']['file_path'])
             rounds_from_to: tuple[int, int]|None = result['context']['char'].get('rounds_from_to')
+            if rounds_from_to is not None:
+                rounds_from_to = (rounds_from_to[0], rounds_from_to[1])
             log2_ddt_probability: float|None = result['context']['char'].get('log2_ddt_prob')
             cwd = result['context'].get('cwd')
 
@@ -150,6 +153,8 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
                     trail = Path(*trail.parts[2:])
                 else:
                     trail = trail.relative_to(cwd or base_path)
+            if trail.parts[0] == 'autodiver':
+                trail = Path(*trail.parts[1:])
 
             cipher = result['context']['cipher']
             model_type = result['context'].get('model_type', 'solution_set')
@@ -201,8 +206,8 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
                     key = result['count_result']['key']
                     tweak = result['count_result']['tweak']
                     time = format_time(result['count_result']['time'])
-                    if 'rounds_from_to' in result['context']['char'] and result['context']['char']['rounds_from_to'] is not None:
-                        rounds = f"{result['context']['char']['rounds_from_to'][0]} - {result['context']['char']['rounds_from_to'][1]}"
+                    if rounds_from_to is not None:
+                        rounds = f"{rounds_from_to[0]} - {rounds_from_to[1]}"
                     else:
                         rounds = '-'
 
@@ -211,7 +216,7 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
 
                     prob_str = f'{fmt_log2(probability)}'
 
-                    count_result = {'cipher': cipher, 'trail': original_trail, 'rounds': rounds, 'measured_prob': prob_str, 'stated_prob': f"2^{log2_ddt_probability}", 'delta': delta, 'epsilon': epsilon, 'key': key, 'tweak': tweak, 'time': time}
+                    count_result = {'cipher': cipher, 'trail': original_trail, 'rounds': rounds_from_to, 'measured_prob': prob_str, 'stated_prob': f"2^{log2_ddt_probability}", 'delta': delta, 'epsilon': epsilon, 'key': key, 'tweak': tweak, 'time': time}
                     count_results.append({k: v for k, v in count_result.items() if v != ''})
 
                 if 'count_tweakey_result' in result:
@@ -311,6 +316,62 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
         print(tabulate.tabulate(count_results, headers='keys', tablefmt='github') + '\n', file=md_file)
         print(file=md_file)
 
+        prob_results_by_trail = defaultdict(list)
+        for r in count_results:
+            cipher, trail = r['cipher'], r['trail']
+            delta, epsilon = r['delta'], r['epsilon']
+            r_copy = r.copy()
+            del r_copy['cipher']
+            del r_copy['trail']
+            del r_copy['delta']
+            del r_copy['epsilon']
+            prob_results_by_trail[cipher, trail, delta, epsilon].append(r_copy)
+
+        for (cipher, trail, delta, epsilon), results in prob_results_by_trail.items():
+            print(f'## {cipher} - {trail} (delta={delta}, epsilon={epsilon}), ', file=prob_file)
+            print(f'%% {cipher} - {trail} (delta={delta}, epsilon={epsilon}), ', file=prob_tex_file)
+
+
+            possible_rounds = {r['rounds'] for r in results}
+            possible_rounds = sorted({r[1] - r[0] + 1 for r in possible_rounds if r is not None}, reverse=True)
+
+            for relevant_rounds in possible_rounds:
+
+                relevant_results = [r for r in results if r['rounds'] is not None and r['rounds'][1] - r['rounds'][0] + 1 == relevant_rounds]
+                relevant_results = sorted(relevant_results, key=lambda r: r['rounds'])
+                relevant_results_dict = {}
+                for r in relevant_results:
+                    relevant_results_dict[r['rounds']] = r
+
+                rounds = ['Rounds']
+                stated_probs = ['Stated prob.']
+                measured_probs = ['Measured prob.']
+                times = ['Time']
+                for r in relevant_results_dict.values():
+                    rounds.append(r['rounds'])
+                    stated_probs.append(r['stated_prob'])
+                    measured_probs.append(r['measured_prob'])
+                    times.append(r['time'])
+
+                print(file=prob_file)
+                print(tabulate.tabulate([rounds, stated_probs, measured_probs, times], headers='firstrow', tablefmt='github') + '\n', file=prob_file)
+
+                print(f'% Rounds: {relevant_rounds}', file=prob_tex_file)
+                print("\\begin{table}", file=prob_tex_file)
+                print("\\scriptsize", file=prob_tex_file)
+                print("\\centering", file=prob_tex_file)
+
+                for i in range(1, len(stated_probs)):
+                    stated_probs[i] = re.sub(r'2\^(-?\d+\.\d*)', r'$2^{\1}$', stated_probs[i])
+                    measured_probs[i] = re.sub(r'2\^(-?\d+\.\d*)', r'$2^{\1}$', measured_probs[i])
+                    rounds[i] = f"{rounds[i][0]}--{rounds[i][1]}"
+
+                print(tabulate.tabulate([rounds, stated_probs, measured_probs, times], headers='firstrow', tablefmt='latex_raw'), file=prob_tex_file)
+                print(f"\\caption{{Count probability results for {relevant_rounds} of {str(trail).replace('_', '\\_')}}}", file=prob_tex_file)
+                print("\\end{table}", file=prob_tex_file)
+                print("", file=prob_tex_file)
+
+
     if count_tweakey_results:
         print(f'# Count Tweakey Results', file=md_file)
         print(file=md_file)
@@ -379,5 +440,6 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
 
 if __name__ == '__main__':
     with open('results.md', 'w') as md_file, open('results.tex', 'w') as tex_file:
-        ret = gather_results(sys.argv[1:], md_file, tex_file)
+        with open('results_prob.md', 'w') as prob_file, open('results_prob.tex', 'w') as prob_tex_file:
+            ret = gather_results(sys.argv[1:], md_file, tex_file, prob_file, prob_tex_file)
     raise SystemExit(ret)
