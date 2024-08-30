@@ -120,6 +120,10 @@ class SboxCipher(IndexSet):
         self._affine_hull = {}
         self._learned_clauses = {}
 
+    def add_index_array(self, name: str, shape: tuple[int, ...]):
+        super().add_index_array(name, shape)
+        self.cnf.nvars = self.numvars
+
     def log_result(self, **kwargs):
         """log results in machine readable json"""
         git_cmd = shutil.which('git')
