@@ -77,7 +77,7 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
 @click.option('--model-type', type=click.Choice([mt.value for mt in ModelType]), default=ModelType.solution_set.value, help="using split-solution set allows for more efficient but less accurate modeling")
 @click.option('--rounds-from-to', nargs=2, type=int, help='For example: 2 4 - use rounds 2 to 4 (3 rounds) of this characteristic.')
 @click.pass_context
-def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: bool, model_type: str, rounds_from_to: tuple) -> None:
+def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: bool, model_type: str, rounds_from_to: tuple[int, int]) -> None:
     characteristic_path = Path(characteristic_path)
     setup_logging(characteristic_path.with_suffix('.jsonl'))
     git_cmd = shutil.which('git')
@@ -88,7 +88,9 @@ def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: 
 
     Cipher, Characteristic = _ciphers[cipher_name]
     characteristic = Characteristic.load(characteristic_path)
-    cipher = Cipher(characteristic, model_sbox_assumptions=sbox_assumptions, model_type=ModelType(model_type), rounds_from_to=rounds_from_to)
+    if rounds_from_to is not None:
+        characteristic.truncate_rounds(rounds_from_to)
+    cipher = Cipher(characteristic, model_sbox_assumptions=sbox_assumptions, model_type=ModelType(model_type))
     ddt_prob_log2 = characteristic.log2_ddt_probability()
     log.info(f"loaded characteristic with {characteristic.num_rounds} rounds from {characteristic_path} with ddt probability 2**{ddt_prob_log2:.1f}")
 

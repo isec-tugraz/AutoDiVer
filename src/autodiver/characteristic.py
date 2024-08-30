@@ -81,3 +81,11 @@ class DifferentialCharacteristic():
     def tikzify(self):
         raise NotImplementedError("this should be implemented by subclasses")
 
+
+    def truncate_rounds(self, rounds_from_to: tuple[int, int]):
+        assert rounds_from_to[1] < self.sbox_in.shape[0]
+        self.sbox_in = self.sbox_in[rounds_from_to[0]:rounds_from_to[1] + 1]
+        self.sbox_out = self.sbox_out[rounds_from_to[0]:rounds_from_to[1] + 1]
+        self.num_rounds = rounds_from_to[1] + 1 - rounds_from_to[0]
+        self.rounds_from_to = rounds_from_to
+

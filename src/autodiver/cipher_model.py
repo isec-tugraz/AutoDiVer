@@ -104,18 +104,11 @@ class SboxCipher(IndexSet):
     _affine_hull: dict[Literal['key', 'tweak', 'tweakey'], tuple[AffineSpace, np.ndarray[Any, np.dtype[np.int32]]]]
     _learned_clauses: dict[Literal['key', 'tweak', 'tweakey'], CNF]
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, rounds_from_to: tuple = None):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
             raise ValueError(f'unknown model_type {model_type}')
-
-        if rounds_from_to is not None:
-            assert rounds_from_to[1] < char.sbox_in.shape[0]
-            char.sbox_in = char.sbox_in[rounds_from_to[0]:rounds_from_to[1] + 1]
-            char.sbox_out = char.sbox_out[rounds_from_to[0]:rounds_from_to[1] + 1]
-            char.num_rounds = rounds_from_to[1] + 1 - rounds_from_to[0]
-            char.rounds_from_to = rounds_from_to
 
         self.char = char
         self.num_rounds = char.num_rounds
