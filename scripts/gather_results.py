@@ -61,13 +61,13 @@ def find_log_files(path: Path):
 
 def find_results_in_file(file: Path):
     with file.open('r') as f:
-        for line in f:
+        for line_number, line in enumerate(f, start=1):
             if 'context' not in line or 'RESULT' not in line:
                 continue
             data = json.loads(line)
             if 'context' not in data:
                 continue
-            yield data
+            yield line_number, data
 
 
 def format_time(t: float):
@@ -107,9 +107,7 @@ def fmt_ci_latex(lower: float, upper: float):
     return "???"
 
 def fmt_ci_latex_log2(lower: float, upper: float):
-    if lower > 0 and upper > 0:
-        return '$2^{[' + f'{lower:.2f},{upper:.2f}' + ']}$'
-    return "???"
+    return '$2^{[' + f'{lower:.2f},{upper:.2f}' + ']}$'
 
 
 
@@ -138,10 +136,18 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
     base_path = Path('.').resolve()
 
     for log_file in find_log_files(args.path):
-        for result in find_results_in_file(log_file):
+        for line_number, result in find_results_in_file(log_file):
             trail = Path(result['context']['char']['file_path'])
+            cwd = result['context'].get('cwd')
+            if cwd:
+                cwd = Path(cwd)
+
             if trail.is_absolute():
-                trail = trail.relative_to(base_path)
+                if trail.parts[:3] == ('/', 'mnt', 'trails'):
+                    trail = Path(*trail.parts[2:])
+                else:
+                    trail = trail.relative_to(cwd or base_path)
+
             cipher = result['context']['cipher']
             model_type = result['context'].get('model_type', 'solution_set')
             timestamp = datetime.fromisoformat(result['timestamp'])
@@ -149,131 +155,135 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
             if model_type not in ('ModelType.solution_set', 'solution_set'):
                 continue
 
-            if 'key_size' in result['context'] and 'tweak_size' in result['context']:
-                key_size = result['context']['key_size']
-                tweak_size = result['context']['tweak_size']
-            else:
-                (key_size, tweak_size) = {
-                    'gift64': (128, 0),
-                    'gift128': (128, 0),
-                    'midori64': (128, 0),
-                    'midori128': (128, 0),
-                    'warp128': (128, 0),
-                    'ascon': (0, 0),
-                    'speedy192': (192, 0),
-                    'skinny64': (64, 128),
-                    'skinny128': (128, 256),
-                    'present80': (80, 0),
-                    'rectangle128': (128, 0),
-                    'presentlongkey': (0, 0),
-                    # 'skinnylongkey': (0, 0),
-                }[cipher.lower()]
-            tweakey_size = key_size + tweak_size
-            has_tweak = tweak_size > 0
-
-            if 'solve_result' in result:
-                key = result['solve_result']['key']
-                tweak = result['solve_result']['tweak']
-                pt = result['solve_result']['pt']
-                time = format_time(result['solve_result']['time'])
-
-                solve_result = {'cipher': cipher, 'trail': trail, 'key': key, 'tweak': tweak, 'pt': pt, 'time': time}
-                solve_results.append({k: v for k, v in solve_result.items() if v != ''})
-
-            if 'count_result' in result:
-                probability = result['count_result']['probability']
-                key = result['count_result']['key']
-                tweak = result['count_result']['tweak']
-                time = format_time(result['count_result']['time'])
-
-                epsilon = result['count_result']['epsilon']
-                delta = result['count_result']['delta']
-
-                prob_str = f'{fmt_log2(probability)}'
-
-                count_result = {'cipher': cipher, 'trail': trail, 'prob': prob_str, 'delta': delta, 'epsilon': epsilon, 'key': key, 'tweak': tweak, 'time': time}
-                count_results.append({k: v for k, v in count_result.items() if v != ''})
-
-            if 'count_tweakey_result' in result:
-                num_keys = result['count_tweakey_result']['num_keys']
-                count_key = result['count_tweakey_result']['count_key']
-                count_tweak = result['count_tweakey_result']['count_tweak'] and has_tweak
-                time = format_time(result['count_tweakey_result']['time'])
-
-                kind = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
-
-                epsilon = result['count_tweakey_result']['epsilon']
-                delta = result['count_tweakey_result']['delta']
-
-                num_keys_str = f'{fmt_log2(num_keys)}'
-
-                count_tweakey_result = {'cipher': cipher, 'trail': trail, 'kind': kind, 'count': num_keys_str, 'delta': delta, 'epsilon': epsilon, 'time': time}
-                count_tweakey_results.append({k: v for k, v in count_tweakey_result.items() if v != ''})
-
-                latex_table[(trail, kind)][KEY_COUNT] = fmt_log2(num_keys, latex=True)
-
-
-            if 'count_tweakey_lin_result' in result:
-                constraints = result['count_tweakey_lin_result']['constraints']
-                count_key = result['count_tweakey_lin_result']['count_key']
-                count_tweak = result['count_tweakey_lin_result']['count_tweak'] and has_tweak
-                time = format_time(result['count_tweakey_lin_result']['time'])
-
-                kind = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
-
-                count_tweakey_lin_result = {'cipher': cipher, 'trail': trail, 'kind': kind, 'constraints': len(constraints), 'time': time}
-                count_tweakey_lin_results.append({k: v for k, v in count_tweakey_lin_result.items() if v != ''})
-
-                latex_table[(trail, kind)][KEY_COUNT_LIN] = fmt_log2(2**(tweakey_size - len(constraints)), digits=0, latex=True)
-
-                if len(constraints) > 0:
-                    iter_constraints = iter(constraints)
-
-                    first = next(iter_constraints)
-                    lin_constraints.append({'cipher': cipher, 'trail': trail, 'kind': kind, 'constraint': first})
-
-                    for constraint in iter_constraints:
-                        lin_constraints.append({'cipher': cipher, 'trail': '', 'kind': '', 'constraint': constraint})
-                    lin_constraints.append({})
-
-            if 'count_tweakeys_sat_result' in result:
-                if timestamp < datetime.fromisoformat('2024-07-15 17:25:13 +0200'):
-                    continue # skip buggy results
-                
-                # these results are restricted to the affine hull of valid keys
-                if 'use_affine_hull' in result and result['use_affine_hull']:
-                    continue
-
-                trials = result['count_tweakeys_sat_result']['trials']
-                count_sat = result['count_tweakeys_sat_result']['count_sat']
-                count_key = result['count_tweakeys_sat_result']['count_key']
-                count_tweak = result['count_tweakeys_sat_result']['count_tweak'] and has_tweak
-                time = result['count_tweakeys_sat_result']['time']
-                kind = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
-
-                key = (cipher, trail, kind)
-                if key in count_tweakey_sat_results:
-                    count_tweakey_sat_results[key]['trials'] += trials
-                    count_tweakey_sat_results[key]['count_sat'] += count_sat
-                    count_tweakey_sat_results[key]['time'] += time
+            try:
+                if 'key_size' in result['context'] and 'tweak_size' in result['context']:
+                    key_size = result['context']['key_size']
+                    tweak_size = result['context']['tweak_size']
                 else:
-                    count_tweakey_sat_results[key] = {
-                        'cipher': cipher,
-                        'trail': trail,
-                        'kind': kind,
-                        'trials': trials,
-                        'count_sat': count_sat,
-                        'time': time,
-                        'tweakey conditions': set(),
-                        '_tweakey_size': tweakey_size,
-                    }
+                    (key_size, tweak_size) = {
+                        'gift64': (128, 0),
+                        'gift128': (128, 0),
+                        'midori64': (128, 0),
+                        'midori128': (128, 0),
+                        'warp128': (128, 0),
+                        'ascon': (0, 0),
+                        'speedy192': (192, 0),
+                        'skinny64': (64, 128),
+                        'skinny128': (128, 256),
+                        'present80': (80, 0),
+                        'rectangle128': (128, 0),
+                        'presentlongkey': (0, 0),
+                        # 'skinnylongkey': (0, 0),
+                    }[cipher.lower()]
+                tweakey_size = key_size + tweak_size
+                has_tweak = tweak_size > 0
 
-            if 'key_conditions_sat_result' in result:
-                tweakey_conditions = set(result['key_conditions_sat_result']['key_conditions'])
-                kind = result['key_conditions_sat_result']['kind']
+                if 'solve_result' in result:
+                    key = result['solve_result']['key']
+                    tweak = result['solve_result']['tweak']
+                    pt = result['solve_result']['pt']
+                    time = format_time(result['solve_result']['time'])
 
-                key = (cipher, trail, kind)
-                count_tweakey_sat_results[key]['tweakey conditions'].update(tweakey_conditions)
+                    solve_result = {'cipher': cipher, 'trail': trail, 'key': key, 'tweak': tweak, 'pt': pt, 'time': time}
+                    solve_results.append({k: v for k, v in solve_result.items() if v != ''})
+
+                if 'count_result' in result:
+                    probability = result['count_result']['probability']
+                    key = result['count_result']['key']
+                    tweak = result['count_result']['tweak']
+                    time = format_time(result['count_result']['time'])
+
+                    epsilon = result['count_result']['epsilon']
+                    delta = result['count_result']['delta']
+
+                    prob_str = f'{fmt_log2(probability)}'
+
+                    count_result = {'cipher': cipher, 'trail': trail, 'prob': prob_str, 'delta': delta, 'epsilon': epsilon, 'key': key, 'tweak': tweak, 'time': time}
+                    count_results.append({k: v for k, v in count_result.items() if v != ''})
+
+                if 'count_tweakey_result' in result:
+                    num_keys = result['count_tweakey_result']['num_keys']
+                    count_key = result['count_tweakey_result']['count_key']
+                    count_tweak = result['count_tweakey_result']['count_tweak'] and has_tweak
+                    time = format_time(result['count_tweakey_result']['time'])
+
+                    kind = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
+
+                    epsilon = result['count_tweakey_result']['epsilon']
+                    delta = result['count_tweakey_result']['delta']
+
+                    num_keys_str = f'{fmt_log2(num_keys)}'
+
+                    count_tweakey_result = {'cipher': cipher, 'trail': trail, 'kind': kind, 'count': num_keys_str, 'delta': delta, 'epsilon': epsilon, 'time': time}
+                    count_tweakey_results.append({k: v for k, v in count_tweakey_result.items() if v != ''})
+
+                    latex_table[(trail, kind)][KEY_COUNT] = fmt_log2(num_keys, latex=True)
+
+
+                if 'count_tweakey_lin_result' in result:
+                    constraints = result['count_tweakey_lin_result']['constraints']
+                    count_key = result['count_tweakey_lin_result']['count_key']
+                    count_tweak = result['count_tweakey_lin_result']['count_tweak'] and has_tweak
+                    time = format_time(result['count_tweakey_lin_result']['time'])
+
+                    kind = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
+
+                    count_tweakey_lin_result = {'cipher': cipher, 'trail': trail, 'kind': kind, 'constraints': len(constraints), 'time': time}
+                    count_tweakey_lin_results.append({k: v for k, v in count_tweakey_lin_result.items() if v != ''})
+
+                    latex_table[(trail, kind)][KEY_COUNT_LIN] = fmt_log2(2**(tweakey_size - len(constraints)), digits=0, latex=True)
+
+                    if len(constraints) > 0:
+                        iter_constraints = iter(constraints)
+
+                        first = next(iter_constraints)
+                        lin_constraints.append({'cipher': cipher, 'trail': trail, 'kind': kind, 'constraint': first})
+
+                        for constraint in iter_constraints:
+                            lin_constraints.append({'cipher': cipher, 'trail': '', 'kind': '', 'constraint': constraint})
+                        lin_constraints.append({})
+
+                if 'count_tweakeys_sat_result' in result:
+                    if timestamp < datetime.fromisoformat('2024-07-15 17:25:13 +0200'):
+                        continue # skip buggy results
+
+                    # these results are restricted to the affine hull of valid keys
+                    if 'use_affine_hull' in result and result['use_affine_hull']:
+                        continue
+
+                    trials = result['count_tweakeys_sat_result']['trials']
+                    count_sat = result['count_tweakeys_sat_result']['count_sat']
+                    count_key = result['count_tweakeys_sat_result']['count_key']
+                    count_tweak = result['count_tweakeys_sat_result']['count_tweak'] and has_tweak
+                    time = result['count_tweakeys_sat_result']['time']
+                    kind = [None, 'tweak', 'key', 'tweakey'][2*count_key + count_tweak]
+
+                    key = (cipher, trail, kind)
+                    if key in count_tweakey_sat_results:
+                        count_tweakey_sat_results[key]['trials'] += trials
+                        count_tweakey_sat_results[key]['count_sat'] += count_sat
+                        count_tweakey_sat_results[key]['time'] += time
+                    else:
+                        count_tweakey_sat_results[key] = {
+                            'cipher': cipher,
+                            'trail': trail,
+                            'kind': kind,
+                            'trials': trials,
+                            'count_sat': count_sat,
+                            'time': time,
+                            'tweakey conditions': set(),
+                            '_tweakey_size': tweakey_size,
+                        }
+
+                if 'key_conditions_sat_result' in result:
+                    tweakey_conditions = set(result['key_conditions_sat_result']['key_conditions'])
+                    kind = result['key_conditions_sat_result']['kind']
+
+                    key = (cipher, trail, kind)
+                    count_tweakey_sat_results[key]['tweakey conditions'].update(tweakey_conditions)
+            except Exception as e:
+                print(f'Could not process {log_file}:{line_number}: {e!r}', file=sys.stderr)
+
 
 
     # if solve_results:
@@ -334,9 +344,9 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO):
 
                 if confidence == 0.8:
                     tweakey_size = v['_tweakey_size']
-                    lower_log2 = tweakey_size + log2(lower)
-                    upper_log2 = tweakey_size + log2(upper)
-                    latex_table[(trail, kind)][KEY_COUNT_SAT] = fmt_ci_latex(lower_log2, upper_log2)
+                    lower_log2 = tweakey_size + log2(lower) if lower > 0 else float('-inf') if lower == 0 else float('nan')
+                    upper_log2 = tweakey_size + log2(upper) if upper > 0 else float('-inf') if upper == 0 else float('nan')
+                    latex_table[(trail, kind)][KEY_COUNT_SAT] = fmt_ci_latex_log2(lower_log2, upper_log2)
             del v['_tweakey_size']
 
 
