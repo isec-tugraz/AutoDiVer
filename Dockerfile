@@ -1,7 +1,7 @@
 ################################################################################
 # build solvers
 ################################################################################
-FROM debian:stable-slim as build_solvers
+FROM debian:bookworm-slim as build_solvers
 
 ARG CRYPTOMINISAT_VERSION=5.11.21
 ARG APPROXMC_VERSION=4.1.24
@@ -67,7 +67,7 @@ RUN mkdir /tmp/sat && cd /tmp/sat \
 ################################################################################
 # build venv
 ################################################################################
-FROM debian:stable-slim as build_venv
+FROM debian:bookworm-slim as build_venv
 
 RUN apt-get update && apt-get install -y \
     python-is-python3 \
@@ -105,7 +105,7 @@ RUN pip install . \
 ################################################################################
 # main image
 ################################################################################
-FROM debian:stable-slim
+FROM debian:bookworm-slim
 
 ENV TERM=xterm-256color
 ENV LANG=C.UTF-8
