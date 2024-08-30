@@ -148,11 +148,14 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
             if cwd:
                 cwd = Path(cwd)
 
-            if trail.is_absolute():
+            if 'autodiver' in trail.parts:
+                trail = Path(*trail.parts[trail.parts.index('autodiver')+1:])
+            elif trail.is_absolute():
                 if trail.parts[:3] == ('/', 'mnt', 'trails'):
                     trail = Path(*trail.parts[2:])
                 else:
                     trail = trail.relative_to(cwd or base_path)
+
             if trail.parts[0] == 'autodiver':
                 trail = Path(*trail.parts[1:])
 
