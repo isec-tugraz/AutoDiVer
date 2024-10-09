@@ -365,8 +365,8 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
                 print("\\centering", file=prob_tex_file)
 
                 for i in range(1, len(stated_probs)):
-                    stated_probs[i] = re.sub(r'2\^(-?\d+\.\d*)', r'$2^{\1}$', stated_probs[i])
-                    measured_probs[i] = re.sub(r'2\^(-?\d+\.\d*)', r'$2^{\1}$', measured_probs[i])
+                    stated_probs[i] = re.sub(r'2\^-(\d+\.\d*)', r'$\1$', stated_probs[i])
+                    measured_probs[i] = re.sub(r'2\^-(\d+\.\d*)', r'$\1$', measured_probs[i])
                     rounds[i] = f"{rounds[i][0]}--{rounds[i][1]}"
 
                 print(tabulate.tabulate([rounds, stated_probs, measured_probs, times], headers='firstrow', tablefmt='latex_raw'), file=prob_tex_file)
