@@ -43,7 +43,8 @@ class SpeckCharacteristic(DifferentialCharacteristic):
         raise NotImplementedError
 
     def log2_ddt_probability(self):
-        return 1
+        # TODO: implement
+        return float('nan')
 
 
 class _SpeckBase(SboxCipher):
