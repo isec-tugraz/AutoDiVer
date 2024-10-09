@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from autodiver.speck.speck_model import Speck32LongKey, Speck64LongKey, Speck128LongKey, SpeckCharacteristic
+from autodiver.speck.speck_model import Speck32LongKey, Speck48LongKey, Speck64LongKey, Speck96LongKey, Speck128LongKey, SpeckCharacteristic
 from autodiver.speck.speck_util import rotr_speck, rotl_speck
 
 class SpeckLongKey():
@@ -25,7 +25,7 @@ class SpeckLongKey():
         return np.array([l, r], np.uint64)
 
 
-@pytest.mark.parametrize('wordsize', [16, 32, 64])
+@pytest.mark.parametrize('wordsize', [16, 24, 32, 48, 64])
 def test_zero_char(wordsize):
     numrounds = 20
     input_diffs = np.zeros((numrounds + 1, 2), np.uint64)
@@ -34,8 +34,12 @@ def test_zero_char(wordsize):
 
     if wordsize == 16:
         cipher = Speck32LongKey(char)
+    elif wordsize == 24:
+        cipher = Speck48LongKey(char)
     elif wordsize == 32:
         cipher = Speck64LongKey(char)
+    elif wordsize == 48:
+        cipher = Speck96LongKey(char)
     elif wordsize == 64:
         cipher = Speck128LongKey(char)
     else:

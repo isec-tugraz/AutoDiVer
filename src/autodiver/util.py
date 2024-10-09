@@ -46,6 +46,14 @@ class Model:
                     model = packed.view(f'u{packed.shape[-1]}')
                     if model.shape[-1] == 1:
                         model = model[..., 0]
+                # ugly special case to support 24-bit and 48-bit variables for Speck
+                elif 'Speck' in type(index_set).__name__ and packed.shape[-1] * 8 == index_set.wordsize: # type: ignore
+                    word_bytes = {3: 4, 6: 8}[packed.shape[-1]]
+                    padded = np.zeros((*packed.shape[:-1], word_bytes), dtype=np.uint8)
+                    padded[..., :packed.shape[-1]] = packed
+                    model = padded.view(f'u{word_bytes}')
+                    assert model.shape[-1] == 1
+                    model = model[..., 0]
                 else:
                     model = packed
 

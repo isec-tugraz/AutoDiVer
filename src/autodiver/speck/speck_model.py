@@ -144,6 +144,7 @@ class _SpeckBase(SboxCipher):
 
     @classmethod
     def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
+        print(arr.shape, arr.dtype, cellsize)
         if cellsize == 0 and len(arr) == 0:
             return ''
         if cellsize != cls.wordsize:
@@ -160,12 +161,30 @@ class Speck32LongKey(_SpeckBase):
     key_size: int
     tweak_size = 0
 
+class Speck48LongKey(_SpeckBase):
+    cipher_name = "Speck48LongKey"
+    sbox = None # type: ignore
+    ddt = None # type: ignore
+    wordsize = 24
+    block_size = 48
+    key_size: int
+    tweak_size = 0
+
 class Speck64LongKey(_SpeckBase):
     cipher_name = "Speck64LongKey"
     sbox = None # type: ignore
     ddt = None # type: ignore
     wordsize = 32
     block_size = 64
+    key_size: int
+    tweak_size = 0
+
+class Speck96LongKey(_SpeckBase):
+    cipher_name = "Speck96LongKey"
+    sbox = None # type: ignore
+    ddt = None # type: ignore
+    wordsize = 48
+    block_size = 96
     key_size: int
     tweak_size = 0
 
