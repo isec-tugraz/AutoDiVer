@@ -26,7 +26,7 @@ from .skinny.skinny_model import Skinny128, Skinny128LongKey, Skinny64, Skinny64
 from .present.present_model import Present80, PresentLongKey, PresentCharacteristic
 from .pyjamask.pyjamask96_model import Pyjamask_Longkey, Pyjamask_with_Keyschedule, Pyjamask96Characteristic
 
-from .speck.speck_model import Speck32LongKey, Speck64LongKey, Speck128LongKey, SpeckCharacteristic
+from .speck.speck_model import Speck32LongKey, Speck48LongKey, Speck64LongKey, Speck96LongKey, Speck128LongKey, SpeckCharacteristic
 
 
 log = logging.getLogger(__name__)
@@ -70,7 +70,9 @@ _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] =
     "skinny128": (Skinny128, Skinny128Characteristic),
     "skinny128-long-key": (Skinny128LongKey, Skinny128Characteristic),
     "speck32-long-key": (Speck32LongKey, SpeckCharacteristic),
+    "speck48-long-key": (Speck48LongKey, SpeckCharacteristic),
     "speck64-long-key": (Speck64LongKey, SpeckCharacteristic),
+    "speck96-long-key": (Speck96LongKey, SpeckCharacteristic),
     "speck128-long-key": (Speck128LongKey, SpeckCharacteristic),
     "speedy192": (Speedy192, Speedy192Characteristic),
     "warp": (WARP128, WarpCharacteristic),
