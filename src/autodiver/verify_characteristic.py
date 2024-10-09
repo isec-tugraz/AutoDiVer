@@ -26,6 +26,8 @@ from .skinny.skinny_model import Skinny128, Skinny128LongKey, Skinny64, Skinny64
 from .present.present_model import Present80, PresentLongKey, PresentCharacteristic
 from .pyjamask.pyjamask96_model import Pyjamask_Longkey, Pyjamask_with_Keyschedule, Pyjamask96Characteristic
 
+from .speck.speck_model import Speck32LongKey, Speck64LongKey, Speck128LongKey, SpeckCharacteristic
+
 
 log = logging.getLogger(__name__)
 
@@ -48,27 +50,30 @@ def setup_logging(filename: Optional[Path] = None):
 
 
 _ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
-    "warp": (WARP128, WarpCharacteristic),
-    "speedy192": (Speedy192, Speedy192Characteristic),
+    "ascon": (Ascon, AsconCharacteristic),
     "gift64": (Gift64, Gift64Characteristic),
     "gift64-full-key": (Gift64FullKey, Gift64Characteristic),
     "gift128": (Gift128, Gift128Characteristic),
     "gift128-full-key": (Gift128FullKey, Gift128Characteristic),
-    "present80": (Present80, PresentCharacteristic),
-    "present-long-key": (PresentLongKey, PresentCharacteristic),
     "midori64": (Midori64, Midori64Characteristic),
     "midori64-long-key": (Midori64LongKey, Midori64Characteristic),
     "midori128": (Midori128, Midori128Characteristic),
     "midori128-long-key": (Midori128LongKey, Midori128Characteristic),
-    "skinny128": (Skinny128, Skinny128Characteristic),
-    "skinny128-long-key": (Skinny128LongKey, Skinny128Characteristic),
-    "skinny64": (Skinny64, Skinny64Characteristic),
-    "skinny64-long-key": (Skinny64LongKey, Skinny64Characteristic),
-    "ascon": (Ascon, AsconCharacteristic),
-    "rectangle128": (Rectangle128, RectangleCharacteristic),
-    "rectangle-long-key": (RectangleLongKey, RectangleCharacteristic),
+    "present80": (Present80, PresentCharacteristic),
+    "present-long-key": (PresentLongKey, PresentCharacteristic),
     "pyjamask": (Pyjamask_with_Keyschedule, Pyjamask96Characteristic),
     "pyjamask-long-key": (Pyjamask_Longkey, Pyjamask96Characteristic),
+    "rectangle128": (Rectangle128, RectangleCharacteristic),
+    "rectangle-long-key": (RectangleLongKey, RectangleCharacteristic),
+    "skinny64": (Skinny64, Skinny64Characteristic),
+    "skinny64-long-key": (Skinny64LongKey, Skinny64Characteristic),
+    "skinny128": (Skinny128, Skinny128Characteristic),
+    "skinny128-long-key": (Skinny128LongKey, Skinny128Characteristic),
+    "speck32-long-key": (Speck32LongKey, SpeckCharacteristic),
+    "speck64-long-key": (Speck64LongKey, SpeckCharacteristic),
+    "speck128-long-key": (Speck128LongKey, SpeckCharacteristic),
+    "speedy192": (Speedy192, Speedy192Characteristic),
+    "warp": (WARP128, WarpCharacteristic),
 }
 
 

@@ -54,7 +54,24 @@ def test_zero_char(wordsize):
         assert ref_r == round_inputs[rnd, 1]
 
 
-def test_ALLW15_char():
+def test_ALLW14_char():
+    """
+    Cahracteristic from Table 7 of
+
+    @inproceedings{fse/AbedLLW14,
+        author = {Farzaneh Abed and Eik List and Stefan Lucks and Jakob Wenzel},
+        title = {Differential Cryptanalysis of Round-Reduced {Simon} and {Speck}},
+        booktitle = {{FSE} 2014},
+        series = {LNCS},
+        volume = {8540},
+        pages = {525--545},
+        publisher = {Springer},
+        year = {2014},
+        doi = {10.1007/978-3-662-46706-0_27},
+        biburl = {https://dblp.org/rec/conf/fse/AbedLLW14.bib},
+        xeditor = {Carlos Cid and Christian Rechberger},
+    }
+    """
     input_diffs = np.array([
         [0x0a60, 0x4205],
         [0x0211, 0x0a04],
