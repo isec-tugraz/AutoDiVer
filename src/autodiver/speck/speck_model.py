@@ -40,7 +40,20 @@ class SpeckCharacteristic(DifferentialCharacteristic):
         return cls(round_in=round_in, wordsize=wordsize, file_path=characteristic_path)
 
     def truncate_rounds(self, rounds_from_to: tuple[int, int]):
-        raise NotImplementedError
+        current_rounds = range(self.num_rounds)
+        start, end = rounds_from_to
+
+        assert start in current_rounds
+        assert end in current_rounds
+
+        self.round_in = self.round_in[start:end + 2]
+        self.add_in1 = self.add_in1[start:end + 1]
+        self.add_in2 = self.add_in2[start:end + 1]
+        self.add_out = self.add_out[start:end + 1]
+        self.rounds_from_to = rounds_from_to
+
+        self.num_rounds = end + 1 - start
+        assert self.num_rounds == len(self.add_in1) == len(self.add_in2) == len(self.add_out) == len(self.round_in) - 1
 
     def log2_ddt_probability(self):
         # TODO: implement
