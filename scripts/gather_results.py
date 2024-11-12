@@ -370,7 +370,8 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
                     rounds[i] = f"{rounds[i][0]}--{rounds[i][1]}"
 
                 print(tabulate.tabulate([rounds, stated_probs, measured_probs, times], headers='firstrow', tablefmt='latex_raw'), file=prob_tex_file)
-                print(f"\\caption{{Count probability results for {relevant_rounds} of {str(trail).replace('_', '\\_')}}}", file=prob_tex_file)
+                tex_trail = str(trail).replace('_', '\\_')
+                print(f"\\caption{{Count probability results for {relevant_rounds} of {tex_trail}}}", file=prob_tex_file)
                 print("\\end{table}", file=prob_tex_file)
                 print("", file=prob_tex_file)
 
