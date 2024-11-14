@@ -124,11 +124,11 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
     count_tweakey_lin_results = []
     count_tweakey_sat_results = {}
 
-    KEY_COUNT_LIN = 'aff.\\ hull'
+    KEY_COUNT_LIN = 'LC'
     KEY_COUNT_SAT = 'exp.\\ est.\\'
     KEY_COUNT = 'AMC'
-    ROUNDS = r'\# rounds'
-    DDT_PROB = r'DDT prob.'
+    ROUNDS = r'\#R'
+    DDT_PROB = r'EDP'
 
     latex_table = defaultdict(lambda: {ROUNDS: '??', DDT_PROB: r'$2^{-??}$', KEY_COUNT: None, KEY_COUNT_SAT: None, KEY_COUNT_LIN: None})
 
@@ -252,7 +252,7 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
                     count_tweakey_lin_result = {'cipher': cipher, 'trail': trail, 'kind': kind, 'constraints': len(constraints), 'time': time}
                     count_tweakey_lin_results.append({k: v for k, v in count_tweakey_lin_result.items() if v != ''})
 
-                    latex_table[(trail, kind)][KEY_COUNT_LIN] = fmt_log2(2**(tweakey_size - len(constraints)), digits=0, latex=True)
+                    latex_table[(trail, kind)][KEY_COUNT_LIN] = f'{len(constraints)}'
 
                     if len(constraints) > 0:
                         iter_constraints = iter(constraints)
@@ -421,9 +421,9 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
                 count_tweakey_sat_results[k][f'{confidence*100:.0f}% CI'] = fmted_ci
 
                 if confidence == 0.8:
-                    tweakey_size = v['_tweakey_size']
-                    lower_log2 = tweakey_size + log2(lower) if lower > 0 else float('-inf') if lower == 0 else float('nan')
-                    upper_log2 = tweakey_size + log2(upper) if upper > 0 else float('-inf') if upper == 0 else float('nan')
+                    # tweakey_size = v['_tweakey_size']
+                    lower_log2 = log2(lower) if lower > 0 else float('-inf') if lower == 0 else float('nan')
+                    upper_log2 = log2(upper) if upper > 0 else float('-inf') if upper == 0 else float('nan')
                     latex_table[(trail, kind)][KEY_COUNT_SAT] = fmt_ci_latex_log2(lower_log2, upper_log2)
             del v['_tweakey_size']
 
