@@ -745,8 +745,6 @@ class SboxCipher(IndexSet):
                 count = ctr[length]
                 log.info(f'{count:3d} filtered clauses of length {length:3d}: ' + '*' * int(count * scale_factor))
 
-            from IPython import embed; embed()
-
 
         log.info(f'RESULT {kind} count: {count_sat}/{trials}')
         count_tweakeys_sat_result = {
