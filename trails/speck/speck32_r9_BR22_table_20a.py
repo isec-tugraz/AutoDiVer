@@ -12,7 +12,7 @@ Characteristic from Table 20 (left) of
     biburl = {https://dblp.org/rec/journals/iacr/BeyneR22.bib},
 }
 probability: 2^-30
-originally from
+originally from Table 6 (left) of
 
 @inproceedings{fse/Biryukov0V14,
     author = {Alex Biryukov and Arnab Roy and Vesselin Velichkov},
