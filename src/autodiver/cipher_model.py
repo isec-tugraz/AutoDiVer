@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import copy
 from concurrent.futures import ThreadPoolExecutor
-from collections import defaultdict
+from collections import defaultdict, Counter
 from dataclasses import dataclass
 from enum import Enum, unique
 import os
@@ -674,7 +674,7 @@ class SboxCipher(IndexSet):
                 log.info(f'RESULT     effect: {constr}')
 
 
-    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey'], use_affine_hull: bool=False):
+    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey'], use_affine_hull: bool=False, max_clause_len: int|None=None):
         """
         Use repeated SAT solving to estimate the number of tweakeys for which
         the characteristic is not impossible.
@@ -705,6 +705,7 @@ class SboxCipher(IndexSet):
         count_unsat = 0
 
         key_cnf = CNF([], nvars=self.cnf.nvars)
+        filtered_clauses = CNF([], nvars=self.cnf.nvars)
 
         prev_keys_update = 0.0
         with Timer() as timer:
@@ -721,13 +722,31 @@ class SboxCipher(IndexSet):
                     conflict_list = solver.get_conflict()
                     conflict_list = sorted(conflict_list, key=abs)
                     conflict = Clause(conflict_list)
-                    if conflict not in key_cnf:
+                    if max_clause_len and len(conflict) > max_clause_len:
+                        filtered_clauses.add_clause(conflict)
+                    elif conflict not in key_cnf:
                         key_cnf.add_clause(conflict)
                         tqdm.write(self.format_clause(conflict))
 
                 if time.perf_counter() - prev_keys_update >= 0.1:
                     prev_keys_update = time.perf_counter()
                     pbar.set_description(f'valid {kind}s: {count_sat}/{i + 1}')
+
+        if len(filtered_clauses) > 0:
+            clause_lengths = np.array([len(clause) for clause in filtered_clauses])
+            ctr = Counter(clause_lengths)
+            max_count = max(ctr.values())
+
+            scale_factor = 1.0 if max_count <= 80 else 80 / max_count
+            log.info(f'filtered {len(filtered_clauses)} clauses with length > {max_clause_len} ({len(key_cnf)} remainining)')
+
+            ctr = Counter(clause_lengths)
+            for length in range(clause_lengths.min(), clause_lengths.max() + 1):
+                count = ctr[length]
+                log.info(f'{count:3d} filtered clauses of length {length:3d}: ' + '*' * int(count * scale_factor))
+
+            from IPython import embed; embed()
+
 
         log.info(f'RESULT {kind} count: {count_sat}/{trials}')
         count_tweakeys_sat_result = {
@@ -761,7 +780,7 @@ class SboxCipher(IndexSet):
             log.info(formatted)
 
         key_size = len(sampling_set_list)
-        sols = count_solutions(XorCNF(key_cnf), 0.8, 0.2, verbosity=0, sampling_set=sampling_set_list.tolist())
+        sols = count_solutions(XorCNF(key_cnf), 0.05, 0.05, verbosity=0, sampling_set=sampling_set_list.tolist())
         ratio = sols / (1 << len(sampling_set_list))
         log_ratio = log2(ratio)
 
@@ -771,7 +790,6 @@ class SboxCipher(IndexSet):
         log.info(f'RESULT {kind} space due to discovered SAT clauses: 2^{key_size} * 2^{log_ratio:.2f} = 2^{key_size + log_ratio:.2f}')
         if use_affine_hull:
             log.info(f'RESULT overall {kind} space: 2^({key_size}-{num_lin_conditions}+{log_ratio:.2f}) = 2^{key_size - num_lin_conditions + log_ratio:.2f}')
-
 
 
         key_conditions_sat_result = {
