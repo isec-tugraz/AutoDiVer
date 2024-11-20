@@ -348,7 +348,7 @@ class SboxCipher(IndexSet):
 
         return conflicts
 
-    def _find_conflicts(self, cnf: XorCNF, assumptions: list[int]) -> CNF:
+    def _find_conflicts(self, cnf: XorCNF, assumptions: list[int], recursive: bool=True) -> CNF:
         if any(assumption < 0 for assumption in assumptions):
             raise ValueError('only positive assumptions are supported')
 
@@ -369,6 +369,9 @@ class SboxCipher(IndexSet):
         conflict = Clause(solver.get_conflict())
         conflicts.add_clause(conflict)
         log.info(f'conflict cause: {self.format_clause(conflict, invert=True).replace("_assumptions", "")}')
+
+        if not recursive:
+            return conflicts
 
         for conflicting_var in conflict:
             new_assumptions = [assumption for assumption in assumptions if assumption != -conflicting_var]
@@ -673,8 +676,37 @@ class SboxCipher(IndexSet):
             for constr in constr:
                 log.info(f'RESULT     effect: {constr}')
 
+    def explain_cnf_conditions(self, conditions: CNF):
+        """
+        find s-box conflicts that explain the conditions in the CNF
+        """
+        if not self.model_sbox_assumptions:
+            raise ValueError('model_sbox_assumptions must be True to explain CNF conditions')
 
-    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey'], use_affine_hull: bool=False, max_clause_len: int|None=None):
+        assumptions_set = set(self.sbox_assumptions.ravel().tolist())
+        assumptions_to_constraints: dict[tuple[int, ...], CNF] = defaultdict(lambda: CNF(nvars=self.cnf.nvars))
+        for clause in conditions:
+            cnf = self.cnf.copy()
+
+            for var in clause:
+                cnf += CNF([-var, 0])
+
+            log.info(f'finding conflicts when condition {self.format_clause(clause)} is violated')
+            conflict = self._find_conflicts(cnf, self.sbox_assumptions.ravel().tolist(), recursive=False)
+
+            for conflict_clause in conflict:
+                assumptions_to_constraints[tuple(conflict_clause)].add_clause(clause)
+
+        for clause, constr_cnf in assumptions_to_constraints.items():
+            constr = self.format_clause(clause, invert=True)
+            print()
+            log.info(f'RESULT cause: {constr}')
+            for clause in constr_cnf:
+                log.info(f'RESULT     effect: {self.format_clause(clause)}')
+
+
+
+    def count_tweakey_space_sat_solver(self, trials: int, kind: Literal['key', 'tweak', 'tweakey'], use_affine_hull: bool=False, max_clause_len: int|None=None, explain: bool=False):
         """
         Use repeated SAT solving to estimate the number of tweakeys for which
         the characteristic is not impossible.
@@ -685,6 +717,9 @@ class SboxCipher(IndexSet):
         """
         if kind not in ('key', 'tweak', 'tweakey'):
             raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
+
+        if explain and not self.model_sbox_assumptions:
+            raise ValueError('model_sbox_assumptions must be True to explain conditions')
 
         sampling_set_list = np.array(self.get_tweak_or_key_variables(kind), dtype=np.int32)
         sampling_set = set(sampling_set_list)
@@ -707,6 +742,8 @@ class SboxCipher(IndexSet):
         key_cnf = CNF([], nvars=self.cnf.nvars)
         filtered_clauses = CNF([], nvars=self.cnf.nvars)
 
+        assumptions_set = set(self.sbox_assumptions.ravel().tolist())
+
         prev_keys_update = 0.0
         with Timer() as timer:
             pbar = tqdm(range(trials))
@@ -720,6 +757,7 @@ class SboxCipher(IndexSet):
 
                 if not is_sat:
                     conflict_list = solver.get_conflict()
+                    conflict_list = [var for var in conflict_list if -var not in assumptions_set]
                     conflict_list = sorted(conflict_list, key=abs)
                     conflict = Clause(conflict_list)
                     if max_clause_len and len(conflict) > max_clause_len:
@@ -804,3 +842,6 @@ class SboxCipher(IndexSet):
         }
 
         self.log_result(key_conditions_sat_result=key_conditions_sat_result)
+
+        if explain:
+            self.explain_cnf_conditions(min_key_cnf)

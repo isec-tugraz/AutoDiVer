@@ -190,7 +190,8 @@ def count_tweakeys_sat(obj: GlobalArgs, trials: int, kind: Literal['key', 'tweak
 @click.option('-k', '--kind', type=click.Choice(['tweakey', 'key', 'tweak']), default=None)
 @click.option('-n', '--trials', type=int, default=1_000, help="number of tweakeys to test")
 @click.option('-m', '--max-clause-len', type=int, default=20, help="maximum length of clauses")
-def count_tweakeys_combined(obj: GlobalArgs, kind: Literal['key', 'tweak', 'tweakey']|None, trials: int, max_clause_len: int) -> None:
+@click.option('--explain', is_flag=True)
+def count_tweakeys_combined(obj: GlobalArgs, kind: Literal['key', 'tweak', 'tweakey']|None, trials: int, max_clause_len: int, explain: bool) -> None:
     """find the affine hull and verify the remaining keyspace experimentally with SAT solvers"""
     cipher = obj.cipher
 
@@ -201,7 +202,9 @@ def count_tweakeys_combined(obj: GlobalArgs, kind: Literal['key', 'tweak', 'twea
     ensure_executables('cryptominisat5')
 
     cipher.find_affine_hull(kind)
-    cipher.count_tweakey_space_sat_solver(trials, kind, use_affine_hull=True, max_clause_len=max_clause_len)
+    if explain:
+        cipher.explain_affine_hull(kind)
+    cipher.count_tweakey_space_sat_solver(trials, kind, use_affine_hull=True, max_clause_len=max_clause_len, explain=explain)
 
 
 @cli.command()
