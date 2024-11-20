@@ -3,6 +3,7 @@ utility functions to model ARX ciphers
 """
 from __future__ import annotations
 
+from typing import Any
 from sat_toolkit.formula import CNF, Truthtable
 import numpy as np
 
@@ -66,13 +67,14 @@ def model_full_adder(input_delta: tuple[int, int, int], carry_delta: int) -> CNF
     _full_adder_cache[key] = cnf
     return cnf.copy()
 
-def model_modular_addition(input_delta: tuple[int, int], output_delta: int, numbits: int) -> CNF:
+def model_modular_addition(input_delta: tuple[int, int], output_delta: int, numbits: int, model_assumptions: bool=False) -> CNF:
     """
     create a CNF model that asserts a differential transition for a modular addition.
     input[0] correspond to variables 1 -- numbits
     input[1] correspond to variables numbits+1 -- 2*numbits
     output corresponds to variables 2*numbits+1 -- 3*numbits
     the temporary variables for the carrys correspond to variables 3*numbits+1 -- 4*numbits
+    assumption (if model_assumptions) corresponds to variables 4*numbits+1 -- 5*numbits
 
     all variables are little-endian indexed, i.e. variable 1 corresponds to the least significant bit
     """
@@ -100,21 +102,28 @@ def model_modular_addition(input_delta: tuple[int, int], output_delta: int, numb
     outvars = np.arange(2*numbits+1, 3*numbits+1)
     carryvars = np.arange(3*numbits+1, 4*numbits+1)
 
-    cnf = CNF(nvars=4*numbits)
+    numvars = 5 * numbits if model_assumptions else 4 * numbits
+    cnf = CNF(nvars=numvars)
     cnf.add_clause([-carryvars[0]])
 
     for i in range(numbits):
+        local_cnf = None
         if i < numbits - 1:
             in_delta1 = (input_delta[0] >> i) & 1
             in_delta2 = (input_delta[1] >> i) & 1
             in_delta_3 = (carry_in_delta >> i) & 1
             local_carry_out_delta = (carry_out_delta >> i) & 1
 
-            local_cnf = model_full_adder((in_delta1, in_delta2, in_delta_3), local_carry_out_delta)
+            temp_cnf = model_full_adder((in_delta1, in_delta2, in_delta_3), local_carry_out_delta)
             new_vars = np.array([0, invars0[i], invars1[i], carryvars[i], outvars[i], carryvars[i+1]])
-            cnf += local_cnf.translate(new_vars)
+            local_cnf = temp_cnf.translate(new_vars)
         else:
             assert i == numbits - 1
-            cnf += CNF.create_xor([invars0[i]], [invars1[i]], [carryvars[i]], [outvars[i]])
+            local_cnf = CNF.create_xor([invars0[i]], [invars1[i]], [carryvars[i]], [outvars[i]])
+
+        if model_assumptions:
+            local_cnf = local_cnf.implied_by(4 * numbits + 1 + i)
+
+        cnf += local_cnf
 
     return cnf

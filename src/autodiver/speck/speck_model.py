@@ -68,14 +68,13 @@ class _SpeckBase(SboxCipher):
     add_out: np.ndarray[Any, np.dtype[np.int32]]
     _carry: np.ndarray[Any, np.dtype[np.int32]]
 
+    adder_assumptions: np.ndarray[Any, np.dtype[np.int32]]
+
     round_input: np.ndarray[Any, np.dtype[np.int32]]
     round_key: np.ndarray[Any, np.dtype[np.int32]]
     ct: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: SpeckCharacteristic, **kwargs):
-        if kwargs.get('model_sbox_assumptions', False):
-            raise NotImplementedError('model_sbox_assumptions is not supported for Speck')
-
         super().__init__(char, **kwargs)
 
 
@@ -108,25 +107,28 @@ class _SpeckBase(SboxCipher):
         self._fieldnames.add('pt')
         self._fieldnames.add('ct')
 
-        self.add_index_array("sbox_assumptions", (0,))
+        if self.model_sbox_assumptions:
+            self.add_index_array("adder_assumptions", (self.num_rounds, self.wordsize))
+        else:
+            self.add_index_array("adder_assumptions", (0,))
+        self.sbox_assumptions = self.adder_assumptions
+
         self._model_addition()
         self._model_linear_layer()
 
     def _model_addition(self):
         for r in range(self.num_rounds):
             in_delta = (self.char.add_in1[r], self.char.add_in2[r])
-            # print(f' round {r} '.center(80, '-'))
-            # print(f'{self.char.round_in[r]} -> {self.char.round_in[r + 1]}')
-            # print(f'{in_delta[0]:04x} + {in_delta[1]:04x} -> {self.char.add_out[r]:04x}')
-            model = model_modular_addition(in_delta, self.char.add_out[r], self.wordsize)
 
+            model = model_modular_addition(in_delta, self.char.add_out[r], self.wordsize, self.model_sbox_assumptions)
 
             add_in1_vars = self.add_in1[r].tolist()
             add_in2_vars = self.add_in2[r].tolist()
             add_out_vars = self.add_out[r].tolist()
             carry_vars = self._carry[r].tolist()
+            assumption_vars = self.adder_assumptions[r].tolist() if self.model_sbox_assumptions else []
 
-            new_vars = np.array([0] + add_in1_vars + add_in2_vars + add_out_vars + carry_vars, dtype=np.int32)
+            new_vars = np.array([0] + add_in1_vars + add_in2_vars + add_out_vars + carry_vars + assumption_vars, dtype=np.int32)
             self.cnf += model.translate(new_vars)
 
 
