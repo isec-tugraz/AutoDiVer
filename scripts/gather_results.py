@@ -164,9 +164,11 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
             timestamp = datetime.fromisoformat(result['timestamp'])
 
             original_trail = trail
+            numrounds = result['context']['char'].get('numrounds')
             if rounds_from_to is not None:
                 from_rnd, to_rnd = rounds_from_to
                 trail = trail.with_stem(f'{trail.stem}_rnd_{from_rnd}-{to_rnd}')
+                numrounds = to_rnd - from_rnd + 1
 
 
             if model_type not in ('ModelType.solution_set', 'solution_set'):
@@ -302,6 +304,12 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
 
                     key = (cipher, trail, kind)
                     count_tweakey_sat_results[key]['tweakey conditions'].update(tweakey_conditions)
+
+                for kind in ('tweak', 'key', 'tweakey'):
+                    key = (trail, kind)
+                    if key in latex_table and numrounds is not None:
+                        latex_table[key][ROUNDS] = f"{numrounds}"
+
             except Exception as e:
                 print(f'Could not process {log_file}:{line_number}: {e!r}', file=sys.stderr)
 
@@ -438,6 +446,7 @@ def gather_results(argv: list[str], md_file: TextIO, tex_file: TextIO, prob_file
 
 
         latex_table_list = [{'trail': trail, 'kind': kind, **v} for ((trail, kind), v) in latex_table.items()]
+        latex_table_list = sorted(latex_table_list, key=lambda x: (x['trail']))
         tex_file.write(tabulate.tabulate(latex_table_list, headers='keys', tablefmt='latex_raw') + '\n')
 
 
