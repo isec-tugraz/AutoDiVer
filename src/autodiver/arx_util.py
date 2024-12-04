@@ -7,6 +7,8 @@ from typing import Any
 from sat_toolkit.formula import CNF, Truthtable
 import numpy as np
 
+import sys
+
 _full_adder_cache = dict()
 
 
@@ -127,3 +129,33 @@ def model_modular_addition(input_delta: tuple[int, int], output_delta: int, numb
         cnf += local_cnf
 
     return cnf
+
+def _eq(x, y, z):
+    return (~x ^ y) & (~x ^ z)
+
+
+if sys.version_info >= (3, 10):
+    _hamming_weight = np.vectorize(lambda x: x.bit_count(), otypes=(int,))
+else:
+    _hamming_weight = np.vectorize(lambda x: bin(x).count('1'), otypes=(int,))
+
+
+def modular_addition_probability(delta_in1: np.ndarray[Any, np.dtype[np.uint64]], delta_in2: np.ndarray[Any, np.dtype[np.uint64]], delta_out: np.ndarray[Any, np.dtype[np.uint64]], numbits: int) -> np.ndarray[Any, np.dtype[np.float64]]:
+    """
+    calculate the probability of a differential transition for a modular addition
+    """
+    mask = (1 << numbits) - 1
+    assert np.all(delta_in1 & mask == delta_in1)
+    assert np.all(delta_in2 & mask == delta_in2)
+    assert np.all(delta_out & mask == delta_out)
+
+    carry_in = delta_in1 ^ delta_in2 ^ delta_out
+
+    is_valid = _eq(delta_in1 << 1, delta_in2 << 1, delta_out << 1) & (carry_in ^ delta_in2 << 1) & mask
+
+    weight = _hamming_weight(~_eq(delta_in1, delta_in2, delta_out) & (mask >> 1))
+    prob = 1.0 / (1 << weight)
+
+    prob[is_valid & mask != 0] = 0
+
+    return prob

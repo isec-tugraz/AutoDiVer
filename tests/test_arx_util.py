@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import pytest
+import numpy as np
 
-from autodiver.arx_util import model_full_adder, model_modular_addition
+from autodiver.arx_util import model_full_adder, model_modular_addition, modular_addition_probability
 
 
 def test_simple():
@@ -91,3 +92,34 @@ def test_modular_add(numbits, in1_delta: int, in2_delta: int, out_delta: int):
 
     assert (inp1 + inp2) & ((1 << numbits) - 1) == out
     assert (inp1 ^ in1_delta) + (inp2 ^ in2_delta) & ((1 << numbits) - 1) == out ^ out_delta
+
+def test_probability():
+    def probability_wrapper(in1: int, in2: int, out: int, numbits: int) -> float:
+        res = modular_addition_probability(np.array([in1]), np.array([in2]), np.array([out]), numbits)
+        assert res.shape == (1,)
+        assert res.dtype == np.float64
+        return float(res[0])
+
+    assert probability_wrapper(1, 0, 0, 32) == 0
+    assert probability_wrapper(0, 1, 0, 32) == 0
+    assert probability_wrapper(0, 0, 1, 32) == 0
+    assert probability_wrapper(0, 0, 0, 32) == 1
+    assert probability_wrapper(1, 0, 1, 32) == 1/2
+    assert probability_wrapper(255, 0, 255, 32) == 1/256
+    assert probability_wrapper(0, 255, 255, 32) == 1/256
+
+def test_probability_speck_char():
+    add_in1 = np.array([0x20492000, 0x00004101, 0x00000048, 0x40000000, 0x00400000,
+                        0x00404000, 0x02400040, 0xd0404040, 0x92800200, 0x00909000,
+                        0x00808080, 0x84808080, 0x20040000], dtype=np.uint64)
+    add_in2 = np.array([0x20082100, 0x00000901, 0x00000008, 0x00000000, 0x40000000,
+                        0x40400002, 0x42004010, 0x50424052, 0x02100200, 0x80101000,
+                        0x80000004, 0x808080a0, 0x00040524], dtype=np.uint64)
+    add_out = np.array([0x00410100, 0x00004800, 0x00000040, 0x40000000, 0x40400000,
+                        0x40004002, 0x404040d0, 0x80020092, 0x90900000, 0x80808000,
+                        0x80808084, 0x04000020, 0x20000524], dtype=np.uint64)
+
+    prob = modular_addition_probability(add_in1, add_in2, add_out, 32)
+    expected_prob = 1.0 / (1 << np.array([6, 4, 2, 1, 2, 4, 7, 9, 5, 4, 4, 5, 6]))
+
+    assert np.allclose(prob, expected_prob)

@@ -8,6 +8,7 @@ from sat_toolkit.formula import XorCNF
 
 from autodiver.arx_util import model_full_adder, model_modular_addition
 from autodiver.cipher_model import SboxCipher, DifferentialCharacteristic
+from autodiver.arx_util import modular_addition_probability
 from .speck_util import rotr_speck_np, ALPHA_MAP, BETA_MAP
 
 
@@ -56,8 +57,8 @@ class SpeckCharacteristic(DifferentialCharacteristic):
         assert self.num_rounds == len(self.add_in1) == len(self.add_in2) == len(self.add_out) == len(self.round_in) - 1
 
     def log2_ddt_probability(self):
-        # TODO: implement
-        return float('nan')
+        round_probs = modular_addition_probability(self.add_in1, self.add_in2, self.add_out, self.wordsize)
+        return np.log2(round_probs).sum()
 
 
 class _SpeckBase(SboxCipher):
