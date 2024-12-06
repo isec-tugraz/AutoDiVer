@@ -144,5 +144,5 @@ WORKDIR /home/user
 COPY --link --from=build_venv /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# ENTRYPOINT ["verify-characteristic"]
+# ENTRYPOINT ["autodiver"]
 CMD ["--help"]

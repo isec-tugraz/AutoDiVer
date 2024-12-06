@@ -36,5 +36,5 @@ INFO RESULT key[1, 3, 2, 2] = 0
 INFO RESULT key[1, 3, 2, 3] = 0
 """.lstrip()
 
-    output = sp.check_output('verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-lin', shell=True, text=True)
-    assert output in expected_output
+    output = sp.check_output('autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-lin', shell=True, stderr=sp.STDOUT, text=True)
+    assert expected_output in output

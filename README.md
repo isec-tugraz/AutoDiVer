@@ -9,30 +9,30 @@ The easiest way to get started is to use the provided `./run_docker.sh` script.
 It builds a docker image which includes all dependencies like espresso, ApproxMC, and CryptoMiniSAT.
 
 Inside of the Docker, the current working directory is available in `/mnt`.
-The tool is already installed and can be run by using `verify-characteristic -h`.
+The tool is already installed and can be run by using `autodiver -h`.
 
 
 ## Usage
 
 You can start our tool as follows:
 ```
-verify-characteristic <cipher_name> <characteristic_file> <command>
+autodiver <cipher_name> <characteristic_file> <command>
 ```
 
 For example, to verify analyze the MIDORI-64 characteristic the following is possible:
 
 ```bash
 # calculate the probability averaged over all 2^128 keys
-verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-prob
+autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-prob
 
 # find affine conditions on the key
-verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-lin
+autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-lin
 
 # use ApproxMC to count the number of keys
-verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys
+autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys
 
 # count the number of keys experimentally
-verify-characteristic midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-sat
+autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-sat
 ```
 
 ## Licensing
