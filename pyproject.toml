@@ -5,7 +5,6 @@ requires = ["setuptools>=64", "wheel"]
 name = "autodiver"
 version = "0.4"
 dependencies = [
-   "colorama",
    "click",
    "galois",
    "pyapproxmc",

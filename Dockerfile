@@ -83,7 +83,7 @@ RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
 # speed up subsequent builds of autodiver by installing the dependencies in a separate layer
-RUN pip install colorama click cython galois icecream ipython pyapproxmc pycryptosat!=5.11.23 sat_toolkit>=0.4.6 galois setuptools tqdm numpy scipy
+RUN pip install click cython galois icecream ipython pyapproxmc pycryptosat!=5.11.23 sat_toolkit>=0.4.6 galois setuptools tqdm numpy scipy
 
 RUN mkdir /home/user/autodiver
 WORKDIR /home/user/autodiver
