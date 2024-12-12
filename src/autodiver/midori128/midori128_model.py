@@ -82,6 +82,7 @@ class _Midori128Base(SboxCipher):
 
     key: np.ndarray[Any, np.dtype[np.int32]]
     mc_out: np.ndarray[Any, np.dtype[np.int32]]
+    round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: Midori128Characteristic, **kwargs):
         if not isinstance(char, Midori128Characteristic):
@@ -184,8 +185,6 @@ class Midori128(_Midori128Base):
         return key_xor_cnf
 
 class Midori128LongKey(_Midori128Base):
-    round_keys: np.ndarray[Any, np.dtype[np.int32]]
-
     def _key_schedule(self) -> None:
 
         self.add_index_array('round_keys', (self.num_rounds - 1, self.sbox_count, self.sbox_bits))

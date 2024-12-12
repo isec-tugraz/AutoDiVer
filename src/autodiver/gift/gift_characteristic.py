@@ -1,12 +1,15 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from io import StringIO
 
 import numpy as np
 
 from ..cipher_model import DifferentialCharacteristic
 from .gift_util import bit_perm, P64, P128, DDT as GIFT_DDT
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _PREAMBLE = r"""
 \documentclass{standalone}
