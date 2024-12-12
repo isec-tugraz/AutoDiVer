@@ -504,35 +504,6 @@ class SboxCipher(IndexSet):
         self.log_result(count_tweakey_result=count_tweakey_result)
 
 
-    @staticmethod
-    def get_small_clauses(solver: Solver, max_len: int, max_glue: int):
-        try:
-            solver.start_getting_small_clauses(max_len, max_glue)
-            while True:
-                clause = solver.get_next_small_clause()
-                if clause is None:
-                    break
-                yield clause
-        finally:
-            solver.end_getting_small_clauses()
-
-    @staticmethod
-    def get_small_clauses_over_set(solver: Solver, max_len: int, max_glue: int, sampling_set: set[int]):
-        min_var = min(sampling_set)
-        max_var = max(sampling_set)
-
-        for clause in SboxCipher.get_small_clauses(solver, max_len, max_glue):
-            clause = sorted(clause, key=abs)
-            np_clause = np.array(clause)
-            variables = np.abs(np_clause)
-
-            if np.any((variables < min_var) | (variables > max_var)):
-                continue
-            if any(variable not in sampling_set for variable in variables):
-                continue
-
-            yield clause
-
     def find_affine_hull(self, kind: Literal['key', 'tweak', 'tweakey']):
         """
         determine the size of the affine hull of the tweakey space
