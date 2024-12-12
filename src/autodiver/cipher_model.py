@@ -7,7 +7,6 @@ import copy
 from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict, Counter
 from dataclasses import dataclass
-from enum import Enum, unique
 import os
 import logging
 import subprocess as sp
@@ -22,24 +21,17 @@ from math import log2
 from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
-from galois import GF2
 from sat_toolkit.formula import XorCNF, CNF, Clause
 from pycryptosat import Solver
 
 from . import version
 from .util import IndexSet, Model, fmt_log2
-from .gf2_util import affine_hull, AffineSpace
-from .sat_util import UnsatException, count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
+from .sat_util import count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
 from .characteristic import DifferentialCharacteristic
+from .types import ModelType, UnsatException
 
 
 log = logging.getLogger(__name__)
-
-@unique
-class ModelType(Enum):
-    solution_set = 'solution-set'
-    split_solution_set = 'split-solution-set'
-
 
 class Timer:
     start: float
@@ -548,6 +540,8 @@ class SboxCipher(IndexSet):
         if kind not in ('key', 'tweak', 'tweakey'):
             raise ValueError(f'unknown kind {kind}, should be "key", "tweak", or "tweakey"')
 
+        from .gf2_util import GF2, affine_hull, AffineSpace
+
         # print(self.sbox_assumptions.shape)
         # assumptions = np.array([self.sbox_assumptions[*x] for x in [[0, 0, 0], [0, 2, 2], [1, 0, 0], [1, 1, 0], [2, 1, 1], [3, 0, 0], [3, 1, 0], [3, 3, 0]]])
         # assumptions = np.array([self.sbox_assumptions[*x] for x in [[2, 1, 1], [3, 0, 0], [3, 1, 0], [3, 3, 0]]])
@@ -720,6 +714,8 @@ class SboxCipher(IndexSet):
 
         if explain and not self.model_sbox_assumptions:
             raise ValueError('model_sbox_assumptions must be True to explain conditions')
+
+        from .gf2_util import GF2, affine_hull, AffineSpace
 
         sampling_set_list = np.array(self.get_tweak_or_key_variables(kind), dtype=np.int32)
         sampling_set = set(sampling_set_list)

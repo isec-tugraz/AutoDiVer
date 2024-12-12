@@ -8,25 +8,15 @@ from pathlib import Path
 import shutil
 import subprocess as sp
 import sys
-from typing import Optional, Literal
+from typing import Optional, Literal, TYPE_CHECKING
 
-from IPython import start_ipython
 import click
 
-from .import version
-from .cipher_model import SboxCipher, ModelType, DifferentialCharacteristic, UnsatException
-from .gift.gift_model import Gift64, Gift64Characteristic, Gift64FullKey, Gift128, Gift128FullKey, Gift128Characteristic
-from .rectangle128.rectangle_model import Rectangle128, RectangleLongKey, RectangleCharacteristic
-from .midori64.midori64_model import Midori64, Midori64LongKey, Midori64Characteristic
-from .midori128.midori128_model import Midori128, Midori128LongKey, Midori128Characteristic
-from .warp128.warp128_model import WARP128, WarpCharacteristic
-from .speedy192.speedy192_model import Speedy192, Speedy192Characteristic
-from .ascon.ascon_model import Ascon, AsconCharacteristic
-from .skinny.skinny_model import Skinny128, Skinny128LongKey, Skinny64, Skinny64LongKey, Skinny128Characteristic, Skinny64Characteristic
-from .present.present_model import Present80, PresentLongKey, PresentCharacteristic
-from .pyjamask.pyjamask96_model import Pyjamask_Longkey, Pyjamask_with_Keyschedule, Pyjamask96Characteristic
+from autodiver import version
+from autodiver.types import ModelType, UnsatException
 
-from .speck.speck_model import Speck32LongKey, Speck48LongKey, Speck64LongKey, Speck96LongKey, Speck128LongKey, SpeckCharacteristic
+if TYPE_CHECKING:
+    from autodiver.cipher_model import SboxCipher, DifferentialCharacteristic
 
 
 log = logging.getLogger(__name__)
@@ -48,34 +38,33 @@ def setup_logging(filename: Optional[Path] = None):
     logging.getLogger().setLevel(logging.DEBUG)
     logging.config.dictConfig(config)
 
-
-_ciphers: dict[str, tuple[type[SboxCipher], type[DifferentialCharacteristic]]] = {
-    "ascon": (Ascon, AsconCharacteristic),
-    "gift64": (Gift64, Gift64Characteristic),
-    "gift64-full-key": (Gift64FullKey, Gift64Characteristic),
-    "gift128": (Gift128, Gift128Characteristic),
-    "gift128-full-key": (Gift128FullKey, Gift128Characteristic),
-    "midori64": (Midori64, Midori64Characteristic),
-    "midori64-long-key": (Midori64LongKey, Midori64Characteristic),
-    "midori128": (Midori128, Midori128Characteristic),
-    "midori128-long-key": (Midori128LongKey, Midori128Characteristic),
-    "present80": (Present80, PresentCharacteristic),
-    "present-long-key": (PresentLongKey, PresentCharacteristic),
-    "pyjamask": (Pyjamask_with_Keyschedule, Pyjamask96Characteristic),
-    "pyjamask-long-key": (Pyjamask_Longkey, Pyjamask96Characteristic),
-    "rectangle128": (Rectangle128, RectangleCharacteristic),
-    "rectangle-long-key": (RectangleLongKey, RectangleCharacteristic),
-    "skinny64": (Skinny64, Skinny64Characteristic),
-    "skinny64-long-key": (Skinny64LongKey, Skinny64Characteristic),
-    "skinny128": (Skinny128, Skinny128Characteristic),
-    "skinny128-long-key": (Skinny128LongKey, Skinny128Characteristic),
-    "speck32-long-key": (Speck32LongKey, SpeckCharacteristic),
-    "speck48-long-key": (Speck48LongKey, SpeckCharacteristic),
-    "speck64-long-key": (Speck64LongKey, SpeckCharacteristic),
-    "speck96-long-key": (Speck96LongKey, SpeckCharacteristic),
-    "speck128-long-key": (Speck128LongKey, SpeckCharacteristic),
-    "speedy192": (Speedy192, Speedy192Characteristic),
-    "warp": (WARP128, WarpCharacteristic),
+_ciphers: dict[str, tuple[str, str, str]] = {
+    "ascon": ("autodiver.ascon.ascon_model", "Ascon", "AsconCharacteristic"),
+    "gift64": ("autodiver.gift.gift_model", "Gift64", "Gift64Characteristic"),
+    "gift64-full-key": ("autodiver.gift.gift_model", "Gift64FullKey", "Gift64Characteristic"),
+    "gift128": ("autodiver.gift.gift_model", "Gift128", "Gift128Characteristic"),
+    "gift128-full-key": ("autodiver.gift.gift_model", "Gift128FullKey", "Gift128Characteristic"),
+    "midori64": ("autodiver.midori64.midori64_model", "Midori64", "Midori64Characteristic"),
+    "midori64-long-key": ("autodiver.midori64.midori64_model", "Midori64LongKey", "Midori64Characteristic"),
+    "midori128": ("autodiver.midori128.midori128_model", "Midori128", "Midori128Characteristic"),
+    "midori128-long-key": ("autodiver.midori128.midori128_model", "Midori128LongKey", "Midori128Characteristic"),
+    "present80": ("autodiver.present.present_model", "Present80", "PresentCharacteristic"),
+    "present-long-key": ("autodiver.present.present_model", "PresentLongKey", "PresentCharacteristic"),
+    "pyjamask": ("autodiver.pyjamask.pyjamask96_model", "Pyjamask_with_Keyschedule", "Pyjamask96Characteristic"),
+    "pyjamask-long-key": ("autodiver.pyjamask.pyjamask96_model", "Pyjamask_Longkey", "Pyjamask96Characteristic"),
+    "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic"),
+    "rectangle-long-key": ("autodiver.rectangle128.rectangle_model", "RectangleLongKey", "RectangleCharacteristic"),
+    "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic"),
+    "skinny64-long-key": ("autodiver.skinny.skinny_model", "Skinny64LongKey", "Skinny64Characteristic"),
+    "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic"),
+    "skinny128-long-key": ("autodiver.skinny.skinny_model", "Skinny128LongKey", "Skinny128Characteristic"),
+    "speck32-long-key": ("autodiver.speck.speck_model", "Speck32LongKey", "SpeckCharacteristic"),
+    "speck48-long-key": ("autodiver.speck.speck_model", "Speck48LongKey", "SpeckCharacteristic"),
+    "speck64-long-key": ("autodiver.speck.speck_model", "Speck64LongKey", "SpeckCharacteristic"),
+    "speck96-long-key": ("autodiver.speck.speck_model", "Speck96LongKey", "SpeckCharacteristic"),
+    "speck128-long-key": ("autodiver.speck.speck_model", "Speck128LongKey", "SpeckCharacteristic"),
+    "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic"),
+    "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic"),
 }
 
 
@@ -95,7 +84,12 @@ def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: 
     log.info(f"version: {version}, git_commit: {git_commit}, git_changed_files: {git_changed_files}")
     log.debug("arguments: %s", sys.argv, extra={"cli_args": sys.argv, "git_commit": git_commit, "git_changed_files": git_changed_files, "version": version})
 
-    Cipher, Characteristic = _ciphers[cipher_name]
+    module_name, cipher_type_name, characteristic_type_name = _ciphers[cipher_name]
+    import importlib
+    module = importlib.import_module(module_name)
+    Cipher: type[SboxCipher] = getattr(module, cipher_type_name)
+    Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
+
     characteristic = Characteristic.load(characteristic_path)
     if rounds_from_to is not None:
         characteristic.truncate_rounds(rounds_from_to)
@@ -265,6 +259,7 @@ def embed(obj: GlobalArgs) -> None:
     """launch an interactive IPython shell"""
     cipher = obj.cipher
     characteristic = obj.characteristic
+    from IPython import start_ipython
     sys.argv = sys.argv[:1] # remove all arguments except the command, so start_ipython doesn't try to parse it
     start_ipython(user_ns=globals()|locals())
 
