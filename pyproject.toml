@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel", "Cython"]
+requires = ["setuptools>=64", "wheel"]
 
 [project]
 name = "autodiver"
@@ -7,18 +7,13 @@ version = "0.4"
 dependencies = [
    "colorama",
    "click",
-   "cython",
    "galois",
-   "icecream",
-   "ipython",
    "pyapproxmc",
    "pycryptosat!=5.11.23",
    "sat_toolkit>=0.4.6",
-   "galois",
    "setuptools",
    "tqdm",
    "numpy>=2.0",
-   "scipy"
 ]
 requires-python = ">=3.9"
 authors = [
@@ -40,13 +35,16 @@ classifiers = [
    "Operating System :: POSIX :: Linux",
    "Operating System :: MacOS",
    "Programming Language :: Python",
-   "Programming Language :: Cython",
    "Programming Language :: C",
    "Framework :: Pytest",
 ]
 
 [tool.setuptools.package-data]
 autodiver = ["**/log_config.json"]
+
+[project.optional-dependencies]
+dev = ["ipython"]
+
 [project.scripts]
 autodiver = "autodiver.autodiver:cli"
 tikzify = "autodiver.tikzify:main"

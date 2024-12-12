@@ -15,9 +15,6 @@ from .util import pyjamask_mix_rows_96, unload_state
 from ..util import get_ddt
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
-import scipy
-from scipy.linalg import circulant
-
 from pathlib import Path
 
 
@@ -73,6 +70,13 @@ class Pyjamask96Characteristic(DifferentialCharacteristic):
             raise ValueError('sbox_in and sbox_out must have the same shape')
 
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
+
+def circulant(vector: list[int]) -> np.ndarray:
+    vec = np.array(vector)
+    result = np.zeros((len(vector), len(vector)), dtype=np.int32)
+    for i in range(len(vector)):
+        result[:, i] = np.roll(vec, i)
+    return result
 
 class Pyjamask96(SboxCipher):
     cipher_name = "Pyjamask96"

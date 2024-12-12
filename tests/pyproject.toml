@@ -8,6 +8,7 @@ dependencies = [
    "cython",
    "numpy",
    "pytest",
+   "icecream",
 ]
 requires-python = ">=3.9"
 

@@ -259,9 +259,14 @@ def embed(obj: GlobalArgs) -> None:
     """launch an interactive IPython shell"""
     cipher = obj.cipher
     characteristic = obj.characteristic
-    from IPython import start_ipython
-    sys.argv = sys.argv[:1] # remove all arguments except the command, so start_ipython doesn't try to parse it
-    start_ipython(user_ns=globals()|locals())
+
+    try:
+        from IPython import start_ipython
+    except ImportError:
+        click.echo("Error: optional dependency IPython is required for this command", err=True)
+        sys.exit(1)
+
+    start_ipython(argv=[], user_ns=globals()|locals())
 
 
 if __name__ == "__main__":
