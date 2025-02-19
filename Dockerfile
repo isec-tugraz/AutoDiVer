@@ -126,23 +126,25 @@ RUN apt-get update && apt-get install -y \
     python3-venv \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --link --from=build_solvers /usr/bin/espresso /usr/bin/espresso
-COPY --link --from=build_solvers /usr/local/bin/cryptominisat5 /usr/bin/cryptominisat5
-COPY --link --from=build_solvers /usr/local/bin/arjun /usr/bin/arjun
-COPY --link --from=build_solvers /usr/local/bin/approxmc /usr/bin/approxmc
-
-COPY --link --from=build_solvers /usr/local/lib/libcryptominisat5.so* /usr/lib/
-COPY --link --from=build_solvers /usr/local/lib/libarjun.so* /usr/lib/
-COPY --link --from=build_solvers /usr/local/lib/libapproxmc.so* /usr/lib/
 
 RUN useradd -m -s /usr/bin/zsh -G sudo -u 1000 user \
     && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
+
+COPY --from=build_solvers /usr/bin/espresso /usr/bin/espresso
+COPY --from=build_solvers /usr/local/bin/cryptominisat5 /usr/bin/cryptominisat5
+COPY --from=build_solvers /usr/local/bin/arjun /usr/bin/arjun
+COPY --from=build_solvers /usr/local/bin/approxmc /usr/bin/approxmc
+
+COPY --from=build_solvers /usr/local/lib/libcryptominisat5.so* /usr/lib/
+COPY --from=build_solvers /usr/local/lib/libarjun.so* /usr/lib/
+COPY --from=build_solvers /usr/local/lib/libapproxmc.so* /usr/lib/
+COPY --from=build_venv /opt/venv /opt/venv
+
 USER user
 WORKDIR /home/user
-
-COPY --link --from=build_venv /opt/venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+
 
 # ENTRYPOINT ["autodiver"]
 CMD ["--help"]
