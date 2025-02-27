@@ -12,7 +12,7 @@ import logging
 import subprocess as sp
 import tempfile
 import time
-from typing import Any, Literal
+from typing import Any, Literal, TYPE_CHECKING
 from itertools import count
 import shutil
 import sys
@@ -29,6 +29,9 @@ from .util import IndexSet, Model, fmt_log2
 from .sat_util import count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
 from .characteristic import DifferentialCharacteristic
 from .types import ModelType, UnsatException
+
+if TYPE_CHECKING:
+    from .gf2_util import AffineSpace
 
 
 log = logging.getLogger(__name__)
