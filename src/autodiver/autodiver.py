@@ -95,7 +95,8 @@ def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: 
         characteristic.truncate_rounds(rounds_from_to)
     cipher = Cipher(characteristic, model_sbox_assumptions=sbox_assumptions, model_type=ModelType(model_type))
     ddt_prob_log2 = characteristic.log2_ddt_probability()
-    log.info(f"loaded characteristic with {characteristic.num_rounds} rounds from {characteristic_path} with ddt probability 2**{ddt_prob_log2:.1f}")
+    relative_characteristic_path = characteristic_path.relative_to(Path(".").resolve())
+    log.info(f"loaded characteristic with {characteristic.num_rounds} rounds from {relative_characteristic_path} with ddt probability 2**{ddt_prob_log2:.1f}")
 
     if characteristic.file_path is None:
         log.warning(f"file path not stored in characteristic object")
