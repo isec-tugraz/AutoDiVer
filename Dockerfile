@@ -131,6 +131,8 @@ RUN useradd -m -s /usr/bin/zsh -G sudo -u 1000 user \
     && echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
 
+COPY --chown=user trails /home/user/trails
+COPY --chown=user README.md /home/user/README.md
 COPY --from=build_solvers /usr/bin/espresso /usr/bin/espresso
 COPY --from=build_solvers /usr/local/bin/cryptominisat5 /usr/bin/cryptominisat5
 COPY --from=build_solvers /usr/local/bin/arjun /usr/bin/arjun
