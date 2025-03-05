@@ -7,6 +7,10 @@ Table 12. The Best TK3 differential characteristics we found on 17 rounds of
 SKINNY-128 with probability equal to 2^-110.
 
 https://doi.org/10.1007/978-3-030-78375-4_8
+
+A typo in the input difference of the first round was fixed.
+The stated value 0x32 was corrected to 0x20.
+Otherwise, the S-box transition from 0x32->0x92 would be impossible.
 """
 
 from pathlib import Path
