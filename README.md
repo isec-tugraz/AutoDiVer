@@ -49,7 +49,10 @@ autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-lin
 autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys
 
 # count the number of keys experimentally
-autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-sat
+autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-sat -n 10000
+
+# verify whether any keys within the affine hull are invalid
+autodiver midori64 trails/midori64/midori64_zhww_r5_1.npz count-tweakeys-combined -n 10000
 ```
 
 # Licensing
