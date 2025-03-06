@@ -411,6 +411,9 @@ class SboxCipher(IndexSet):
         tweak_str = ""
 
         cnf = copy.copy(self.cnf)
+        if self.model_sbox_assumptions:
+            cnf += CNF.create_all_zero(-self.sbox_assumptions.flatten())
+
         if fixed_key:
             key_bits = np.unpackbits(np.array(bytearray(os.urandom(self.key_size // 8))))
             key_bits = key_bits.reshape(-1, self.key.shape[-1])
@@ -487,9 +490,13 @@ class SboxCipher(IndexSet):
 
         sampling_set = self.get_tweak_or_key_variables(kind)
 
+        cnf = self.cnf.copy()
+        if self.model_sbox_assumptions:
+            cnf += CNF.create_all_zero(-self.sbox_assumptions.flatten())
+
         seed = int.from_bytes(os.urandom(4), 'little')
         with Timer() as timer:
-            num_keys = count_solutions(self.cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set, seed=seed)
+            num_keys = count_solutions(cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set, seed=seed)
 
         log_num_keys = fmt_log2(num_keys)
         log.info(f'RESULT {kind} space: {log_num_keys}, {epsilon=}, {delta=}')
