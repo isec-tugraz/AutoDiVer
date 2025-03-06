@@ -231,7 +231,7 @@ def solve(obj: GlobalArgs) -> None:
 @cli.command()
 @click.pass_obj
 def find_conflicts(obj: GlobalArgs) -> None:
-    """list s-boxes which lead to a contradiction"""
+    """list S-boxes which lead to a contradiction"""
     cipher = obj.cipher
     if not cipher.model_sbox_assumptions:
         raise click.UsageError("command 'find-conflict' requires --sbox-assumptions")
@@ -240,14 +240,21 @@ def find_conflicts(obj: GlobalArgs) -> None:
 @cli.command()
 @click.argument('filename', type=click.Path(writable=True))
 @click.option('--convert-xors', is_flag=True, help="convert XOR constraints to CNF")
+@click.option('--assumptions/--no-assumptions', default=True, is_flag=True, help="add unit clausses for S-box assumptions (default: True)")
 @click.pass_obj
-def write_cnf(obj: GlobalArgs, filename: Path, convert_xors: bool) -> None:
+def write_cnf(obj: GlobalArgs, filename: Path, convert_xors: bool, assumptions: bool) -> None:
     """write the CNF to a file"""
+    from sat_toolkit.formula import CNF
 
     if convert_xors:
         cnf = obj.cipher.cnf.to_cnf()
     else:
         cnf = obj.cipher.cnf
+
+    cnf = cnf.copy()
+    if assumptions and obj.cipher.model_sbox_assumptions:
+        for assumption_var in obj.cipher.sbox_assumptions.flatten():
+            cnf += CNF([assumption_var, 0])
 
     with open(filename, 'w') as f:
         log.info(f"writing CNF to {filename}")
