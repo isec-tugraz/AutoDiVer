@@ -23,7 +23,7 @@ authors = [
 ]
 
 maintainers = [
-    {name = "Marcel Nageler", email = "marcel.nageler@iaik.tugraz.at"},
+    {name = "Marcel Nageler", email = "marcel.nageler@tugraz.at"},
 ]
 
 description = "A tool for verifying differential characteristics in block ciphers"

@@ -6,7 +6,7 @@
 
 """
 Implementation of Ascon v1.2, an authenticated cipher and hash function
-http://ascon.iaik.tugraz.at/
+http://ascon.isec.tugraz.at/
 """
 
 debug = False
