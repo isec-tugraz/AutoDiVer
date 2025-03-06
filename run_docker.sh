@@ -5,4 +5,4 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 docker build -t autodiver .
-docker run -v .:/mnt  --rm -it autodiver /bin/bash -c 'cd /mnt; exec bash'
+docker run -v "$PWD:/mnt"  --rm -it autodiver /bin/bash -c 'cd /mnt; exec bash'
