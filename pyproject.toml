@@ -3,7 +3,7 @@ requires = ["setuptools>=64", "wheel"]
 
 [project]
 name = "autodiver"
-version = "0.4"
+version = "0.6"
 dependencies = [
    "click",
    "galois",
