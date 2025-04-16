@@ -175,10 +175,6 @@ class Present80(Present):
             key_schedule_cnf += self._get_sbox_cnf(0, 0).translate(mapping)
         self.cnf += key_schedule_cnf
 
-class Present128(Present):
-    cipher_name = 'PRESENT-128'
-    key_size = 128
-
 class PresentLongKey(Present):
     cipher_name = 'PRESENT-long-key'
 
