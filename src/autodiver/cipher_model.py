@@ -29,6 +29,7 @@ from .util import IndexSet, Model, fmt_log2
 from .sat_util import count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
 from .characteristic import DifferentialCharacteristic
 from .types import ModelType, UnsatException
+from pysat.card import *
 
 if TYPE_CHECKING:
     from .gf2_util import AffineSpace
@@ -93,13 +94,16 @@ class SboxCipher(IndexSet):
     pt: np.ndarray[Any, np.dtype[np.int32]]
     tweak: np.ndarray[Any, np.dtype[np.int32]]
     sbox_assumptions: np.ndarray[Any, np.dtype[np.int32]]
+    sbox_count: int
     cnf: XorCNF
 
     model_type: ModelType
     _affine_hull: dict[Literal['key', 'tweak', 'tweakey'], tuple[AffineSpace, np.ndarray[Any, np.dtype[np.int32]]]]
     _learned_clauses: dict[Literal['key', 'tweak', 'tweakey'], CNF]
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False):
+    search_char: bool
+
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -114,6 +118,7 @@ class SboxCipher(IndexSet):
         self.__model_sboxes_called = False
         self._affine_hull = {}
         self._learned_clauses = {}
+        self.search_char = search_char
 
     def add_index_array(self, name: str, shape: tuple[int, ...]):
         super().add_index_array(name, shape)
@@ -127,6 +132,17 @@ class SboxCipher(IndexSet):
         hostname = sp.check_output(['hostname']).decode().strip()
         available_cpus = _available_cpus()
 
+        if self.search_char:
+            char = ""
+        else:
+            char = {
+                'num_rounds': self.char.num_rounds,
+                'file_path': self.char.file_path,
+                'type': type(self.char).__name__,
+                'log2_ddt_prob': self.char.log2_ddt_probability(),
+                'rounds_from_to': self.char.rounds_from_to,
+            }
+
         context = {
             'cwd': os.getcwd(),
             'cipher': type(self).__name__,
@@ -135,13 +151,7 @@ class SboxCipher(IndexSet):
             'model_type': self.model_type.name,
             'hostname': hostname,
             'available_cpus': available_cpus,
-            'char': {
-                'num_rounds': self.char.num_rounds,
-                'file_path': self.char.file_path,
-                'type': type(self.char).__name__,
-                'log2_ddt_prob': self.char.log2_ddt_probability(),
-                'rounds_from_to': self.char.rounds_from_to,
-            },
+            'char': char,
             'argv': sys.argv,
             'git': {
                 'commit': git_commit,
@@ -162,7 +172,9 @@ class SboxCipher(IndexSet):
         lut = np.zeros((len(sbox), len(sbox)), dtype=np.uint8)
 
         if model_type == ModelType.solution_set:
-            lut[x_set, sbox[x_set]] = 1
+            lut[x_set, sbox[x_set]] = 1 # set indicated by characteristic
+            # print(f"x_set: {x_set}, sbox[x_set]: {sbox[x_set]}")
+            # print(lut)
             assert lut.sum() == len(x_set)
             return lut_to_cnf(lut)
         elif model_type == ModelType.split_solution_set:
@@ -184,8 +196,26 @@ class SboxCipher(IndexSet):
 
     def _get_sbox_cnf(self, delta_in, delta_out) -> CNF:
         x = np.arange(len(self.sbox), dtype=np.uint8)
-        x_set, = np.where(self.sbox[x] ^ self.sbox[x ^ delta_in] == delta_out)
-        return self._get_cnf(self.sbox, x_set, model_type=self.model_type)
+        # print(f"delta_in: {delta_in}, delta_out: {delta_out}")
+        x_set, = np.where(self.sbox[x] ^ self.sbox[x ^ delta_in] == delta_out) # values for which the differential characteristic occurs
+        cnf = self._get_cnf(self.sbox, x_set, model_type=self.model_type)
+        print(cnf)
+        return cnf
+
+    # todo: should only be calculated once, always the same
+    # mapping is the only thing that changes
+    def _get_ddt_cnf(self):
+        # TODO: can lut_to_cnf handle 4d luts? do i need a 4d lut? for the weight encoding of the transitions
+        # might have to touch the sat_toolkit library - how? ask marcel / chatgpt first
+
+        ddt_lut = (self.ddt != 0).astype(int) # don't encode value of transitions for now
+        # ddt_lut = np.zeros(self.ddt.shape) # debugging
+        # ddt_lut[0, 0] = 1
+
+        cnf = lut_to_cnf(ddt_lut)
+        print(cnf)
+        return cnf
+
 
     def _model_sboxes(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
         """
@@ -211,12 +241,12 @@ class SboxCipher(IndexSet):
         out_vars = sbox_out.reshape(-1, self.sbox_bits)
 
         delta_in = self.char.sbox_in.reshape(-1)
-        delta_out = self.char.sbox_out.reshape(-1)
+        delta_out = self.char.sbox_out.reshape(-1) #sbox_in is bitwise, delta_in/out is sbox_wise
 
         self._actual_sbox_in = inp_vars.copy()
         self._actual_sbox_out = out_vars.copy()
 
-        self._fieldnames.add('_actual_sbox_in')
+        self._fieldnames.add('_actual_sbox_in') # is this used apart from test_ascon?
         self._fieldnames.add('_actual_sbox_out')
 
         if self.model_sbox_assumptions:
@@ -225,6 +255,7 @@ class SboxCipher(IndexSet):
             self.add_index_array("sbox_assumptions", (0,))
 
         sbox_cnf = CNF()
+        # print(f"inp_vars: {sbox_in.shape}, delta_out: {self.char.sbox_out.shape}")
 
         for idx in range(delta_out.shape[0]):
             inp, out = inp_vars[idx], out_vars[idx]
@@ -240,6 +271,41 @@ class SboxCipher(IndexSet):
             sbox_cnf += cnf
 
         self.cnf += sbox_cnf
+
+
+    def _model_ddt(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
+        if self.__model_sboxes_called:
+            raise ValueError('model_sboxes / model_ddt can only be called once')
+        self.__model_sboxes_called = True
+
+        self.add_index_array("sbox_assumptions", (0,)) # compliance
+
+        sbox_in = sbox_in if sbox_in is not None else self.sbox_in
+        sbox_out = sbox_out if sbox_out is not None else self.sbox_out
+
+        assert sbox_in.shape[1:] == sbox_out.shape[1:]
+
+        # support using sbox_in[r+1] as ciphertext variables
+        assert sbox_in.shape[0] == sbox_out.shape[0] or self.sbox_in.shape[0] == self.sbox_out.shape[0] + 1
+
+        inp_vars = sbox_in.reshape(-1, self.sbox_bits)
+        out_vars = sbox_out.reshape(-1, self.sbox_bits)
+
+        ddt_cnf = CNF()
+        print(f"sbox_in.shape: {sbox_in.shape[0]}")
+
+        for idx in range(out_vars.shape[0]):
+            inp, out = inp_vars[idx], out_vars[idx]
+            print(f"inp: {inp}, out: {out}")
+
+            mapping = np.concatenate((np.array([0], dtype=np.int32), inp, out))
+            print(f"mapping: {mapping}")
+
+            cnf = self._get_ddt_cnf().translate(mapping)
+
+            ddt_cnf += cnf
+
+        self.cnf += ddt_cnf
 
 
     def _model_linear_layer(self):
@@ -753,7 +819,7 @@ class SboxCipher(IndexSet):
             max_count = max(ctr.values())
 
             scale_factor = 1.0 if max_count <= 80 else 80 / max_count
-            log.info(f'filtered {len(filtered_clauses)} clauses with length > {max_clause_len} ({len(key_cnf)} remainining)')
+            log.info(f'filtered {len(filtered_clauses)} clauses with length > {max_clause_len} ({len(key_cnf)} remaining)')
 
             ctr = Counter(clause_lengths)
             for length in range(clause_lengths.min(), clause_lengths.max() + 1):

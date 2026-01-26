@@ -1,0 +1,149 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{spn}[2024/03/07 Utils for illustrating SPN designs with bit-permutations]
+
+%%% PREREQUISITES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{tikz}
+\usetikzlibrary{calc,cipher}
+
+%%% GENERAL CRYPTO UTILS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\providecommand{\cipher}[1]{\textsf{#1}}
+
+
+\tikzset{spn/.style={op/.append style={minimum size=1ex},
+                     sbox/.style={box,minimum size=.45cm,rounded corners=1pt},
+                     xscale=.5,
+                     >=latex}
+}
+
+\newif\ifspnlink
+\newif\ifspnconnectbits\spnconnectbitstrue
+\newif\ifspnpermpoint\spnpermpointtrue
+
+\newcommand{\spninit}[3][i]{
+  % #1 = round index (optional, just for labels)
+  % #2 = number of S-boxes
+  % #3 = number of bits per S-box
+  \pgfmathsetmacro{\Sboxes}{int(#2-1)}
+  \pgfmathsetmacro{\bits}{int(#2*#3-1)}
+  \pgfmathsetmacro{\bpS}{int(#3)}
+  \pgfmathsetmacro{\bpSlast}{int(#3-1)}
+  \pgfmathsetmacro{\bitoffset}{-(\bpS-1)*0.5/\bpS}
+
+  \pgfmathsetmacro{\permstepheight}{1.2}
+
+  \draw coordinate (here);
+  \foreach \s in {0,...,\Sboxes} {
+    \draw (\s,0) coordinate (S\s) coordinate (Sh\s); % node[above] {$S_{\s}^{(#1)}$};
+  }
+  \foreach \i in {0,...,\bits} {
+    \draw (\bitoffset+\i/\bpS,0) coordinate (b\i) coordinate (bh\i); % node[above] {$x_{\i}^{(#1)}$};
+  }
+  \spnlinkfalse
+}
+
+%\newcommand{\arxfini}[1][i+1]{
+%  \foreach \i in {1,...,\B} {
+%    \draw[->] (H\i) -- (H\i|-here) node[below] {$X_{\i}^{(#1)}$};
+%  }
+%}
+
+\newcommand{\spnstep}[1][1]{
+  \draw (here) ++(0,-#1) coordinate (here);
+}
+
+\newcommand{\spnsbox}[1][$\mathcal{S}$]{
+  \spnstep[0.4]
+  \foreach \s in {0,...,\Sboxes} {
+    \draw (S\s|-here) node[sbox] (S\s) {#1};
+    \ifspnlink
+      \ifspnconnectbits
+        \foreach \si[evaluate=\si as \i using {int(\bpS*\s+\si)}] in {0,...,\bpSlast} {
+          \draw[->] (bh\i-|b\i) coordinate (bin\i) -- (b\i|-S\s.north);
+        }
+      \else
+        \draw[->] (Sh\s) -- (S\s.north);
+      \fi
+    \fi
+    \draw (S\s.south) coordinate (Sh\s);
+  }
+  \foreach \i in {0,...,\bits} {
+    \draw (b\i|-S0.south) coordinate (bh\i);
+  }
+  \draw (S0.south) coordinate (here);
+  \spnlinktrue
+  % TODO
+  %\draw[->] (H#2) -- (r);
+  %\draw (r.south) coordinate (H#2);
+}
+
+\newcommand{\spnpermword}[2][]{
+  \draw (here) ++(0,-.1) coordinate (ptop);
+  \spnstep[\permstepheight]
+  \draw (here) ++(0,.2)  coordinate (pbot);
+  \ifspnconnectbits
+    \foreach \from/\to in {#2} {
+      \foreach \si[evaluate=\si as \fromi using {int(\bpS*\from+\si)},
+                   evaluate=\si as \toi   using {int(\bpS*\to+\si)}] in {0,...,\bpSlast} {
+        \draw[->,rounded corners=2pt,#1] (bh\fromi) -- (b\fromi|-ptop) -- (b\toi|-pbot) -- (b\toi|-here);
+      }
+    }
+    \foreach \to in {0,...,\Sboxes} {
+      \draw (S\to|-here) coordinate (Sh\to);
+    }
+    \foreach \toi in {0,...,\bits} {
+      \draw (b\toi|-here) coordinate (bh\toi);
+    }
+  \else
+    \foreach \from/\to in {#2} {
+      \draw[->,rounded corners=2pt,#1] (Sh\from) -- (Sh\from|-ptop) -- (S\to|-pbot) -- (S\to|-here);
+    }
+    \foreach \to in {0,...,\Sboxes} {
+      \draw (S\to|-here) coordinate (Sh\to);
+    }
+  \fi
+}
+
+\newcommand{\spnbittowordswitch}{
+  \foreach \s in {0,...,\Sboxes} {
+    \draw[shorten <=1pt,shorten >=1pt] (S\s.west|-bh0) -- (S\s.east|-bh0);
+  }
+  \spnconnectbitsfalse
+}
+
+\newcommand{\spnwordtobitswitch}{
+  % TODO iflink, connect
+  \foreach \s in {0,...,\Sboxes} {
+    \draw[shorten <=1pt,shorten >=1pt] (S\s.west|-here) -- (S\s.east|-here);
+    \ifspnlink
+      \draw (Sh\s) -- (Sh\s|-here) coordinate (Sh\s);
+    \fi
+  }
+  \foreach \i in {0,...,\bits} {
+    \draw (b\i|-here) coordinate (bh\i);
+  }
+  \spnconnectbitstrue
+}
+
+\newcommand{\spnpermbits}[2][]{
+  \draw (here) ++(0,-.1) coordinate (ptop);
+  \spnstep[\permstepheight]
+  \draw (here) ++(0,.2)  coordinate (pbot);
+  \foreach \from/\to in {#2} {
+    \ifspnpermpoint
+      \draw[->,rounded corners=2pt,#1] (bh\from) -- (bh\from|-ptop) -- (b\to|-pbot) -- (b\to|-here);
+    \else
+      \draw[rounded corners=2pt,#1] (bh\from) -- (bh\from|-ptop) -- (b\to|-pbot) -- (b\to|-here);
+    \fi
+  }
+  \foreach \to in {0,...,\bits} {
+    \draw (b\to|-here) coordinate (bh\to);
+  }
+}
+
+
+\newcommand{\spnmix}[1][]{
+  % TODO boxes that fit X sboxes
+}
+
+\endinput

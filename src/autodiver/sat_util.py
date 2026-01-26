@@ -39,6 +39,7 @@ def truthtable_to_cnf(tt: Truthtable) -> CNF:
 
 def lut_to_cnf(lut: np.ndarray) -> CNF:
     truthtable = Truthtable.from_lut(lut.T.flatten())
+    #print(f"truthtable: {truthtable}")
     return truthtable_to_cnf(truthtable)
 
 def xor_cnf_as_cryptominisat_solver(xor_cnf: XorCNF) -> pycryptosat.Solver:

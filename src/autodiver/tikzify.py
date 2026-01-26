@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-create tikz code and compile to pdf for differential charactersitics
+create tikz code and compile to pdf for differential characteristics
 """
 from __future__ import annotations
 
@@ -31,7 +31,10 @@ def main():
 
     CharacteristicType = ciphers[args.cipher]
     char = CharacteristicType.load(args.characteristic)
-    tex_file = args.characteristic.with_suffix(".tex")
+    # tex_file = args.characteristic.with_suffix(".tex")
+    tex_file = Path.cwd() / args.characteristic.with_suffix(".tex").name
+    print(tex_file)
+    print(type(tex_file))
     tex_file.write_text(char.tikzify())
 
     if args.compile:

@@ -9,6 +9,9 @@ import shutil
 import subprocess as sp
 import sys
 from typing import Optional, Literal, TYPE_CHECKING
+import numpy as np
+from shutil import which
+
 
 import click
 
@@ -16,7 +19,9 @@ from autodiver import version
 from autodiver.types import ModelType, UnsatException
 
 if TYPE_CHECKING:
-    from autodiver.cipher_model import SboxCipher, DifferentialCharacteristic
+    from autodiver.cipher_model import SboxCipher
+
+from autodiver.cipher_model import DifferentialCharacteristic
 
 
 log = logging.getLogger(__name__)
@@ -221,7 +226,7 @@ def count_prob(obj: GlobalArgs, epsilon: float, delta: float, fixed_key: bool, f
 @cli.command()
 @click.pass_obj
 def solve(obj: GlobalArgs) -> None:
-    """find a satisfying pair for the charactersitic"""
+    """find a satisfying pair for the characteristic"""
     cipher = obj.cipher
     try:
         cipher.solve()
@@ -276,6 +281,74 @@ def embed(obj: GlobalArgs) -> None:
 
     start_ipython(argv=[], user_ns=globals()|locals())
 
+@click.command()
+@click.argument('cipher_name', type=click.Choice(list(_ciphers.keys())), required=True)
+@click.argument('num_rounds', nargs=1, type=int, required=True)
+# add path for characteristic to be saved in?
+def search_characteristic(cipher_name: str, num_rounds: int) -> None:
+    """search for a characteristic for the given cipher"""
+    setup_logging('search_char.jsonl')
+
+    git_cmd = shutil.which('git')
+    git_commit = git_cmd and sp.check_output([git_cmd, 'rev-parse', 'HEAD']).decode().strip()
+    git_changed_files = git_cmd and sp.check_output([git_cmd, 'status', '--porcelain', '-uno', '-z']).decode().strip(
+        '\0').split('\0')
+    log.info(f"version: {version}, git_commit: {git_commit}, git_changed_files: {git_changed_files}")
+    log.debug("arguments: %s", sys.argv,
+              extra={"cli_args": sys.argv, "git_commit": git_commit, "git_changed_files": git_changed_files,
+                     "version": version})
+
+    module_name, cipher_type_name, characteristic_type_name = _ciphers[cipher_name]
+
+    import importlib
+    module = importlib.import_module(module_name)
+    Cipher: type[SboxCipher] = getattr(module, cipher_type_name)
+
+    sbox_count = Cipher.sbox_count
+    sbox_in = np.zeros((num_rounds, sbox_count))
+    sbox_out = np.zeros((num_rounds, sbox_count))
+
+    characteristic = DifferentialCharacteristic(sbox_in, sbox_out)
+
+    cipher = Cipher(characteristic, search_char=True)
+
+    try:
+        model = cipher.solve()
+        Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
+        characteristic = Characteristic.load_from_model(model)
+
+        tex_file = Path.cwd() / "char.tex"
+        print(tex_file)
+        print(type(tex_file))
+        tex_file.write_text(characteristic.tikzify())
+
+        latexmk = which("latexmk")
+        if latexmk is None:
+            print("latexmk not found, skipping compilation", file=sys.stderr)
+            return 1
+
+        output = None # sp.DEVNULL
+        try:
+            sp.check_call([latexmk, "-pdf", tex_file], stdout=output, stderr=output)
+            sp.check_call([latexmk, "-c", tex_file], stdout=output, stderr=output)
+        except sp.CalledProcessError as e:
+            print(f"latexmk failed with exit code {e.returncode}", file=sys.stderr)
+
+    except UnsatException:
+        pass
+
+
+
+
+# @cli.command()
+# @click.pass_obj
+# def search_characteristic(obj: GlobalArgs) -> None:
+#     """search for a characteristic for the given cipher"""
+#     cipher = obj.cipher
+#     try:
+#         #cipher.find_characteristic()
+#     except UnsatException:
+#         pass
 
 if __name__ == "__main__":
     cli()

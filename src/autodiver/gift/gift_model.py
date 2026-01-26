@@ -29,7 +29,7 @@ class _Gift(SboxCipher):
     _round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
-        if not isinstance(char, self.characteristic_type):
+        if not isinstance(char, (self.characteristic_type | DifferentialCharacteristic)):
             raise ValueError(f'expected {self.characteristic_type}, got {type(char)}')
 
         super().__init__(char, **kwargs)
@@ -39,14 +39,24 @@ class _Gift(SboxCipher):
         #generate Variables
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
-        self.add_index_array('key', (32, self.sbox_bits))
+
+        if self.search_char:
+            self.add_index_array('key', (0,))
+        else:
+            self.add_index_array('key', (32, self.sbox_bits))
 
         self.add_index_array('tweak', (0,))
         self.pt = self.sbox_in[0]
         self._fieldnames.add('pt')
 
-        self._model_sboxes()
-        self._model_key_schedule()
+        if self.search_char:
+            self._model_ddt()
+        else:
+            self._model_sboxes()
+
+        if not self.search_char:
+            self._model_key_schedule()
+
         self._model_linear_layer()
 
         self.cnf.nvars = self.numvars
@@ -66,7 +76,13 @@ class _Gift(SboxCipher):
     def _model_linear_layer(self) -> None:
         for r in range(self.num_rounds):
             permOut = self.applyPerm(self.sbox_out[r])
-            self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r], GIFT_RC[r])
+            if self.search_char:
+                # self._addKey(permOut, self.sbox_in[r+1])
+                self.cnf += XorCNF.create_xor(permOut.flatten(), self.sbox_in[r+1].flatten())
+
+            else:
+                self._addKey(permOut, self.sbox_in[r+1], self._round_keys[r], GIFT_RC[r])
+
 
 class Gift128(_Gift):
     cipher_name = "GIFT128"
@@ -194,7 +210,7 @@ class Gift128FullKey(_Gift):
 
 class Gift64FullKey(_Gift):
     """
-    Variant of GIFT-64 where a full key addition with indepnend round keys happens each round.
+    Variant of GIFT-64 where a full key addition with independent round keys happens each round.
     Round constants are not modeled.
     """
     cipher_name = "GIFT64-full-key"

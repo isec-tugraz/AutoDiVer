@@ -1,0 +1,139 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{gift}[2024/05/31 Utils for illustrating the GIFT cipher]
+
+%%% PREREQUISITES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\RequirePackage{spn}
+
+\tikzset{gift/.style={spn,xscale=-1,op/.append style={scale=.85}}} % bits labelled right to left!
+
+\newcommand{\giftinit}[1][]{
+  \ifsmallgift
+    \spninit[#1]{16}{4}
+  \else
+    \spninit[#1]{32}{4}
+  \fi
+  \spnpermpointfalse
+}
+
+\newif\ifsmallgift
+
+\newcommand{\giftpermbits}{
+  \ifsmallgift
+  % GIFT-64
+  % 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62 63
+  % 0 17 34 51 48 1 18 35 32 49 2 19 16 33 50 3 4 21 38 55 52 5 22 39 36 53 6 23 20 37 54 7 8 25 42 59 56 9 26 43 40 57 10 27 24 41 58 11 12 29 46 63 60 13 30 47 44 61 14 31 28 45 62 15
+    \spnpermbits{0/0, 1/17, 2/34, 3/51, 4/48, 5/1, 6/18, 7/35, 8/32, 9/49, 10/2, 11/19, 12/16, 13/33, 14/50, 15/3,
+                 16/4, 17/21, 18/38, 19/55, 20/52, 21/5, 22/22, 23/39, 24/36, 25/53, 26/6, 27/23, 28/20, 29/37, 30/54, 31/7,
+                 32/8, 33/25, 34/42, 35/59, 36/56, 37/9, 38/26, 39/43, 40/40, 41/57, 42/10, 43/27, 44/24, 45/41, 46/58, 47/11,
+                 48/12, 49/29, 50/46, 51/63, 52/60, 53/13, 54/30, 55/47, 56/44, 57/61, 58/14, 59/31, 60/28, 61/45, 62/62, 63/15}
+  \else
+    \spnpermbits{0/0, 1/33, 2/66, 3/99, 4/96, 5/1, 6/34, 7/67, 8/64, 9/97, 10/2, 11/35, 12/32, 13/65, 14/98, 15/3,
+                 16/4, 17/37, 18/70, 19/103, 20/100, 21/5, 22/38, 23/71, 24/68, 25/101, 26/6, 27/39, 28/36, 29/69, 30/102, 31/7,
+                 32/8, 33/41, 34/74, 35/107, 36/104, 37/9, 38/42, 39/75, 40/72, 41/105, 42/10, 43/43, 44/40, 45/73, 46/106, 47/11,
+                 48/12, 49/45, 50/78, 51/111, 52/108, 53/13, 54/46, 55/79, 56/76, 57/109, 58/14, 59/47, 60/44, 61/77, 62/110, 63/15,
+                 64/16, 65/49, 66/82, 67/115, 68/112, 69/17, 70/50, 71/83, 72/80, 73/113, 74/18, 75/51, 76/48, 77/81, 78/114, 79/19,
+                 80/20, 81/53, 82/86, 83/119, 84/116, 85/21, 86/54, 87/87, 88/84, 89/117, 90/22, 91/55, 92/52, 93/85, 94/118, 95/23,
+                 96/24, 97/57, 98/90, 99/123, 100/120, 101/25, 102/58, 103/91, 104/88, 105/121, 106/26, 107/59, 108/56, 109/89, 110/122, 111/27,
+                 112/28, 113/61, 114/94, 115/127, 116/124, 117/29, 118/62, 119/95, 120/92, 121/125, 122/30, 123/63, 124/60, 125/93, 126/126, 127/31}
+  \fi
+}
+
+\newcommand{\giftaddkey}{
+  \ifsmallgift
+    % GIFT-64: n/2-bit round key U || V with U added to b_{4i+1} and V to b_{4i}
+    \foreach \bit[evaluate=\bit as \ubit using {int(mod(4*\bit+1,64))},
+                  evaluate=\bit as \vbit using {int(mod(4*\bit+0,64))}] in {0,...,15} {
+      \draw (b\ubit|-here) coordinate[xor] (uk\bit);
+      \draw (b\vbit|-here) coordinate[xor] (vk\bit);
+      %\draw[->] (bh\ubit) -- (uk\bit);
+      %\draw[->] (bh\vbit) -- (vk\bit);
+      %\draw (uk\bit.south) coordinate (bh\ubit);
+      %\draw (vk\bit.south) coordinate (bh\vbit);
+    }
+    \foreach \bit in {63,23,19,15,11,7,3} {
+      \draw (b\bit|-here) coordinate[xor,gray] (ck\bit);
+    }
+  \else
+    % GIFT-128 n/2-bit round key U || V with U added to b_{4i+1} and V to b_{4i}
+    \foreach \bit[evaluate=\bit as \ubit using {int(mod(4*\bit+2,128))},
+                  evaluate=\bit as \vbit using {int(mod(4*\bit+1,128))}] in {0,...,31} {
+      \draw (b\ubit|-here) coordinate[xor] (uk\bit);
+      \draw (b\vbit|-here) coordinate[xor] (vk\bit);
+      %\draw[->] (bh\ubit) -- (uk\bit);
+      %\draw[->] (bh\vbit) -- (vk\bit);
+      %\draw (uk\bit.south) coordinate (bh\ubit);
+      %\draw (vk\bit.south) coordinate (bh\vbit);
+    }
+    \foreach \bit in {127,23,19,15,11,7,3} {
+      \draw (bh\bit|-here) coordinate[xor,gray] (ck\bit);
+    }
+  \fi
+  \spnstep[0.06]
+}
+
+%\newcommand{\arxkey}[3][-.5]{
+%  \draw (here-|B#2) coordinate[xor]     (s)
+%      ++(#1,0)      node[inner sep=1pt] (k) {#3};
+%  \draw[->] (k) -- (s);
+%  \draw[->] (H#2) -- (s);
+%  \draw (s.south) coordinate (H#2);
+%}
+
+\newcommand{\giftround}[1][]{
+  \spnsbox
+  \giftpermbits
+  \giftaddkey
+}
+
+\newcommand{\giftmarkbits}[4][]{
+  % #1 = style (optional)
+  % #2 = active input bits to S-box (comma-separated index list)
+  % #3 = active S-boxes (comma-separated index list)
+  % #4 = active bit transitions (comma-separated list of from/to bit indices)
+
+  \foreach \i in {#2} {
+    \draw[->,#1] (bin\i) ++ (0,.1pt) -- (bin\i|-S0.north);
+  }
+
+  \foreach \s in {#3} {
+    \draw (S\s) node[white,sbox,#1,fill] (S\s) {\color{white}$\mathcal{S}$};
+  }
+
+  % return to previous permutation
+  \draw (here) coordinate (orighere)
+        (S0.south) coordinate (here);
+  \foreach \i in {0,...,\bits} {
+    \draw (bh\i) coordinate (origbh\i)
+          (bh\i|-here) coordinate (bh\i);
+  }
+
+  \spnpermbits[#1]{#4}
+
+  % restore previous state
+  \draw (orighere) coordinate (here);
+  \foreach \i in {0,...,\bits} {
+    \draw (origbh\i) coordinate (bh\i);
+  }
+}
+
+\newcommand{\giftmarkbitslast}[4][]{
+  % #1 = style (optional)
+  % #2 = active input bits to S-box (comma-separated index list)
+  % #3 = active S-boxes (comma-separated index list)
+  % #4 = active bit transitions (comma-separated list of from/to bit indices)
+
+  \giftmarkbits[#1]{#2}{#3}{#4}
+
+  \foreach \from/\to in {#4} {
+    \draw[->,#1] (bh\to) ++ (0,.1pt) -- (bh\to|-here);
+  }
+}
+
+\newcommand{\giftfini}{ %[1][i+1]{
+  \spnstep[0.2]
+  \foreach \i in {0,...,\bits} {
+    \draw[->] (bh\i-|b\i) ++ (0,.1pt) -- (b\i|-here); % node[below,font=\tiny,gray] {\i}; % {$x_{\i}^{(#1)}$};
+  }
+}
+
+\endinput

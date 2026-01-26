@@ -178,3 +178,9 @@ build/
 *.su
 *.idb
 *.pdb
+
+*.idea/
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
