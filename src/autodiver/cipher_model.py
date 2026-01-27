@@ -29,8 +29,7 @@ from .util import IndexSet, Model, fmt_log2
 from .sat_util import count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
 from .characteristic import DifferentialCharacteristic
 from .types import ModelType, UnsatException
-from pysat.card import *
-
+from pysat.card import CardEnc, IDPool
 if TYPE_CHECKING:
     from .gf2_util import AffineSpace
 
@@ -213,7 +212,7 @@ class SboxCipher(IndexSet):
         # ddt_lut[0, 0] = 1
 
         cnf = lut_to_cnf(ddt_lut)
-        print(cnf)
+        # print(cnf)
         return cnf
 
 
@@ -294,6 +293,9 @@ class SboxCipher(IndexSet):
         ddt_cnf = CNF()
         print(f"sbox_in.shape: {sbox_in.shape[0]}")
 
+        literals = inp_vars.flatten()[0:320].tolist() # just testing
+        vpool = IDPool(start_from=self.numvars + 1)
+
         for idx in range(out_vars.shape[0]):
             inp, out = inp_vars[idx], out_vars[idx]
             print(f"inp: {inp}, out: {out}")
@@ -305,7 +307,32 @@ class SboxCipher(IndexSet):
 
             ddt_cnf += cnf
 
+        print(f"literals: {literals}")
+
         self.cnf += ddt_cnf
+        cardinality_encoding = CardEnc.atmost(lits=literals,vpool=vpool, bound=10).clauses # just to figure things out
+        print(cardinality_encoding)
+        card_enc_sattoolkit = CNF()
+        for clause in cardinality_encoding:
+            print(clause + [0])
+            card_enc_sattoolkit += clause + [0]
+
+        print(card_enc_sattoolkit)
+
+        self.add_index_array("cardinality_encoding_vars", (vpool.top - self.numvars))
+        # print(self.counting_vars)
+        self.cnf += card_enc_sattoolkit
+
+
+        # TODO:
+        # get pysat cardinality encoding working
+        # to do this: convert clauses into a format that's accepted by marcels sat_toolkit library
+        # -> current baustelle: += operation
+        # take care to register the auxiliary variables that pysat uses (add_index_array)
+
+        # once this works, start to think about a more sophisticated way of counting (either number of active sboxes or even weight of transitions)
+        # might have to dig deeper into the SAT clause generation / add my own functions
+
 
 
     def _model_linear_layer(self):

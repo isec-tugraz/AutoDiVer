@@ -284,8 +284,9 @@ def embed(obj: GlobalArgs) -> None:
 @click.command()
 @click.argument('cipher_name', type=click.Choice(list(_ciphers.keys())), required=True)
 @click.argument('num_rounds', nargs=1, type=int, required=True)
+@click.option("--tikzify", is_flag=True, help="visualize the found characteristic in latex. current folder must contain dependencies (.sty files)")
 # add path for characteristic to be saved in?
-def search_characteristic(cipher_name: str, num_rounds: int) -> None:
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool) -> None:
     """search for a characteristic for the given cipher"""
     setup_logging('search_char.jsonl')
 
@@ -317,26 +318,31 @@ def search_characteristic(cipher_name: str, num_rounds: int) -> None:
         Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
         characteristic = Characteristic.load_from_model(model)
 
-        tex_file = Path.cwd() / "char.tex"
-        print(tex_file)
-        print(type(tex_file))
-        tex_file.write_text(characteristic.tikzify())
+        if tikzify:
+            create_latex(characteristic)
 
-        latexmk = which("latexmk")
-        if latexmk is None:
-            print("latexmk not found, skipping compilation", file=sys.stderr)
-            return 1
-
-        output = None # sp.DEVNULL
-        try:
-            sp.check_call([latexmk, "-pdf", tex_file], stdout=output, stderr=output)
-            sp.check_call([latexmk, "-c", tex_file], stdout=output, stderr=output)
-        except sp.CalledProcessError as e:
-            print(f"latexmk failed with exit code {e.returncode}", file=sys.stderr)
 
     except UnsatException:
         pass
 
+
+def create_latex(characteristic) -> None:
+    tex_file = Path.cwd() / "char.tex"
+    print(tex_file)
+    print(type(tex_file))
+    tex_file.write_text(characteristic.tikzify())
+
+    latexmk = which("latexmk")
+    if latexmk is None:
+        print("latexmk not found, skipping compilation", file=sys.stderr)
+        return 1
+
+    output = None  # sp.DEVNULL
+    try:
+        sp.check_call([latexmk, "-pdf", tex_file], stdout=output, stderr=output)
+        sp.check_call([latexmk, "-c", tex_file], stdout=output, stderr=output)
+    except sp.CalledProcessError as e:
+        print(f"latexmk failed with exit code {e.returncode}", file=sys.stderr)
 
 
 
