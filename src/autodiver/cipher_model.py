@@ -201,17 +201,25 @@ class SboxCipher(IndexSet):
         print(cnf)
         return cnf
 
-    # todo: should only be calculated once, always the same
+    # todo: only has to be calculated once, always the same
     # mapping is the only thing that changes
     def _get_ddt_cnf(self):
-        # TODO: can lut_to_cnf handle 4d luts? do i need a 4d lut? for the weight encoding of the transitions
-        # might have to touch the sat_toolkit library - how? ask marcel / chatgpt first
+        lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], 4))
+        # todo: implement iterative algorithm that increases bound gradually
+        # todo: add support for bigger sboxes
+        # todo: add support for other ciphers
+        # todo: play around with different cardinality encodings and see how they affect performance
+        # todo: tikzifies
+        for i in range(self.ddt.shape[0]):
+            for j in range(self.ddt.shape[1]):
+                if self.ddt[i, j] == 2:
+                    lut[i, j, 3] = 1 # 3 (2 bits) (higher cost)
+                if self.ddt[i,j] >= 4:
+                    lut[i, j, 1] = 1 # 1 (1 bit) (lower cost)
 
-        ddt_lut = (self.ddt != 0).astype(int) # don't encode value of transitions for now
-        # ddt_lut = np.zeros(self.ddt.shape) # debugging
-        # ddt_lut[0, 0] = 1
+        lut[0,0,0] = 1 # no cost for zero transition = 0
 
-        cnf = lut_to_cnf(ddt_lut)
+        cnf = lut_to_cnf(lut)
         # print(cnf)
         return cnf
 
@@ -290,49 +298,41 @@ class SboxCipher(IndexSet):
         inp_vars = sbox_in.reshape(-1, self.sbox_bits)
         out_vars = sbox_out.reshape(-1, self.sbox_bits)
 
+
         ddt_cnf = CNF()
-        print(f"sbox_in.shape: {sbox_in.shape[0]}")
 
         literals = inp_vars.flatten()[0:320].tolist() # just testing
         vpool = IDPool(start_from=self.numvars + 1)
+        weights = self.ddt_weights.reshape(-1,2)
+
 
         for idx in range(out_vars.shape[0]):
             inp, out = inp_vars[idx], out_vars[idx]
-            print(f"inp: {inp}, out: {out}")
+            # print(f"inp: {inp}, out: {out}")
 
-            mapping = np.concatenate((np.array([0], dtype=np.int32), inp, out))
-            print(f"mapping: {mapping}")
+            mapping = np.concatenate((np.array([0], dtype=np.int32), inp, out, weights[idx]))
 
             cnf = self._get_ddt_cnf().translate(mapping)
 
             ddt_cnf += cnf
 
-        print(f"literals: {literals}")
-
         self.cnf += ddt_cnf
-        cardinality_encoding = CardEnc.atmost(lits=literals,vpool=vpool, bound=10).clauses # just to figure things out
-        print(cardinality_encoding)
+
+        cardinality_encoding = CardEnc.atmost(lits=weights.flatten().tolist(),vpool=vpool, bound=int(3*self.num_rounds)).clauses # just to figure things out
+
+        # exclude the zero characteristic:
+        exclude_zero_conditions = CardEnc.atleast(lits=inp[0:self.sbox_bits*self.sbox_count].tolist(),vpool=vpool, bound=1).clauses # just to figure things out
+
         card_enc_sattoolkit = CNF()
         for clause in cardinality_encoding:
-            print(clause + [0])
             card_enc_sattoolkit += clause + [0]
 
-        print(card_enc_sattoolkit)
+        for clause in exclude_zero_conditions:
+            card_enc_sattoolkit += clause + [0]
 
         self.add_index_array("cardinality_encoding_vars", (vpool.top - self.numvars))
         # print(self.counting_vars)
         self.cnf += card_enc_sattoolkit
-
-
-        # TODO:
-        # get pysat cardinality encoding working
-        # to do this: convert clauses into a format that's accepted by marcels sat_toolkit library
-        # -> current baustelle: += operation
-        # take care to register the auxiliary variables that pysat uses (add_index_array)
-
-        # once this works, start to think about a more sophisticated way of counting (either number of active sboxes or even weight of transitions)
-        # might have to dig deeper into the SAT clause generation / add my own functions
-
 
 
     def _model_linear_layer(self):

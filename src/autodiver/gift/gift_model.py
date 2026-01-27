@@ -50,6 +50,9 @@ class _Gift(SboxCipher):
         self._fieldnames.add('pt')
 
         if self.search_char:
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, 2))
+
+        if self.search_char:
             self._model_ddt()
         else:
             self._model_sboxes()
