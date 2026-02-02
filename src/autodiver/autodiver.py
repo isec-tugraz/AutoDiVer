@@ -11,7 +11,7 @@ import sys
 from typing import Optional, Literal, TYPE_CHECKING
 import numpy as np
 from shutil import which
-
+from .types import RoundMode
 
 import click
 
@@ -285,8 +285,10 @@ def embed(obj: GlobalArgs) -> None:
 @click.argument('cipher_name', type=click.Choice(list(_ciphers.keys())), required=True)
 @click.argument('num_rounds', nargs=1, type=int, required=True)
 @click.option("--tikzify", is_flag=True, help="visualize the found characteristic in latex. current folder must contain dependencies (.sty files)")
+@click.option("--seed", type=int, default=None)
+@click.option("--round_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 # add path for characteristic to be saved in?
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool) -> None:
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, round_mode: RoundMode) -> None:
     """search for a characteristic for the given cipher"""
     setup_logging('search_char.jsonl')
 
@@ -311,12 +313,13 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool) -> N
 
     characteristic = DifferentialCharacteristic(sbox_in, sbox_out)
 
-    cipher = Cipher(characteristic, search_char=True)
+    cipher = Cipher(characteristic, search_char=True, round_mode=round_mode)
 
     try:
-        model = cipher.solve()
+        model = cipher.solve(seed=seed)
         Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
         characteristic = Characteristic.load_from_model(model)
+        print(f"probability: {characteristic.log2_ddt_probability()}")
 
         if tikzify:
             create_latex(characteristic)
@@ -337,7 +340,7 @@ def create_latex(characteristic) -> None:
         print("latexmk not found, skipping compilation", file=sys.stderr)
         return 1
 
-    output = None  # sp.DEVNULL
+    output = sp.DEVNULL
     try:
         sp.check_call([latexmk, "-pdf", tex_file], stdout=output, stderr=output)
         sp.check_call([latexmk, "-c", tex_file], stdout=output, stderr=output)

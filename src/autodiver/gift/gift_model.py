@@ -50,7 +50,8 @@ class _Gift(SboxCipher):
         self._fieldnames.add('pt')
 
         if self.search_char:
-            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, 2))
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights)) # max number of bits to encode powers of two (for example 2,4,8,16)
+            # values in between (6, 10, 12, 14) are "rounded" up or down - add argument to cli to choose depending
 
         if self.search_char:
             self._model_ddt()

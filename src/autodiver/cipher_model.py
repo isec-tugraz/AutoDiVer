@@ -28,7 +28,7 @@ from . import version
 from .util import IndexSet, Model, fmt_log2
 from .sat_util import count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
 from .characteristic import DifferentialCharacteristic
-from .types import ModelType, UnsatException
+from .types import ModelType, UnsatException, RoundMode
 from pysat.card import CardEnc, IDPool
 if TYPE_CHECKING:
     from .gf2_util import AffineSpace
@@ -101,8 +101,11 @@ class SboxCipher(IndexSet):
     _learned_clauses: dict[Literal['key', 'tweak', 'tweakey'], CNF]
 
     search_char: bool
+    num_bits_ddt_weights: int
+    cardinality_encoding_cnf: CNF
+    round_mode: RoundMode # only used in the case of searching for differential characteristics
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, round_mode: RoundMode = RoundMode.DOWN):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -118,9 +121,16 @@ class SboxCipher(IndexSet):
         self._affine_hull = {}
         self._learned_clauses = {}
         self.search_char = search_char
+        self.round_mode = round_mode
+        self.num_bits_ddt_weights = self._get_num_bits_ddt_weights()
+
 
     def add_index_array(self, name: str, shape: tuple[int, ...]):
         super().add_index_array(name, shape)
+        self.cnf.nvars = self.numvars
+
+    def update_index_array(self, name: str, shape: tuple[int, ...]):
+        super().update_index_array(name, shape)
         self.cnf.nvars = self.numvars
 
     def log_result(self, **kwargs):
@@ -198,24 +208,22 @@ class SboxCipher(IndexSet):
         # print(f"delta_in: {delta_in}, delta_out: {delta_out}")
         x_set, = np.where(self.sbox[x] ^ self.sbox[x ^ delta_in] == delta_out) # values for which the differential characteristic occurs
         cnf = self._get_cnf(self.sbox, x_set, model_type=self.model_type)
-        print(cnf)
+        # print(cnf)
         return cnf
 
     # todo: only has to be calculated once, always the same
     # mapping is the only thing that changes
     def _get_ddt_cnf(self):
-        lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], 4))
-        # todo: implement iterative algorithm that increases bound gradually
-        # todo: add support for bigger sboxes
-        # todo: add support for other ciphers
-        # todo: play around with different cardinality encodings and see how they affect performance
-        # todo: tikzifies
+        lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], pow(2,self.num_bits_ddt_weights)))
         for i in range(self.ddt.shape[0]):
             for j in range(self.ddt.shape[1]):
-                if self.ddt[i, j] == 2:
-                    lut[i, j, 3] = 1 # 3 (2 bits) (higher cost)
-                if self.ddt[i,j] >= 4:
-                    lut[i, j, 1] = 1 # 1 (1 bit) (lower cost)
+                for k in range(self.num_bits_ddt_weights):
+                    if self.round_mode == RoundMode.DOWN:
+                        if pow(2, k + 1) <= self.ddt[i, j] < pow(2, k + 2): # round down ( 6 classified as 4, 10 as 8)
+                            lut[i,j,pow(2, self.num_bits_ddt_weights-k) - 1] = 1
+                    else: # todo: think about this again - is it correct?
+                        if pow(2, k) < self.ddt[i, j] <= pow(2, k + 1):  # round up ( 6 classified as 8, 10 as 16)
+                            lut[i, j, pow(2, self.num_bits_ddt_weights - k) - 1] = 1
 
         lut[0,0,0] = 1 # no cost for zero transition = 0
 
@@ -298,41 +306,50 @@ class SboxCipher(IndexSet):
         inp_vars = sbox_in.reshape(-1, self.sbox_bits)
         out_vars = sbox_out.reshape(-1, self.sbox_bits)
 
-
         ddt_cnf = CNF()
-
-        literals = inp_vars.flatten()[0:320].tolist() # just testing
-        vpool = IDPool(start_from=self.numvars + 1)
-        weights = self.ddt_weights.reshape(-1,2)
-
-
+        weights = self.ddt_weights.reshape(-1, self.num_bits_ddt_weights)
+        print(self.ddt_weights.shape)
+        print(weights.shape)
         for idx in range(out_vars.shape[0]):
             inp, out = inp_vars[idx], out_vars[idx]
-            # print(f"inp: {inp}, out: {out}")
-
+            print(weights[idx])
             mapping = np.concatenate((np.array([0], dtype=np.int32), inp, out, weights[idx]))
-
             cnf = self._get_ddt_cnf().translate(mapping)
-
             ddt_cnf += cnf
-
         self.cnf += ddt_cnf
 
-        cardinality_encoding = CardEnc.atmost(lits=weights.flatten().tolist(),vpool=vpool, bound=int(3*self.num_rounds)).clauses # just to figure things out
-
         # exclude the zero characteristic:
-        exclude_zero_conditions = CardEnc.atleast(lits=inp[0:self.sbox_bits*self.sbox_count].tolist(),vpool=vpool, bound=1).clauses # just to figure things out
-
-        card_enc_sattoolkit = CNF()
-        for clause in cardinality_encoding:
-            card_enc_sattoolkit += clause + [0]
-
+        vpool = IDPool(start_from=self.numvars + 1)
+        exclude_zero_conditions = CardEnc.atleast(lits=inp[0:self.sbox_bits*self.sbox_count].tolist(),vpool=vpool, bound=1).clauses
+        exclude_zero_cnf = CNF()
         for clause in exclude_zero_conditions:
-            card_enc_sattoolkit += clause + [0]
+            exclude_zero_cnf += clause + [0]
 
-        self.add_index_array("cardinality_encoding_vars", (vpool.top - self.numvars))
-        # print(self.counting_vars)
-        self.cnf += card_enc_sattoolkit
+        self.add_index_array("exclude_zero_vars", (vpool.top - self.numvars))
+        self.cnf += exclude_zero_cnf
+
+
+    def _model_cardinality_encoding(self, bound: int) -> CNF:
+        vpool = IDPool(start_from=self.numvars + 1)
+        cardinality_encoding = CardEnc.atmost(lits=self.ddt_weights.flatten().tolist(), vpool=vpool, bound=bound).clauses
+
+        self.cardinality_encoding_cnf = CNF()
+
+        for clause in cardinality_encoding:
+            self.cardinality_encoding_cnf += clause + [0]
+
+        self.update_index_array("cardinality_encoding_vars", (vpool.top - self.numvars))
+
+    def _get_num_bits_ddt_weights(self) -> int:
+        ddt_copy = self.ddt.copy()
+        ddt_copy[0][0] = 0 # exclude 0,0 case
+        num_bits = ddt_copy.max()
+        if self.round_mode == RoundMode.UP:
+            num_bits = int(np.ceil(np.log2(num_bits)))
+        else:
+            num_bits = int(np.floor(np.log2(num_bits)))
+        print(num_bits)
+        return num_bits
 
 
     def _model_linear_layer(self):
@@ -346,6 +363,10 @@ class SboxCipher(IndexSet):
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
 
         cnf = cnf if cnf is not None else self.cnf
+        if self.search_char:
+            self._model_cardinality_encoding(self.num_rounds*5)
+            cnf = cnf + self.cardinality_encoding_cnf
+
         with tempfile.NamedTemporaryFile(mode='w', prefix='assumptions', suffix='.txt') as f:
             f.write("\n".join(str(x) for x in assumptions.ravel()))
             f.flush()
@@ -370,6 +391,38 @@ class SboxCipher(IndexSet):
         result[1:] = model[1:] # model[0] is always None
         return result
 
+    def _solve_for_characteristic(self, log_result: bool = True, seed: int | None = None) -> np.ndarray[Any, np.dtype[np.uint8]]:
+
+        seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
+        args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
+
+        cost_boundary = self.num_rounds # lower bound that is definitely necessary
+        while True:
+
+            self._model_cardinality_encoding(cost_boundary)
+            cnf = self.cnf + self.cardinality_encoding_cnf
+
+
+            if log_result:
+                log.info(
+                    f'solving with {args} #Cost-Boundary: {cost_boundary}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
+            is_sat, model = cnf.solve_dimacs(args)
+
+            if is_sat:
+                break
+
+            cost_boundary += 1
+
+
+        assert model is not None
+
+        if log_result:
+            log.info('RESULT cnf is SAT')
+
+        result = np.zeros(len(model), dtype=np.uint8)
+        result[1:] = model[1:]  # model[0] is always None
+        return result
+
     @classmethod
     def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
         if cellsize == 0 and len(arr) == 0:
@@ -388,7 +441,10 @@ class SboxCipher(IndexSet):
             if seed is None:
                 seed = int.from_bytes(os.urandom(4), 'little')
             try:
-                raw_model = self._solve(seed=seed)
+                if self.search_char:
+                    raw_model = self._solve_for_characteristic(seed=seed)
+                else:
+                    raw_model = self._solve(seed=seed)
             except UnsatException:
                 self.log_result(solve_result={'status': 'UNSAT'})
                 raise

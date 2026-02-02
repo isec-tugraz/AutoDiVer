@@ -7,6 +7,10 @@ class ModelType(Enum):
     solution_set = 'solution-set'
     split_solution_set = 'split-solution-set'
 
+class RoundMode(Enum):
+    UP = 'up'
+    DOWN = 'down'
+
 
 class UnsatException(Exception):
     pass
