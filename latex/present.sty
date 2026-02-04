@@ -1,0 +1,81 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{present}[2024/09/01 Utils for illustrating the PRESENT cipher]
+
+%%% PREREQUISITES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\RequirePackage{spn}
+
+\tikzset{present/.style={spn,xscale=-1,op/.append style={scale=.85}}} % bits labelled right to left!
+
+\newcommand{\presentinit}[1][]{
+  \spninit[#1]{16}{4}
+  \spnpermpointtrue
+  \spnconnectbitstrue
+  \spnlinktrue
+  \pgfmathsetmacro{\permstepheight}{1}
+}
+
+\newcommand{\presentpermbits}{
+  % \foreach \z [evaluate=\z as \zz using {int(mod(16*\z,63))}] in {0,...,62} 
+  \spnpermbits{0/0, 1/16, 2/32, 3/48, 4/1, 5/17, 6/33, 7/49, 8/2, 9/18, 10/34, 11/50, 12/3, 13/19, 14/35, 15/51,
+               16/4, 17/20, 18/36, 19/52, 20/5, 21/21, 22/37, 23/53, 24/6, 25/22, 26/38, 27/54, 28/7, 29/23, 30/39, 31/55,
+               32/8, 33/24, 34/40, 35/56, 36/9, 37/25, 38/41, 39/57, 40/10, 41/26, 42/42, 43/58, 44/11, 45/27, 46/43, 47/59,
+               48/12, 49/28, 50/44, 51/60, 52/13, 53/29, 54/45, 55/61, 56/14, 57/30, 58/46, 59/62, 60/15, 61/31, 62/47, 63/63}
+}
+
+\newcommand{\presentaddkey}{
+  % TODO test logic & spacing
+  \spnstep[.1]
+  \foreach \bit in {0,...,\bits} {
+    \draw (b\bit|-here) coordinate[xor] (k\bit);
+    \ifspnlink
+      \draw (bh\bit) -- (k\bit);
+      \draw (k\bit.south) coordinate (bh\bit);
+    \fi
+  }
+  \spnstep[.05]
+}
+
+\newcommand{\presentround}[1][]{
+  \presentaddkey
+  \spnsbox
+  \presentpermbits
+}
+
+\newcommand{\presentmarkbits}[4][]{
+  % #1 = style (optional)
+  % #2 = active input bits to S-box (comma-separated index list)
+  % #3 = active S-boxes (comma-separated index list)
+  % #4 = active bit transitions (comma-separated list of from/to bit indices)
+
+  \foreach \i in {#2} {
+    \draw[->,#1] (bin\i) -- (bin\i|-S0.north);
+  }
+
+  \foreach \s in {#3} {
+    \draw (S\s) node[white,sbox,#1,fill] (S\s) {\color{white}$\mathcal{S}$};
+  }
+
+  % return to previous permutation
+  \draw (here) coordinate (orighere)
+        (S0.south) coordinate (here);
+  \foreach \i in {0,...,\bits} {
+    \draw (bh\i) coordinate (origbh\i)
+          (bh\i|-here) coordinate (bh\i);
+  }
+
+  \spnpermbits[#1]{#4}
+
+  % restore previous state
+  \draw (orighere) coordinate (here);
+  \foreach \i in {0,...,\bits} {
+    \draw (origbh\i) coordinate (bh\i);
+  }
+}
+
+\newcommand{\presentfini}{
+  \foreach \i in {0,...,\bits} {
+    \draw[->] (bh\i) -- (b\i|-here); % node[below,font=\tiny,gray] {\i}; % {$x_{\i}^{(#1)}$};
+  }
+}
+
+\endinput
