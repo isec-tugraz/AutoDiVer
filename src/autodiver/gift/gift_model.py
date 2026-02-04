@@ -40,25 +40,17 @@ class _Gift(SboxCipher):
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
 
-        if self.search_char:
-            self.add_index_array('key', (0,))
-        else:
-            self.add_index_array('key', (32, self.sbox_bits))
-
         self.add_index_array('tweak', (0,))
         self.pt = self.sbox_in[0]
         self._fieldnames.add('pt')
 
         if self.search_char:
-            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights)) # max number of bits to encode powers of two (for example 2,4,8,16)
-            # values in between (6, 10, 12, 14) are "rounded" up or down - add argument to cli to choose depending
-
-        if self.search_char:
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
             self._model_ddt()
+            self.add_index_array('key', (0,))
         else:
             self._model_sboxes()
-
-        if not self.search_char:
+            self.add_index_array('key', (32, self.sbox_bits))
             self._model_key_schedule()
 
         self._model_linear_layer()

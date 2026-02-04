@@ -11,66 +11,15 @@ if TYPE_CHECKING:
 import logging
 from pathlib import Path
 
-from .present_util import PERM, INV_PERM, bit_perm
+from .present_util import PERM, INV_PERM, bit_perm, PRESENT_DDT
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
+from .present_characteristic import PresentCharacteristic
 
 import numpy as np
 from sat_toolkit.formula import XorCNF
 
 
 log = logging.getLogger(__name__)
-PRESENT_DDT = np.array(
-    [[16,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0],
-     [ 0,  0,  0,  4,  0,  0,  0,  4,  0,  4,  0,  0,  0,  4,  0,  0],
-     [ 0,  0,  0,  2,  0,  4,  2,  0,  0,  0,  2,  0,  2,  2,  2,  0],
-     [ 0,  2,  0,  2,  2,  0,  4,  2,  0,  0,  2,  2,  0,  0,  0,  0],
-     [ 0,  0,  0,  0,  0,  4,  2,  2,  0,  2,  2,  0,  2,  0,  2,  0],
-     [ 0,  2,  0,  0,  2,  0,  0,  0,  0,  2,  2,  2,  4,  2,  0,  0],
-     [ 0,  0,  2,  0,  0,  0,  2,  0,  2,  0,  0,  4,  2,  0,  0,  4],
-     [ 0,  4,  2,  0,  0,  0,  2,  0,  2,  0,  0,  0,  2,  0,  0,  4],
-     [ 0,  0,  0,  2,  0,  0,  0,  2,  0,  2,  0,  4,  0,  2,  0,  4],
-     [ 0,  0,  2,  0,  4,  0,  2,  0,  2,  0,  0,  0,  2,  0,  4,  0],
-     [ 0,  0,  2,  2,  0,  4,  0,  0,  2,  0,  2,  0,  0,  2,  2,  0],
-     [ 0,  2,  0,  0,  2,  0,  0,  0,  4,  2,  2,  2,  0,  2,  0,  0],
-     [ 0,  0,  2,  0,  0,  4,  0,  2,  2,  2,  2,  0,  0,  0,  2,  0],
-     [ 0,  2,  4,  2,  2,  0,  0,  2,  0,  0,  2,  2,  0,  0,  0,  0],
-     [ 0,  0,  2,  2,  0,  0,  2,  2,  2,  2,  0,  0,  2,  2,  0,  0],
-     [ 0,  4,  0,  0,  4,  0,  0,  0,  0,  0,  0,  0,  0,  0,  4,  4]], dtype=np.uint8)
-
-
-class PresentCharacteristic(DifferentialCharacteristic):
-    ddt: np.ndarray[Any, np.dtype[np.uint8]] = PRESENT_DDT
-
-    @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
-        with np.load(characteristic_path) as f:
-            sbox_in = f['sbox_in']
-            sbox_out = f['sbox_out']
-        sbox_in = np.array(sbox_in, dtype=np.uint8)
-        sbox_out = np.array(sbox_out, dtype=np.uint8)
-
-        if sbox_in.shape != sbox_out.shape:
-            raise ValueError('sbox_in and sbox_out must have the same shape')
-        if len(sbox_in.shape) != 2 or len(sbox_out.shape) != 2:
-            raise ValueError('sbox_in and sbox_out must have 2 dimensions')
-        if sbox_in.shape[1] != 16 or sbox_out.shape[1] != 16:
-            raise ValueError('sbox_in and sbox_out must have 16 s-boxes')
-
-        num_rounds = sbox_in.shape[0]
-        permuted = bit_perm(sbox_out)
-
-        for i in range(1, num_rounds):
-            lin_input = sbox_out[i - 1]
-            lin_output = sbox_in[i]
-            permuted = bit_perm(lin_input)
-            if not np.all(permuted == lin_output):
-                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
-
-
-        if sbox_in.shape != sbox_out.shape:
-            raise ValueError('sbox_in and sbox_out must have the same shape')
-        return cls(sbox_in, sbox_out, file_path=characteristic_path)
-
 
 class Present(SboxCipher):
     sbox = np.array([int(x, 16) for x in "c56b90ad3ef84712"], dtype=np.uint8)
@@ -82,8 +31,8 @@ class Present(SboxCipher):
     round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
-        if not isinstance(char, PresentCharacteristic):
-            raise ValueError('char must be a PresentCharacteristic')
+        if not isinstance(char, (PresentCharacteristic | DifferentialCharacteristic)):
+            raise ValueError('char must be a DifferentialCharacteristic or PresentCharacteristic')
 
         super().__init__(char, **kwargs)
         self.char = char
@@ -104,8 +53,14 @@ class Present(SboxCipher):
 
         self.add_index_array('pt', (self.sbox_count, self.sbox_bits))
 
-        self._model_sboxes()
-        self._model_key_schedule()
+        if self.search_char:
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+            self._model_ddt()
+            self.add_index_array('key', (0,))
+        else:
+            self._model_sboxes()
+            self._model_key_schedule()
+
         self._model_linear_layer()
 
     @classmethod
@@ -138,10 +93,16 @@ class Present(SboxCipher):
         raise NotImplementedError("Subclasses must implement _model_key_schedule")
 
     def _model_linear_layer(self) -> None:
-        self.cnf += XorCNF.create_xor(self.pt.flatten(), self.sbox_in[0].flatten(), self.round_keys[0])
-        for r in range(self.num_rounds):
-            permOut = self.applyPerm(self.sbox_out[r])
-            self.cnf += XorCNF.create_xor(permOut.flatten(), self.sbox_in[r+1].flatten(), self.round_keys[r + 1].flatten())
+        if self.search_char:
+            self.cnf += XorCNF.create_xor(self.pt.flatten(), self.sbox_in[0].flatten())
+            for r in range(self.num_rounds):
+                permOut = self.applyPerm(self.sbox_out[r])
+                self.cnf += XorCNF.create_xor(permOut.flatten(), self.sbox_in[r + 1].flatten())
+        else:
+            self.cnf += XorCNF.create_xor(self.pt.flatten(), self.sbox_in[0].flatten(), self.round_keys[0])
+            for r in range(self.num_rounds):
+                permOut = self.applyPerm(self.sbox_out[r])
+                self.cnf += XorCNF.create_xor(permOut.flatten(), self.sbox_in[r+1].flatten(), self.round_keys[r + 1].flatten())
 
 class Present80(Present):
     cipher_name = 'PRESENT-80'

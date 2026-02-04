@@ -286,9 +286,10 @@ def embed(obj: GlobalArgs) -> None:
 @click.argument('num_rounds', nargs=1, type=int, required=True)
 @click.option("--tikzify", is_flag=True, help="visualize the found characteristic in latex. current folder must contain dependencies (.sty files)")
 @click.option("--seed", type=int, default=None)
+@click.option("--cost_boundary", type=int, default=None)
 @click.option("--round_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 # add path for characteristic to be saved in?
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, round_mode: RoundMode) -> None:
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, cost_boundary: int, round_mode: RoundMode) -> None:
     """search for a characteristic for the given cipher"""
     setup_logging('search_char.jsonl')
 
@@ -311,14 +312,14 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
     sbox_in = np.zeros((num_rounds, sbox_count))
     sbox_out = np.zeros((num_rounds, sbox_count))
 
-    characteristic = DifferentialCharacteristic(sbox_in, sbox_out)
+    characteristic = DifferentialCharacteristic(sbox_in, sbox_out) # pro forma characteristic; could be used to indicate active sboxes if we wanted
 
-    cipher = Cipher(characteristic, search_char=True, round_mode=round_mode)
+    cipher = Cipher(characteristic, search_char=True, round_mode=RoundMode(round_mode), cost_boundary=cost_boundary)
 
     try:
         model = cipher.solve(seed=seed)
         Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
-        characteristic = Characteristic.load_from_model(model)
+        characteristic = Characteristic.load_from_model(model) # actual recovered characteristic
         print(f"probability: {characteristic.log2_ddt_probability()}")
 
         if tikzify:
@@ -331,8 +332,6 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
 
 def create_latex(characteristic) -> None:
     tex_file = Path.cwd() / "char.tex"
-    print(tex_file)
-    print(type(tex_file))
     tex_file.write_text(characteristic.tikzify())
 
     latexmk = which("latexmk")

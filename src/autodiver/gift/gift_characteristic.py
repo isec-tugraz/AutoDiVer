@@ -98,7 +98,7 @@ class _GiftCharacteristic(DifferentialCharacteristic):
             active_sboxes_str = ",".join(str(x) for x in active_sboxes)
             active_input_bits_str = ",".join(str(x) for x in active_input_bits)
             active_bit_transitions = ",".join(f"{x}/{inv_perm[x]}" for x in active_output_bits)
-            print(f"      \\giftmarkbits[tugblue]{{{active_input_bits_str}}}{{{active_sboxes_str}}}{{{active_bit_transitions}}}", file=result)
+            print(f"      \\giftmarkbits[tug, very thick]{{{active_input_bits_str}}}{{{active_sboxes_str}}}{{{active_bit_transitions}}}", file=result)
 
         print(f"      \\giftfini", file=result)
         print(r"      \foreach \i in {0,4,...,\bits} { \draw (b\i|-here) node[below,gray,inner sep=0pt,font=\tiny] {\i}; }", file=result)

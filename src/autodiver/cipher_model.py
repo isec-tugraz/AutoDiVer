@@ -103,9 +103,11 @@ class SboxCipher(IndexSet):
     search_char: bool
     num_bits_ddt_weights: int
     cardinality_encoding_cnf: CNF
+    ddt_cnf: CNF # always the same - only compute once
     round_mode: RoundMode # only used in the case of searching for differential characteristics
+    cost_boundary: int | None
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, round_mode: RoundMode = RoundMode.DOWN):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, round_mode: RoundMode = RoundMode.DOWN, cost_boundary: int | None = None):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -123,6 +125,8 @@ class SboxCipher(IndexSet):
         self.search_char = search_char
         self.round_mode = round_mode
         self.num_bits_ddt_weights = self._get_num_bits_ddt_weights()
+        self.ddt_cnf = self._get_ddt_cnf()
+        self.cost_boundary = cost_boundary
 
 
     def add_index_array(self, name: str, shape: tuple[int, ...]):
@@ -211,18 +215,19 @@ class SboxCipher(IndexSet):
         # print(cnf)
         return cnf
 
-    # todo: only has to be calculated once, always the same
-    # mapping is the only thing that changes
     def _get_ddt_cnf(self):
         lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], pow(2,self.num_bits_ddt_weights)))
         for i in range(self.ddt.shape[0]):
             for j in range(self.ddt.shape[1]):
+                # print(f"ddt value: {self.ddt[i,j]}, num bits: {self.num_bits_ddt_weights}")
                 for k in range(self.num_bits_ddt_weights):
                     if self.round_mode == RoundMode.DOWN:
                         if pow(2, k + 1) <= self.ddt[i, j] < pow(2, k + 2): # round down ( 6 classified as 4, 10 as 8)
+                            # print(f"{self.ddt[i, j]} is in between {pow(2, k + 1)} and {pow(2, k + 2)} and weighted as {pow(2, self.num_bits_ddt_weights-k) - 1}")
                             lut[i,j,pow(2, self.num_bits_ddt_weights-k) - 1] = 1
-                    else: # todo: think about this again - is it correct?
+                    else:
                         if pow(2, k) < self.ddt[i, j] <= pow(2, k + 1):  # round up ( 6 classified as 8, 10 as 16)
+                            # print(f"{self.ddt[i, j]} is in between {pow(2, k)} and {pow(2, k + 1)} and weighted as {pow(2, self.num_bits_ddt_weights-k) - 1}")
                             lut[i, j, pow(2, self.num_bits_ddt_weights - k) - 1] = 1
 
         lut[0,0,0] = 1 # no cost for zero transition = 0
@@ -308,13 +313,11 @@ class SboxCipher(IndexSet):
 
         ddt_cnf = CNF()
         weights = self.ddt_weights.reshape(-1, self.num_bits_ddt_weights)
-        print(self.ddt_weights.shape)
-        print(weights.shape)
+
         for idx in range(out_vars.shape[0]):
             inp, out = inp_vars[idx], out_vars[idx]
-            print(weights[idx])
             mapping = np.concatenate((np.array([0], dtype=np.int32), inp, out, weights[idx]))
-            cnf = self._get_ddt_cnf().translate(mapping)
+            cnf = self.ddt_cnf.translate(mapping)
             ddt_cnf += cnf
         self.cnf += ddt_cnf
 
@@ -348,7 +351,7 @@ class SboxCipher(IndexSet):
             num_bits = int(np.ceil(np.log2(num_bits)))
         else:
             num_bits = int(np.floor(np.log2(num_bits)))
-        print(num_bits)
+        # print(num_bits)
         return num_bits
 
 
@@ -396,7 +399,7 @@ class SboxCipher(IndexSet):
         seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
 
-        cost_boundary = self.num_rounds # lower bound that is definitely necessary
+        cost_boundary =  self.num_rounds if self.cost_boundary is None else self.cost_boundary # lower bound that is definitely necessary
         while True:
 
             self._model_cardinality_encoding(cost_boundary)
