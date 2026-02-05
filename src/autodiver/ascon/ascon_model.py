@@ -106,7 +106,7 @@ class Ascon(SboxCipher):
         self.add_index_array('sbox_in', (self.num_rounds, 5, 64))
         self.add_index_array('sbox_out', (self.num_rounds, 5, 64))
 
-        self.add_index_array('key', (0,))
+        self.add_index_array('key', (0,)) # MAR: Why no key? - answer: not part of permutation, XORed to state at initialization
         self.add_index_array('tweak', (0,))
 
 
@@ -116,7 +116,12 @@ class Ascon(SboxCipher):
         self.pt = self.sbox_in[0]
         self._fieldnames.add('pt')
 
-        self._model_sboxes()
+        if self.search_char:
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+            self._model_ddt()
+        else:
+            self._model_sboxes()
+
         self._model_linear_layer()
 
     @classmethod
@@ -146,7 +151,7 @@ class Ascon(SboxCipher):
         constants = np.pad(constants, ((0, 0), (0, 64 - 8))) # type:ignore
 
         for r in range(self.num_rounds):
-            sbox_in[r, 2] *= np.int8(-1)**constants[12 - self.num_rounds + r]
+            sbox_in[r, 2] *= np.int8(-1)**constants[12 - self.num_rounds + r] # addition of round constants
 
         # swap axes for bitsliced sboxes
         # swap bits for compatibility with big-endian s-box table
@@ -157,6 +162,20 @@ class Ascon(SboxCipher):
         self._fieldnames.add('sbox_out_bitsliced')
 
         super()._model_sboxes(self.sbox_in_bitsliced, self.sbox_out_bitsliced)
+
+    def _model_ddt(self, sbox_in: None|np.ndarray=None, sbox_out: None|np.ndarray=None) -> None:
+        sbox_in = sbox_in.copy() if sbox_in is not None else self.sbox_in.copy()
+        sbox_out = sbox_out.copy() if sbox_out is not None else self.sbox_out.copy()
+
+        # swap axes for bitsliced sboxes
+        # swap bits for compatibility with big-endian s-box table
+        self.sbox_in_bitsliced = sbox_in.swapaxes(-1, -2)[..., ::-1]
+        self.sbox_out_bitsliced = sbox_out.swapaxes(-1, -2)[..., ::-1]
+
+        self._fieldnames.add('sbox_in_bitsliced')
+        self._fieldnames.add('sbox_out_bitsliced')
+
+        super()._model_ddt(self.sbox_in_bitsliced, self.sbox_out_bitsliced)
 
 
     def _model_linear_layer(self) -> None:

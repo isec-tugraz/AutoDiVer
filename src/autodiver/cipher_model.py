@@ -300,7 +300,7 @@ class SboxCipher(IndexSet):
 
         self.add_index_array("sbox_assumptions", (0,)) # compliance
 
-        sbox_in = sbox_in if sbox_in is not None else self.sbox_in
+        sbox_in = sbox_in if sbox_in is not None else self.sbox_in # to enable bitsliced passing for bitsliced sboxes
         sbox_out = sbox_out if sbox_out is not None else self.sbox_out
 
         assert sbox_in.shape[1:] == sbox_out.shape[1:]

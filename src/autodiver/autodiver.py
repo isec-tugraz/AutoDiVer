@@ -284,7 +284,7 @@ def embed(obj: GlobalArgs) -> None:
 @click.command()
 @click.argument('cipher_name', type=click.Choice(list(_ciphers.keys())), required=True)
 @click.argument('num_rounds', nargs=1, type=int, required=True)
-@click.option("--tikzify", is_flag=True, help="visualize the found characteristic in latex. current folder must contain dependencies (.sty files)")
+@click.option("--tikzify", is_flag=True, help="visualize the found characteristic in latex")
 @click.option("--seed", type=int, default=None)
 @click.option("--cost_boundary", type=int, default=None)
 @click.option("--round_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
@@ -331,7 +331,8 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
 
 
 def create_latex(characteristic) -> None:
-    tex_file = Path.cwd() / "char.tex"
+    workdir = Path.cwd() / "latex"
+    tex_file = workdir / "char.tex"
     tex_file.write_text(characteristic.tikzify())
 
     latexmk = which("latexmk")
@@ -339,10 +340,10 @@ def create_latex(characteristic) -> None:
         print("latexmk not found, skipping compilation", file=sys.stderr)
         return 1
 
-    output = sp.DEVNULL
+    output = None # sp.DEVNULL
     try:
-        sp.check_call([latexmk, "-pdf", tex_file], stdout=output, stderr=output)
-        sp.check_call([latexmk, "-c", tex_file], stdout=output, stderr=output)
+        sp.check_call([latexmk, "-pdf", tex_file], cwd=workdir, stdout=output, stderr=output)
+        sp.check_call([latexmk, "-c", tex_file], cwd=workdir, stdout=output, stderr=output)
     except sp.CalledProcessError as e:
         print(f"latexmk failed with exit code {e.returncode}", file=sys.stderr)
 
