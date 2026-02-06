@@ -8,6 +8,9 @@ from math import log2
 
 import numpy as np
 import numpy.typing as npt
+from pathlib import Path
+from shutil import which
+import subprocess as sp
 
 def fmt_log2(number: float, width: int=0) -> str:
     if number == 0:
@@ -173,3 +176,39 @@ class IndexSet:
         res += ")"
 
         return res
+
+
+def unique_path(path):
+    path = Path(path)
+
+    if not path.exists():
+        return path
+
+    stem = path.stem
+    suffix = path.suffix
+    parent = path.parent
+
+    i = 1
+    while True:
+        candidate = parent / f"{stem}_{i}{suffix}"
+        if not candidate.exists():
+            return candidate
+        i += 1
+
+
+def create_latex(characteristic) -> None:
+    workdir = Path.cwd() / "latex"
+    tex_file = workdir / "char.tex"
+    tex_file.write_text(characteristic.tikzify())
+
+    latexmk = which("latexmk")
+    if latexmk is None:
+        print("latexmk not found, skipping compilation", file=sys.stderr)
+        return 1
+
+    output = None # sp.DEVNULL
+    try:
+        sp.check_call([latexmk, "-pdf", tex_file], cwd=workdir, stdout=output, stderr=output)
+        sp.check_call([latexmk, "-c", tex_file], cwd=workdir, stdout=output, stderr=output)
+    except sp.CalledProcessError as e:
+        print(f"latexmk failed with exit code {e.returncode}", file=sys.stderr)
