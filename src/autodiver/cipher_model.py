@@ -217,14 +217,16 @@ class SboxCipher(IndexSet):
 
     def _get_ddt_cnf(self):
         lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], pow(2,self.num_bits_ddt_weights)))
+        # print(f"num bits ddt weights: {self.num_bits_ddt_weights}")
         for i in range(self.ddt.shape[0]):
             for j in range(self.ddt.shape[1]):
-                # print(f"ddt value: {self.ddt[i,j]}, num bits: {self.num_bits_ddt_weights}")
+                if i == 0 and j == 0: continue
+                # print(f"i: {i}, j: {j}, ddt value: {self.ddt[i,j]}, num bits: {self.num_bits_ddt_weights}")
                 for k in range(self.num_bits_ddt_weights):
                     if self.round_mode == RoundMode.DOWN:
                         if pow(2, k + 1) <= self.ddt[i, j] < pow(2, k + 2): # round down ( 6 classified as 4, 10 as 8)
                             # print(f"{self.ddt[i, j]} is in between {pow(2, k + 1)} and {pow(2, k + 2)} and weighted as {pow(2, self.num_bits_ddt_weights-k) - 1}")
-                            lut[i,j,pow(2, self.num_bits_ddt_weights-k) - 1] = 1
+                            lut[i,j,pow(2, self.num_bits_ddt_weights - k) - 1] = 1
                     else:
                         if pow(2, k) < self.ddt[i, j] <= pow(2, k + 1):  # round up ( 6 classified as 8, 10 as 16)
                             # print(f"{self.ddt[i, j]} is in between {pow(2, k)} and {pow(2, k + 1)} and weighted as {pow(2, self.num_bits_ddt_weights-k) - 1}")
@@ -235,6 +237,23 @@ class SboxCipher(IndexSet):
         cnf = lut_to_cnf(lut)
         # print(cnf)
         return cnf
+
+# # simplified function for debugging
+#     def _get_ddt_cnf(self):
+#         lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], 4))
+#         # print(f"num bits ddt weights: {self.num_bits_ddt_weights}")
+#         for i in range(self.ddt.shape[0]):
+#             for j in range(self.ddt.shape[1]):
+#                 # print(f"i: {i}, j: {j}, ddt value: {self.ddt[i,j]}, num bits: {self.num_bits_ddt_weights}")
+#                 if self.ddt[i, j] == 2:
+#                     lut[i,j,3] = 1
+#                 if self.ddt[i, j] == 4:
+#                     lut[i, j, 1] = 1
+#
+#         lut[0,0,0] = 1 # no cost for zero transition = 0
+#
+#         cnf = lut_to_cnf(lut)
+#         return cnf
 
 
     def _model_sboxes(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
@@ -311,19 +330,19 @@ class SboxCipher(IndexSet):
         inp_vars = sbox_in.reshape(-1, self.sbox_bits)
         out_vars = sbox_out.reshape(-1, self.sbox_bits)
 
-        ddt_cnf = CNF()
+        cnf_for_ddts = CNF()
         weights = self.ddt_weights.reshape(-1, self.num_bits_ddt_weights)
 
         for idx in range(out_vars.shape[0]):
             inp, out = inp_vars[idx], out_vars[idx]
             mapping = np.concatenate((np.array([0], dtype=np.int32), inp, out, weights[idx]))
             cnf = self.ddt_cnf.translate(mapping)
-            ddt_cnf += cnf
-        self.cnf += ddt_cnf
+            cnf_for_ddts += cnf
+        self.cnf += cnf_for_ddts
 
         # exclude the zero characteristic:
         vpool = IDPool(start_from=self.numvars + 1)
-        exclude_zero_conditions = CardEnc.atleast(lits=inp[0:self.sbox_bits*self.sbox_count].tolist(),vpool=vpool, bound=1).clauses
+        exclude_zero_conditions = CardEnc.atleast(lits=self.ddt_weights.flatten()[0:self.sbox_bits*self.sbox_count].tolist(),vpool=vpool, bound=1).clauses # TODO fix: bug here, inp has different dimension than intended
         exclude_zero_cnf = CNF()
         for clause in exclude_zero_conditions:
             exclude_zero_cnf += clause + [0]
