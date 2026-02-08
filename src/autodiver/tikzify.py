@@ -10,6 +10,7 @@ from shutil import which
 import sys
 import subprocess as sp
 
+from autodiver.present.present_characteristic import PresentCharacteristic
 from .cipher_model import DifferentialCharacteristic
 from .gift.gift_model import Gift64Characteristic, Gift128Characteristic
 
@@ -18,6 +19,7 @@ def main():
     ciphers: dict[str, type[DifferentialCharacteristic]] = {
         "gift64": Gift64Characteristic,
         "gift128": Gift128Characteristic,
+        "present80": PresentCharacteristic
     }
 
     parser = argparse.ArgumentParser(description=__doc__)

@@ -78,13 +78,14 @@ class _Midori64Base(SboxCipher):
     key_size = 128
 
     sbox_bits = 4
+    sbox_count = 16
 
     key: np.ndarray[Any, np.dtype[np.int32]]
     mc_out: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
-        if not isinstance(char, Midori64Characteristic):
-            raise ValueError('char must be of type Midori64Characteristic')
+        if not isinstance(char, Midori64Characteristic | DifferentialCharacteristic):
+            raise ValueError('char must be of type Midori64Characteristic / DifferentialCharacteristic')
         super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds
@@ -93,20 +94,26 @@ class _Midori64Base(SboxCipher):
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
-        for i in range(1, self.num_rounds):
-            lin_input = matrix_as_uint64(self.char.sbox_out[i - 1])
-            lin_output = matrix_as_uint64(self.char.sbox_in[i])
+        if not self.search_char: # currently treating passed characteristic as dummy variable in this case
+            for i in range(1, self.num_rounds):
+                lin_input = matrix_as_uint64(self.char.sbox_out[i - 1])
+                lin_output = matrix_as_uint64(self.char.sbox_in[i])
 
-
-            temp = midori64_mc(midori64_sr(lin_input))
-            if not temp == lin_output:
-                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
+                temp = midori64_mc(midori64_sr(lin_input))
+                if not temp == lin_output:
+                    raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
 
         self._create_vars()
 
-        self._model_sboxes()
+        if self.search_char:
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+            self._model_ddt()
+            self._model_no_key_addition()
+        else:
+            self._model_sboxes()
+            self._model_add_key()
+
         self._model_linear_layer()
-        self._model_add_key()
 
     def _create_vars(self):
         self.add_index_array('sbox_in', (self.num_rounds+1, 4, 4, self.sbox_bits))
@@ -146,6 +153,15 @@ class _Midori64Base(SboxCipher):
             else:
                 # no mix columns in the last round
                 self.cnf += XorCNF.create_xor(mc_input.flatten(), mc_output.flatten())
+
+    def _model_no_key_addition(self):
+        self.add_index_array('key', (0,))
+
+        for r in range(self.num_rounds):
+            inp = self.mc_out[r].swapaxes(0, 1).flatten()
+            out = self.sbox_in[r + 1].swapaxes(0, 1).flatten()
+
+            self.cnf += XorCNF.create_xor(inp, out)
 
 
 class Midori64(_Midori64Base):

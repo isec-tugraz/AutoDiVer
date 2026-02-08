@@ -309,7 +309,7 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
     module = importlib.import_module(module_name)
     Cipher: type[SboxCipher] = getattr(module, cipher_type_name)
 
-    sbox_count = Cipher.sbox_count
+    sbox_count = Cipher.sbox_count # change to dimension of state? - but annoying with compatibility
     sbox_in = np.zeros((num_rounds, sbox_count))
     sbox_out = np.zeros((num_rounds, sbox_count))
 
@@ -322,7 +322,9 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
         Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
         characteristic = Characteristic.load_from_model(model) # actual recovered characteristic
         print(f"probability: {characteristic.log2_ddt_probability()}")
-        print(characteristic.sbox_in)
+        print(model.sbox_in)
+        print(model.sbox_out)
+
 
         if tikzify:
             create_latex(characteristic)

@@ -206,7 +206,7 @@ def create_latex(characteristic) -> None:
         print("latexmk not found, skipping compilation", file=sys.stderr)
         return 1
 
-    output = None # sp.DEVNULL
+    output =  sp.DEVNULL
     try:
         sp.check_call([latexmk, "-pdf", tex_file], cwd=workdir, stdout=output, stderr=output)
         sp.check_call([latexmk, "-c", tex_file], cwd=workdir, stdout=output, stderr=output)

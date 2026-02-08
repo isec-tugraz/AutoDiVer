@@ -342,7 +342,7 @@ class SboxCipher(IndexSet):
 
         # exclude the zero characteristic:
         vpool = IDPool(start_from=self.numvars + 1)
-        exclude_zero_conditions = CardEnc.atleast(lits=self.ddt_weights.flatten()[0:self.sbox_bits*self.sbox_count].tolist(),vpool=vpool, bound=1).clauses # TODO fix: bug here, inp has different dimension than intended
+        exclude_zero_conditions = CardEnc.atleast(lits=self.ddt_weights.flatten()[0:self.sbox_bits*self.sbox_count].tolist(),vpool=vpool, bound=1).clauses
         exclude_zero_cnf = CNF()
         for clause in exclude_zero_conditions:
             exclude_zero_cnf += clause + [0]
