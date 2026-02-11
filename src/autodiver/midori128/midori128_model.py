@@ -11,6 +11,7 @@ from typing import Any
 import numpy as np
 from sat_toolkit.formula import XorCNF
 
+from .convert import unpack_bits
 from .util import DDT, RC, do_shift_rows, mixing_mat, do_mix_columns
 from .generate_perm import permutation
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
@@ -70,6 +71,20 @@ class Midori128Characteristic(DifferentialCharacteristic):
 
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
 
+    @classmethod
+    def load_from_model(cls, model):
+        sbox_in_eightbit = np.zeros((model.sbox_out.shape[0], 4, 4), dtype=np.uint8)
+        sbox_out_eightbit = np.zeros((model.sbox_out.shape[0], 4, 4), dtype=np.uint8)
+
+        for i in range(model.sbox_out.shape[0]):
+            for j in range(4):
+                for k in range(4):
+                    sbox_in_eightbit[i, k, j] = model.sbox_in[i, (j * 4 + k) * 2] << 4 | model.sbox_in[i, (j * 4 + k) * 2 + 1]  # little endian
+                    sbox_out_eightbit[i, k, j] = model.sbox_out[i, (j * 4 + k) * 2] << 4 | model.sbox_out[i, (j * 4 + k) * 2 + 1]
+
+        return cls(sbox_in_eightbit, sbox_out_eightbit, file_path=None)
+        # return cls(model.sbox_in,  model.sbox_out, file_path=None)
+
 class _Midori128Base(SboxCipher):
     cipher_name = "MIDORI128"
     sbox = np.array([int(x, 16) for x in "1053e2f7da9bc846"], dtype=np.uint8)
@@ -85,8 +100,8 @@ class _Midori128Base(SboxCipher):
     round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: Midori128Characteristic, **kwargs):
-        if not isinstance(char, Midori128Characteristic):
-            raise ValueError(f'char must be an instance of Midori128Characteristic, not {type(char)}')
+        if not isinstance(char, Midori128Characteristic | DifferentialCharacteristic):
+            raise ValueError(f'char must be an instance of Midori128Characteristic | DifferentialCharacteristic, not {type(char)}')
 
         super().__init__(char, **kwargs)
         self.char = char
@@ -97,11 +112,18 @@ class _Midori128Base(SboxCipher):
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
         self._create_vars()
-        self._key_schedule()
 
-        self._model_add_key()
+        if self.search_char:
+            self.add_index_array('key', 0)
+            self._model_add_no_key()
+            self.add_index_array("ddt_weights",(self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+            self._model_ddt()
+        else:
+            self._key_schedule()
+            self._model_add_key()
+            self._model_sboxes()
+
         self._model_linear_layer()
-        self._model_sboxes()
 
     def _create_vars(self):
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
@@ -130,6 +152,21 @@ class _Midori128Base(SboxCipher):
 
         super()._model_sboxes(sbox_in_permuted, sbox_out_permuted)
 
+    def _model_ddt(self):
+        perm = permutation()
+        sbox_in_permuted = np.zeros_like(self.sbox_in)
+        sbox_out_permuted = np.zeros_like(self.sbox_out)
+
+        for i in range(self.num_rounds):
+            sin_flat = self.sbox_in[i].flatten()[perm]
+            sout_flat = self.sbox_out[i].flatten()[perm]
+
+            sbox_in_permuted[i] = sin_flat.reshape(32, 4)
+            sbox_out_permuted[i] = sout_flat.reshape(32, 4)
+
+        super()._model_ddt(sbox_in_permuted, sbox_out_permuted)
+
+
     def _addKey(self, Y, X, K, RC: np.ndarray):
         raise NotImplementedError("Subclasses must implement _addKey")
 
@@ -138,6 +175,10 @@ class _Midori128Base(SboxCipher):
         for r in range(self.num_rounds - 1):
             self.cnf += self._addKey(self.mc_out[r], self.sbox_in[r+1], self.round_keys[r], RC[r])
         self.cnf += XorCNF.create_xor(self.mc_out[self.num_rounds - 1].flatten(), self.sbox_in[self.num_rounds].reshape(16, 8).flatten())
+
+    def _model_add_no_key(self):
+        for r in range(self.num_rounds):
+            self.cnf += XorCNF.create_xor(self.mc_out[r].flatten(), self.sbox_in[r + 1].reshape(16, 8).flatten())
 
     @staticmethod
     def model_mix_cols(A, B):

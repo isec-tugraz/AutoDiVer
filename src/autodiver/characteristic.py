@@ -61,7 +61,7 @@ class DifferentialCharacteristic():
     def load_from_model(cls, model):
         sbox_in = model.sbox_in
         sbox_out = model.sbox_out
-        return cls(sbox_in, sbox_out)
+        return cls(sbox_in, sbox_out, file_path=None)
 
     def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, file_path: Path|None=None):
         if sbox_in.shape[0] == sbox_out.shape[0] + 1:
