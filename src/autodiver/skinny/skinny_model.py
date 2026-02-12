@@ -7,17 +7,17 @@ from __future__ import annotations
 
 
 from itertools import product
-from pathlib import Path
 from typing import Any
 import logging
 
 from sat_toolkit.formula import XorCNF, CNF, Truthtable
 import numpy as np
-import numpy.typing as npt
 
-from ..cipher_model import SboxCipher, DifferentialCharacteristic
-from .constants import apply_perm, connection_poly_4, connection_poly_8, do_mix_cols, do_shift_rows, expanded_rc, get_ddt, mixing_mat, tweakey_mask, tweakey_perm, update_tweakey
+from ..cipher_model import SboxCipher
+from .constants import apply_perm, connection_poly_4, connection_poly_8, do_shift_rows, expanded_rc, DDT4, DDT8, mixing_mat, tweakey_mask, tweakey_perm
 from .util import sbox8, sbox4, LfsrState
+
+from .skinny_characteristic import _SkinnyBaseCharacteristic, Skinny64Characteristic, Skinny128Characteristic
 
 
 log = logging.getLogger(__name__)
@@ -34,56 +34,6 @@ sbox4_cnf = sbox4_dnf.to_cnf()
 sboxes = {8: sbox8, 4: sbox4}
 sbox_cnfs = {8: sbox8_cnf, 4: sbox4_cnf}
 
-DDT4 = get_ddt(sbox4)
-DDT8 = get_ddt(sbox8)
-
-class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
-    block_size = 0
-    tweakeys: np.ndarray
-
-    @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
-        rounds = 100
-
-        with np.load(characteristic_path) as f:
-            sbox_in = f['sbox_in']
-            sbox_out = f['sbox_out']
-            tweakeys = f['tweakeys']
-        sbox_in = np.array(sbox_in, dtype=np.int8)[:rounds]
-        sbox_out = np.array(sbox_out, dtype=np.int8)[:rounds]
-        tweakeys = np.array(tweakeys, dtype=np.int8)[:rounds]
-
-        if sbox_in.shape != sbox_out.shape:
-            raise ValueError('sbox_in and sbox_out must have the same shape')
-
-        return cls(sbox_in, sbox_out, tweakeys, file_path=characteristic_path)
-
-
-    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, tweakeys: npt.ArrayLike, **kwargs):
-        super().__init__(sbox_in, sbox_out, **kwargs)
-        self.tweakeys = np.array(tweakeys, dtype=np.uint8)
-        if self.tweakeys.shape != (self.num_rounds, 3, 4, 4):
-            raise ValueError('tweakeys must have shape (num_rounds, 3, 4, 4)')
-
-        # sanity check characteristic
-        for i in range(len(self.tweakeys) - 1):
-            assert np.all(self.tweakeys[i + 1] == update_tweakey(self.tweakeys[i], self.block_size)), f'tweakey update check failed at round {i}'
-            rtk = np.bitwise_xor.reduce(self.tweakeys[i], axis=0) & tweakey_mask
-            assert np.all(self.sbox_in[i + 1] == do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk)))
-
-        self.num_rounds = len(self.sbox_in)
-
-    def truncate_rounds(self, rounds_from_to: tuple[int, int]):
-        super().truncate_rounds(rounds_from_to)
-        self.tweakeys = self.tweakeys[rounds_from_to[0]:rounds_from_to[1] + 1]
-
-class Skinny128Characteristic(_SkinnyBaseCharacteristic):
-    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT8
-    block_size = 128
-
-class Skinny64Characteristic(_SkinnyBaseCharacteristic):
-    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT4
-    block_size = 64
 
 
 class SkinnyBase(SboxCipher):
@@ -110,15 +60,22 @@ class SkinnyBase(SboxCipher):
         self._sbox_in = char.sbox_in
         self._sbox_out = char.sbox_out
 
-        self._unmasked_tweakey = np.bitwise_xor.reduce(char.tweakeys, axis=1)
-        self._tweakey = [np.bitwise_and(tk, tweakey_mask) for tk in self._unmasked_tweakey]
+        if not self.search_char:
+            self._unmasked_tweakey = np.bitwise_xor.reduce(char.tweakeys, axis=1)
+            self._tweakey = [np.bitwise_and(tk, tweakey_mask) for tk in self._unmasked_tweakey]
         self.num_rounds = char.num_rounds
 
         self._total_log_prob = None
 
         self._create_vars()
+
+        if self.search_char:
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+            self._model_ddt()
+        else:
+            self._model_sboxes()
+
         self._model_linear_layer()
-        self._model_sboxes()
 
     def _create_vars(self):
 
@@ -131,7 +88,12 @@ class SkinnyBase(SboxCipher):
         self.ct = self.sbox_in[-1]
         self._fieldnames.add('ct')
 
-        self._model_key_schedule()
+        # not considering related-key / related-tweakey characteristics for now - add as cli option later on
+        if self.search_char:
+            self.add_index_array('key', 0)
+            self.add_index_array('tweak', 0)
+        else:
+            self._model_key_schedule()
 
     def _model_key_schedule(self):
         rnds = self.numrounds
@@ -197,14 +159,19 @@ class SkinnyBase(SboxCipher):
 
     def _model_linear_layer(self):
         for rnd in range(self.numrounds):
-            in_rcs = expanded_rc[rnd]
+
+            if not self.search_char:
+                in_rcs = expanded_rc[rnd]
+            else:
+                in_rcs = np.zeros_like(expanded_rc[rnd])
 
             sb_mc_input = np.zeros((4, 4), object)
             for row, col in product(range(4), range(4)):
                 sb_mc_input[row, col] = [self.sbox_out[rnd, row, col]]
 
-            for row, col in product(range(2), range(4)):
-                sb_mc_input[row, col].append(self.round_tweakeys[rnd, row, col])
+            if not self.search_char:
+                for row, col in product(range(2), range(4)):
+                    sb_mc_input[row, col].append(self.round_tweakeys[rnd, row, col])
 
 
             sb_mc_input = do_shift_rows(sb_mc_input)

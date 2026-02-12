@@ -43,6 +43,8 @@ def setup_logging(filename: Optional[Path] = None):
     logging.getLogger().setLevel(logging.DEBUG)
     logging.config.dictConfig(config)
 
+    # TODO: make second cipher list without longkey classes
+
 _ciphers: dict[str, tuple[str, str, str]] = {
     "ascon": ("autodiver.ascon.ascon_model", "Ascon", "AsconCharacteristic"),
     "gift64": ("autodiver.gift.gift_model", "Gift64", "Gift64Characteristic"),
@@ -287,10 +289,10 @@ def embed(obj: GlobalArgs) -> None:
 @click.option("--tikzify", is_flag=True, help="visualize the found characteristic in latex, supported for GIFT and PRESENT")
 @click.option("--seed", type=int, default=None)
 @click.option("--cost_boundary", type=int, default=None)
-@click.option("--round_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
+@click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 @click.option("--save", type=bool, default=False)
 # add path for characteristic to be saved in?
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, cost_boundary: int, round_mode: RoundMode, save: bool) -> None:
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, cost_boundary: int, rounding_mode: RoundMode, save: bool) -> None:
     """search for a characteristic for the given cipher"""
     setup_logging('search_char.jsonl')
 
@@ -315,23 +317,22 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
 
     characteristic = DifferentialCharacteristic(sbox_in, sbox_out) # pro forma characteristic; could be used to indicate active sboxes if we wanted
 
-    cipher = Cipher(characteristic, search_char=True, round_mode=RoundMode(round_mode), cost_boundary=cost_boundary)
+    cipher = Cipher(characteristic, search_char=True, round_mode=RoundMode(rounding_mode), cost_boundary=cost_boundary)
 
     try:
         model = cipher.solve(seed=seed)
         Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
         characteristic = Characteristic.load_from_model(model) # actual recovered characteristic
         print(f"probability: {characteristic.log2_ddt_probability()}")
-        print(model.sbox_in)
-        print(model.sbox_out)
+        # print(model.sbox_in)
+        # print(model.sbox_out)
 
+        if save: # todo: per default yes in the end; probability in filename
+            char_path = Path(Path.cwd() / "found_trails" / (cipher_name + "_r" + str(num_rounds))).with_suffix('.npz')
+            np.savez(unique_path(char_path), sbox_in=characteristic.sbox_in, sbox_out=characteristic.sbox_out)
 
         if tikzify:
             create_latex(characteristic)
-
-        if save:
-            char_path = Path(Path.cwd() / "found_trails" / (cipher_name + "_r" + str(num_rounds))).with_suffix('.npz')
-            np.savez(unique_path(char_path), sbox_in=characteristic.sbox_in, sbox_out=characteristic.sbox_out)
 
 
     except UnsatException:

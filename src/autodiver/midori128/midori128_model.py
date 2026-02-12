@@ -83,7 +83,6 @@ class Midori128Characteristic(DifferentialCharacteristic):
                     sbox_out_eightbit[i, k, j] = model.sbox_out[i, (j * 4 + k) * 2] << 4 | model.sbox_out[i, (j * 4 + k) * 2 + 1]
 
         return cls(sbox_in_eightbit, sbox_out_eightbit, file_path=None)
-        # return cls(model.sbox_in,  model.sbox_out, file_path=None)
 
 class _Midori128Base(SboxCipher):
     cipher_name = "MIDORI128"

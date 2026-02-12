@@ -215,7 +215,7 @@ class SboxCipher(IndexSet):
         # print(cnf)
         return cnf
 
-    def _get_ddt_cnf(self):
+    def _get_ddt_cnf(self): # TODO: update to accurately model logprob (2^-2 = 2 active weights, 2^-3 = 3 active weights, and so on
         lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], pow(2,self.num_bits_ddt_weights)))
         # print(f"num bits ddt weights: {self.num_bits_ddt_weights}")
         for i in range(self.ddt.shape[0]):
@@ -420,10 +420,12 @@ class SboxCipher(IndexSet):
 
         cost_boundary =  self.num_rounds if self.cost_boundary is None else self.cost_boundary # lower bound that is definitely necessary
         while True:
+            # TODO: use multithreading for different boundaries, see find_affine_hull
+            # executor.submit, join comparable? how to exit when correct boundary is found?
+            # concurrent.futures.wait
 
             self._model_cardinality_encoding(cost_boundary)
             cnf = self.cnf + self.cardinality_encoding_cnf
-
 
             if log_result:
                 log.info(
@@ -434,7 +436,6 @@ class SboxCipher(IndexSet):
                 break
 
             cost_boundary += 1
-
 
         assert model is not None
 
