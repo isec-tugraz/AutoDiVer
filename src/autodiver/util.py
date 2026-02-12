@@ -204,7 +204,7 @@ def create_latex(characteristic) -> None:
     latexmk = which("latexmk")
     if latexmk is None:
         print("latexmk not found, skipping compilation", file=sys.stderr)
-        return 1
+        return
 
     output =  sp.DEVNULL
     try:
