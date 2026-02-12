@@ -98,14 +98,7 @@ import numpy as np
 class PresentCharacteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint8]] = PRESENT_DDT
 
-    @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
-        with np.load(characteristic_path) as f:
-            sbox_in = f['sbox_in']
-            sbox_out = f['sbox_out']
-        sbox_in = np.array(sbox_in, dtype=np.uint8)
-        sbox_out = np.array(sbox_out, dtype=np.uint8)
-
+    def __init__(self, sbox_in: np.ndarray, sbox_out: np.ndarray, file_path: Path|None):
         if sbox_in.shape != sbox_out.shape:
             raise ValueError('sbox_in and sbox_out must have the same shape')
         if len(sbox_in.shape) != 2 or len(sbox_out.shape) != 2:
@@ -123,10 +116,24 @@ class PresentCharacteristic(DifferentialCharacteristic):
             if not np.all(permuted == lin_output):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
 
+        super().__init__(sbox_in, sbox_out, file_path=file_path)
 
-        if sbox_in.shape != sbox_out.shape:
-            raise ValueError('sbox_in and sbox_out must have the same shape')
+
+    @classmethod
+    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+        with np.load(characteristic_path) as f:
+            sbox_in = f['sbox_in']
+            sbox_out = f['sbox_out']
+        sbox_in = np.array(sbox_in, dtype=np.uint8)
+        sbox_out = np.array(sbox_out, dtype=np.uint8)
+
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
+
+    @classmethod
+    def load_from_model(cls, model):
+        sbox_in = model.sbox_in[:-1]
+        sbox_out = model.sbox_out
+        return cls(sbox_in, sbox_out, file_path=None)
 
 
     def tikzify(self)  -> str:
