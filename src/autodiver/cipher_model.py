@@ -104,10 +104,10 @@ class SboxCipher(IndexSet):
     num_bits_ddt_weights: int
     cardinality_encoding_cnf: CNF
     ddt_cnf: CNF # always the same - only compute once
-    round_mode: RoundMode # only used in the case of searching for differential characteristics
+    rounding_mode: RoundMode # only used in the case of searching for differential characteristics
     cost_boundary: int | None
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, round_mode: RoundMode = RoundMode.DOWN, cost_boundary: int | None = None):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, cost_boundary: int | None = None):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -123,8 +123,8 @@ class SboxCipher(IndexSet):
         self._affine_hull = {}
         self._learned_clauses = {}
         self.search_char = search_char
-        self.round_mode = round_mode
-        self.num_bits_ddt_weights = self._get_num_bits_ddt_weights()
+        self.rounding_mode = rounding_mode
+        self.num_bits_ddt_weights = self.sbox_bits - 1 # self._get_num_bits_ddt_weights()
         self.ddt_cnf = self._get_ddt_cnf()
         self.cost_boundary = cost_boundary
 
@@ -215,21 +215,19 @@ class SboxCipher(IndexSet):
         # print(cnf)
         return cnf
 
-    def _get_ddt_cnf(self): # TODO: update to accurately model logprob (2^-2 = 2 active weights, 2^-3 = 3 active weights, and so on
+    def _get_ddt_cnf(self):
         lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], pow(2,self.num_bits_ddt_weights)))
-        # print(f"num bits ddt weights: {self.num_bits_ddt_weights}")
         for i in range(self.ddt.shape[0]):
             for j in range(self.ddt.shape[1]):
                 if i == 0 and j == 0: continue
-                # print(f"i: {i}, j: {j}, ddt value: {self.ddt[i,j]}, num bits: {self.num_bits_ddt_weights}")
                 for k in range(self.num_bits_ddt_weights):
-                    if self.round_mode == RoundMode.DOWN:
-                        if pow(2, k + 1) <= self.ddt[i, j] < pow(2, k + 2): # round down ( 6 classified as 4, 10 as 8)
-                            # print(f"{self.ddt[i, j]} is in between {pow(2, k + 1)} and {pow(2, k + 2)} and weighted as {pow(2, self.num_bits_ddt_weights-k) - 1}")
+                    if self.rounding_mode == RoundMode.DOWN:
+                        if pow(2,k + 1) <= self.ddt[i, j] < pow(2,k + 2) :
+                            # print(f"{pow(2,k + 1)} <= {self.ddt[i, j]} < {pow(2,k + 2)} is weighted as {pow(2, self.num_bits_ddt_weights-k) - 1} ^= {self.num_bits_ddt_weights-k} bits")
                             lut[i,j,pow(2, self.num_bits_ddt_weights - k) - 1] = 1
                     else:
-                        if pow(2, k) < self.ddt[i, j] <= pow(2, k + 1):  # round up ( 6 classified as 8, 10 as 16)
-                            # print(f"{self.ddt[i, j]} is in between {pow(2, k)} and {pow(2, k + 1)} and weighted as {pow(2, self.num_bits_ddt_weights-k) - 1}")
+                        if pow(2, k) < self.ddt[i, j] <= pow(2, k + 1):
+                            # print(f"{pow(2, k)} <= {self.ddt[i, j]} <= {pow(2, k + 1)} is weighted as {pow(2, self.num_bits_ddt_weights - k) - 1} ^= {self.num_bits_ddt_weights - k} bits")
                             lut[i, j, pow(2, self.num_bits_ddt_weights - k) - 1] = 1
 
         lut[0,0,0] = 1 # no cost for zero transition = 0
@@ -240,15 +238,17 @@ class SboxCipher(IndexSet):
 
 # # simplified function for debugging
 #     def _get_ddt_cnf(self):
-#         lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], 4))
+#         lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], pow(2,self.num_bits_ddt_weights)))
 #         # print(f"num bits ddt weights: {self.num_bits_ddt_weights}")
 #         for i in range(self.ddt.shape[0]):
 #             for j in range(self.ddt.shape[1]):
 #                 # print(f"i: {i}, j: {j}, ddt value: {self.ddt[i,j]}, num bits: {self.num_bits_ddt_weights}")
-#                 if self.ddt[i, j] == 2:
-#                     lut[i,j,3] = 1
+#                 if self.ddt[i, j] == 2: # 2^-3 -> 3 bits
+#                     lut[i,j,7] = 1
 #                 if self.ddt[i, j] == 4:
-#                     lut[i, j, 1] = 1
+#                     lut[i, j, 3] = 1 # 2^-2 -> 2 bits
+#                 if self.ddt[i, j] == 8:
+#                     lut[i, j, 1] = 1  # 2^-1
 #
 #         lut[0,0,0] = 1 # no cost for zero transition = 0
 #
@@ -362,16 +362,16 @@ class SboxCipher(IndexSet):
 
         self.update_index_array("cardinality_encoding_vars", (vpool.top - self.numvars))
 
-    def _get_num_bits_ddt_weights(self) -> int:
-        ddt_copy = self.ddt.copy()
-        ddt_copy[0][0] = 0 # exclude 0,0 case
-        num_bits = ddt_copy.max()
-        if self.round_mode == RoundMode.UP:
-            num_bits = int(np.ceil(np.log2(num_bits)))
-        else:
-            num_bits = int(np.floor(np.log2(num_bits)))
-        # print(num_bits)
-        return num_bits
+    # def _get_num_bits_ddt_weights(self) -> int:
+    #     ddt_copy = self.ddt.copy()
+    #     ddt_copy[0][0] = 0 # exclude 0,0 case
+    #     num_bits = ddt_copy.max()
+    #     if self.rounding_mode == RoundMode.UP:
+    #         num_bits = int(np.ceil(np.log2(num_bits)))
+    #     else:
+    #         num_bits = int(np.floor(np.log2(num_bits)))
+    #     # print(num_bits)
+    #     return num_bits
 
 
     def _model_linear_layer(self):

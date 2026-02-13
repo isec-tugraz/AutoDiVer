@@ -317,7 +317,7 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
 
     characteristic = DifferentialCharacteristic(sbox_in, sbox_out) # pro forma characteristic; could be used to indicate active sboxes if we wanted
 
-    cipher = Cipher(characteristic, search_char=True, round_mode=RoundMode(rounding_mode), cost_boundary=cost_boundary)
+    cipher = Cipher(characteristic, search_char=True, rounding_mode=RoundMode(rounding_mode), cost_boundary=cost_boundary)
 
     try:
         model = cipher.solve(seed=seed)
