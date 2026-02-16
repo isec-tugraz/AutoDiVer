@@ -4,7 +4,8 @@ Cipher model base classes
 from __future__ import annotations
 
 import copy
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import threading
 from collections import defaultdict, Counter
 from dataclasses import dataclass
 import os
@@ -35,6 +36,8 @@ if TYPE_CHECKING:
 
 
 log = logging.getLogger(__name__)
+stop_event = threading.Event()
+import pdb
 
 class Timer:
     start: float
@@ -102,7 +105,6 @@ class SboxCipher(IndexSet):
 
     search_char: bool
     num_bits_ddt_weights: int
-    cardinality_encoding_cnf: CNF
     ddt_cnf: CNF # always the same - only compute once
     rounding_mode: RoundMode # only used in the case of searching for differential characteristics
     cost_boundary: int | None
@@ -355,24 +357,14 @@ class SboxCipher(IndexSet):
         vpool = IDPool(start_from=self.numvars + 1)
         cardinality_encoding = CardEnc.atmost(lits=self.ddt_weights.flatten().tolist(), vpool=vpool, bound=bound).clauses
 
-        self.cardinality_encoding_cnf = CNF()
+        cardinality_encoding_cnf = CNF()
 
         for clause in cardinality_encoding:
-            self.cardinality_encoding_cnf += clause + [0]
+            cardinality_encoding_cnf += clause + [0]
 
-        self.update_index_array("cardinality_encoding_vars", (vpool.top - self.numvars))
-
-    # def _get_num_bits_ddt_weights(self) -> int:
-    #     ddt_copy = self.ddt.copy()
-    #     ddt_copy[0][0] = 0 # exclude 0,0 case
-    #     num_bits = ddt_copy.max()
-    #     if self.rounding_mode == RoundMode.UP:
-    #         num_bits = int(np.ceil(np.log2(num_bits)))
-    #     else:
-    #         num_bits = int(np.floor(np.log2(num_bits)))
-    #     # print(num_bits)
-    #     return num_bits
-
+        # self.update_index_array("cardinality_encoding_vars", (vpool.top - self.numvars))
+        # kept separate from SboxCipher.cnf and SboxCipher.numvars, is only connected in thread that solves specific SAT problem
+        return cardinality_encoding_cnf
 
     def _model_linear_layer(self):
         raise NotImplementedError("this should be implemented by subclasses")
@@ -385,10 +377,6 @@ class SboxCipher(IndexSet):
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
 
         cnf = cnf if cnf is not None else self.cnf
-        if self.search_char:
-            self._model_cardinality_encoding(self.num_rounds*5)
-            cnf = cnf + self.cardinality_encoding_cnf
-
         with tempfile.NamedTemporaryFile(mode='w', prefix='assumptions', suffix='.txt') as f:
             f.write("\n".join(str(x) for x in assumptions.ravel()))
             f.flush()
@@ -418,32 +406,55 @@ class SboxCipher(IndexSet):
         seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
 
-        cost_boundary =  self.num_rounds if self.cost_boundary is None else self.cost_boundary # lower bound that is definitely necessary
-        while True:
-            # TODO: use multithreading for different boundaries, see find_affine_hull
-            # executor.submit, join comparable? how to exit when correct boundary is found?
-            # concurrent.futures.wait
+        cost_boundary = self.num_rounds if self.cost_boundary is None else self.cost_boundary # lower bound that is necessary
 
-            self._model_cardinality_encoding(cost_boundary)
-            cnf = self.cnf + self.cardinality_encoding_cnf
+        with ThreadPoolExecutor(max_workers=_available_cpus()) as executor: # will wait for all running tasks to complete before exiting this block
 
-            if log_result:
-                log.info(
-                    f'solving with {args} #Cost-Boundary: {cost_boundary}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
-            is_sat, model = cnf.solve_dimacs(args)
+            def task(cost_boundary: int, cardinality_cnf: CNF):
+                #self._model_cardinality_encoding(cost_boundary)
+                cnf = self.cnf.copy()
+                cnf += cardinality_cnf # read only access to self.cnf is hopefully ok? Or should I lock? in that case I might as well compute the cardinality encoding cnf within the thread
+                is_sat, model = cnf.solve_dimacs(args, stop_event)
+                return cost_boundary, is_sat, model
 
-            if is_sat:
-                break
+            lower_bound = cost_boundary
+            upper_bound = cost_boundary + _available_cpus() - 1
+            searching_condition = True
+            best_model = None
 
-            cost_boundary += 1
+            highest_unsat = 0
+            lowest_sat = 0xFFFFFFFF
 
-        assert model is not None
+            while searching_condition:
+                futures = [executor.submit(task, i, self._model_cardinality_encoding(i)) for i in range(lower_bound, upper_bound)]
+
+                # returns in the order in which the threads return
+                for future in as_completed(futures):
+                    cost_boundary, is_sat, result = future.result()
+                    print(cost_boundary, is_sat)
+                    if is_sat == False and cost_boundary > highest_unsat:
+                        highest_unsat = cost_boundary
+
+                    if is_sat == True and cost_boundary < lowest_sat:
+                        lowest_sat = cost_boundary
+                        best_model = result
+
+                    if lowest_sat == highest_unsat + 1:
+                        stop_event.set() # stop the remaining threads
+                        searching_condition = False
+                        break
+
+                lower_bound = upper_bound
+                upper_bound += _available_cpus()
+                #pdb.set_trace()
+
+        assert best_model is not None
 
         if log_result:
             log.info('RESULT cnf is SAT')
 
-        result = np.zeros(len(model), dtype=np.uint8)
-        result[1:] = model[1:]  # model[0] is always None
+        result = np.zeros(len(best_model), dtype=np.uint8)
+        result[1:] = best_model[1:]  # model[0] is always None
         return result
 
     @classmethod
@@ -471,7 +482,7 @@ class SboxCipher(IndexSet):
             except UnsatException:
                 self.log_result(solve_result={'status': 'UNSAT'})
                 raise
-
+        #self._fieldnames.remove("cardinality_encoding_vars")
         model = self.get_model(raw_model)
 
         key_str = self._fmt_arr(model.key, self.key.shape[-1]) # type: ignore
