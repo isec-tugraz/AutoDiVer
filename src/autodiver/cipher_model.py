@@ -4,7 +4,7 @@ Cipher model base classes
 from __future__ import annotations
 
 import copy
-from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED, as_completed
 import threading
 from collections import defaultdict, Counter
 from dataclasses import dataclass
@@ -401,58 +401,125 @@ class SboxCipher(IndexSet):
         result[1:] = model[1:] # model[0] is always None
         return result
 
+    def solve_for_boundary(self, args, cost_boundary: int):
+        cardinality_cnf = self._model_cardinality_encoding(cost_boundary)
+        cnf = self.cnf.copy()
+        cnf += cardinality_cnf
+        is_sat, model = cnf.solve_dimacs(args, stop_event)
+        return cost_boundary, is_sat, model
+
+    def binary_characteristic_search_singlethreaded(self, args: list) -> np.ndarray:
+        lowest_cost = self.num_rounds if self.cost_boundary is None else self.cost_boundary
+        highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
+
+        search_space = np.uint64(highest_cost - lowest_cost)
+        search_space_pow_2 = np.uint64(1)
+        while search_space_pow_2 < search_space:
+            search_space_pow_2 = search_space_pow_2 << 1
+            print(hex(search_space_pow_2))
+        print(f"search_space: {search_space}, pow of 2: {search_space_pow_2}")
+        highest_cost = lowest_cost + search_space_pow_2
+
+        best_model = None
+
+        while True:
+            current_cost = np.uint64((lowest_cost + highest_cost) / 2)
+            print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}, current_cost: {current_cost}")
+            cost_boundary, is_sat, result = self.solve_for_boundary(args, current_cost)
+            if is_sat:
+                highest_cost = current_cost
+                best_model = result
+            else:
+                lowest_cost = current_cost
+
+            if highest_cost == lowest_cost + 1:
+                break
+
+        return best_model
+
+    def binary_characteristic_search_multithreaded(self, args: list) -> np.ndarray:
+        lowest_cost = self.num_rounds if self.cost_boundary is None else self.cost_boundary
+        highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
+
+        search_space = np.uint64(highest_cost - lowest_cost)
+        search_space_pow_2 = np.uint64(1)
+        while search_space_pow_2 < search_space:
+            search_space_pow_2 = search_space_pow_2 << 1
+        print(f"search_space: {search_space}, pow of 2: {search_space_pow_2}")
+        highest_cost = lowest_cost + search_space_pow_2
+
+        best_model = None
+        loop_condition = True
+
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            while loop_condition:
+                active = set(executor.submit(self.solve_for_boundary, args, i) for i in np.linspace(lowest_cost, highest_cost, 8)) # 8 threads for now
+
+                for future in as_completed(active):
+                    cost_boundary, is_sat, result = future.result()
+                    print(cost_boundary, is_sat)
+
+                    if is_sat == False and cost_boundary > lowest_cost:
+                        lowest_cost = cost_boundary
+
+                    if is_sat and cost_boundary < highest_cost:
+                        highest_cost = cost_boundary
+                        best_model = result
+
+                    print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}")
+
+                    if highest_cost == lowest_cost + 1:
+                        stop_event.set()  # stop the remaining threads
+                        loop_condition = False
+                        break
+
+
+        return best_model
+
+    def upwards_characteristic_search(self, args: list) -> np.ndarray:
+
+        with ThreadPoolExecutor(max_workers=_available_cpus()) as executor:  # will wait for all running tasks to complete before exiting this block
+            cost_boundary = self.num_rounds if self.cost_boundary is None else self.cost_boundary # lower bound that is necessary
+            highest_unsat = 0
+            lowest_sat = 0xFFFFFFFF
+            upper_bound = cost_boundary + 1 #_available_cpus() - 1
+            best_model = None
+            loop_condition = True
+
+            active = set(executor.submit(self.solve_for_boundary, args,i) for i in range(cost_boundary, upper_bound))
+
+            while loop_condition:
+                done, active = wait(active, return_when=FIRST_COMPLETED)
+
+                for future in done:
+                    cost_boundary, is_sat, result = future.result()
+                    print(cost_boundary, is_sat)
+                    if is_sat == False and cost_boundary > highest_unsat:
+                        highest_unsat = cost_boundary
+
+                    if is_sat and cost_boundary < lowest_sat:
+                        lowest_sat = cost_boundary
+                        best_model = result
+
+                    if lowest_sat == highest_unsat + 1:
+                        stop_event.set()  # stop the remaining threads
+                        loop_condition = False
+                        break
+
+                    if best_model is not None: # stop searching upwards when we've already found satisfiable characteristics
+                        active.add(executor.submit(self.solve_for_boundary, args, upper_bound))
+                        upper_bound = upper_bound + 1
+            # pdb.set_trace()
+        return best_model
+
+
     def _solve_for_characteristic(self, log_result: bool = True, seed: int | None = None) -> np.ndarray[Any, np.dtype[np.uint8]]:
 
         seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
 
-        cost_boundary = self.num_rounds if self.cost_boundary is None else self.cost_boundary # lower bound that is necessary
-
-        with ThreadPoolExecutor(max_workers=_available_cpus()) as executor: # will wait for all running tasks to complete before exiting this block
-
-            def task(cost_boundary: int, cardinality_cnf: CNF):
-                #self._model_cardinality_encoding(cost_boundary)
-                cnf = self.cnf.copy()
-                cnf += cardinality_cnf # read only access to self.cnf is hopefully ok? Or should I lock? in that case I might as well compute the cardinality encoding cnf within the thread
-                is_sat, model = cnf.solve_dimacs(args, stop_event)
-                return cost_boundary, is_sat, model
-
-            # Idea for binary search (to find upper bound efficiently):
-            # special mode for harder characteristics (cli option) -> first solver is started without any constraint on active sboxes, then
-            # number of active sbox bits is counted from that solution and this is used for upper bound
-            # or simply compute possible max with num sbox, num rounds, worst transition (assuming everything is active) and go from there
-            # maybe compare performance
-
-            highest_unsat = 0
-            lowest_sat = 0xFFFFFFFF
-            upper_bound = cost_boundary + _available_cpus() - 1
-            best_model = None
-            loop_condition = True
-
-            active = set(executor.submit(task, i, self._model_cardinality_encoding(i)) for i in range(cost_boundary, upper_bound))
-
-            while loop_condition:
-                done, active = wait(active, return_when=FIRST_COMPLETED)  # returns in the order in which the threads return?
-
-                for future in done:
-                    cost_boundary, is_sat, result = future.result()
-                    # print(cost_boundary, is_sat)
-                    if is_sat == False and cost_boundary > highest_unsat:
-                        highest_unsat = cost_boundary
-
-                    if is_sat == True and cost_boundary < lowest_sat:
-                        lowest_sat = cost_boundary
-                        best_model = result
-
-                    if lowest_sat == highest_unsat + 1:
-                        stop_event.set() # stop the remaining threads
-                        loop_condition = False
-                        break
-
-                    active.add(executor.submit(task, upper_bound, self._model_cardinality_encoding(upper_bound)))
-                    upper_bound = upper_bound + 1
-
-                #pdb.set_trace()
+        #best_model = self.upwards_characteristic_search(args)
+        best_model = self.binary_characteristic_search_multithreaded(args)
 
         assert best_model is not None
 
