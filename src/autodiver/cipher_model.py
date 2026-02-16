@@ -4,7 +4,7 @@ Cipher model base classes
 from __future__ import annotations
 
 import copy
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 import threading
 from collections import defaultdict, Counter
 from dataclasses import dataclass
@@ -417,21 +417,26 @@ class SboxCipher(IndexSet):
                 is_sat, model = cnf.solve_dimacs(args, stop_event)
                 return cost_boundary, is_sat, model
 
-            lower_bound = cost_boundary
-            upper_bound = cost_boundary + _available_cpus() - 1
-            searching_condition = True
-            best_model = None
+            # Idea for binary search (to find upper bound efficiently):
+            # special mode for harder characteristics (cli option) -> first solver is started without any constraint on active sboxes, then
+            # number of active sbox bits is counted from that solution and this is used for upper bound
+            # or simply compute possible max with num sbox, num rounds, worst transition (assuming everything is active) and go from there
+            # maybe compare performance
 
             highest_unsat = 0
             lowest_sat = 0xFFFFFFFF
+            upper_bound = cost_boundary + _available_cpus() - 1
+            best_model = None
+            loop_condition = True
 
-            while searching_condition:
-                futures = [executor.submit(task, i, self._model_cardinality_encoding(i)) for i in range(lower_bound, upper_bound)]
+            active = set(executor.submit(task, i, self._model_cardinality_encoding(i)) for i in range(cost_boundary, upper_bound))
 
-                # returns in the order in which the threads return
-                for future in as_completed(futures):
+            while loop_condition:
+                done, active = wait(active, return_when=FIRST_COMPLETED)  # returns in the order in which the threads return?
+
+                for future in done:
                     cost_boundary, is_sat, result = future.result()
-                    print(cost_boundary, is_sat)
+                    # print(cost_boundary, is_sat)
                     if is_sat == False and cost_boundary > highest_unsat:
                         highest_unsat = cost_boundary
 
@@ -441,11 +446,12 @@ class SboxCipher(IndexSet):
 
                     if lowest_sat == highest_unsat + 1:
                         stop_event.set() # stop the remaining threads
-                        searching_condition = False
+                        loop_condition = False
                         break
 
-                lower_bound = upper_bound
-                upper_bound += _available_cpus()
+                    active.add(executor.submit(task, upper_bound, self._model_cardinality_encoding(upper_bound)))
+                    upper_bound = upper_bound + 1
+
                 #pdb.set_trace()
 
         assert best_model is not None
