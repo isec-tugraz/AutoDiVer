@@ -24,7 +24,6 @@ _PREAMBLE = r"""
 \begin{document}
 
 \pagestyle{empty}
-% PRESENT CHARACTERISTIC
 \clearpage
 
 \begin{figure}[p!]
@@ -93,10 +92,6 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
         super().truncate_rounds(rounds_from_to)
         self.tweakeys = self.tweakeys[rounds_from_to[0]:rounds_from_to[1] + 1]
 
-class Skinny128Characteristic(_SkinnyBaseCharacteristic):
-    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT8
-    block_size = 128
-
     def tikzify(self) -> str:
         result = StringIO()
         print(_PREAMBLE, file=result)
@@ -144,7 +139,7 @@ class Skinny128Characteristic(_SkinnyBaseCharacteristic):
                     if sbox_out[i][j] != 0:
                         state_shifted[i][(i + j) % 4] = sbox_out[i][j]
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str(j + i % 4)}}}\Cell{{ss{str(i) + str(j + i % 4)}}}{{{sbox_out[i][j]:x}}}",
+                            f"\\FillCell[tug!25]{{ss{str(i) + str((j + i) % 4)}}}\Cell{{ss{str(i) + str((j + i) % 4)}}}{{{sbox_out[i][j]:x}}}",
                             file=result, end="")
 
             print("}", file=result)
@@ -179,7 +174,9 @@ class Skinny128Characteristic(_SkinnyBaseCharacteristic):
         print(_DOCUMENT_END, file=result)
         return result.getvalue()
 
-
+class Skinny128Characteristic(_SkinnyBaseCharacteristic):
+    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT8
+    block_size = 128
 
 class Skinny64Characteristic(_SkinnyBaseCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT4

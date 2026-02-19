@@ -40,7 +40,7 @@ class _RectangleBase(SboxCipher):
     r_key: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: RectangleCharacteristic, **kwargs):
-        if not isinstance(char, RectangleCharacteristic):
+        if not isinstance(char, RectangleCharacteristic | DifferentialCharacteristic):
             raise ValueError('char must be of type RectangleCharacteristic')
 
         super().__init__(char, **kwargs)
@@ -64,15 +64,23 @@ class _RectangleBase(SboxCipher):
         #generate Variables
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
-        self.add_index_array('pt', (self.sbox_count, self.sbox_bits))
         self.add_index_array('tweak', (0,))
 
-        self._model_sboxes()
-        self._model_key_schedule()
+        if self.search_char:
+            self.pt = self.sbox_in[0]
+            self._fieldnames.add('pt')
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+            self._model_ddt()
+            self.add_index_array('key', (0,))
+        else:
+            self.add_index_array('pt', (self.sbox_count, self.sbox_bits))
+            self._model_sboxes()
+            self._model_key_schedule()
+
         self._model_linear_layer()
 
     def applyPerm(self, array: np.ndarray[Any, np.dtype[np.int32]]) -> np.ndarray[Any, np.dtype[np.int32]]:
-        offset = [0, 1, 12, 13];
+        offset = [0, 1, 12, 13]
         arrayOut = array.copy()
         # print(f'{array = }')
         #for each row
@@ -119,10 +127,16 @@ class _RectangleBase(SboxCipher):
         self.cnf += key_xor_cnf
 
     def _model_linear_layer(self) -> None:
-        self._addKey(self.sbox_in[0], self.pt, self._round_keys[0])
+        if not self.search_char:
+            self._addKey(self.sbox_in[0], self.pt, self._round_keys[0])
+
         for r in range(self.num_rounds):
             permOut = self.applyPerm(self.sbox_out[r])
-            self._addKey(self.sbox_in[r+1], permOut,  self._round_keys[r+1])
+            if self.search_char:
+                self.cnf += XorCNF.create_xor(self.sbox_in[r+1].flatten(), permOut.flatten())
+            else:
+                self._addKey(self.sbox_in[r+1], permOut,  self._round_keys[r+1])
+
 
 class Rectangle128(_RectangleBase):
     cipher_name = "RECTANGLE128"

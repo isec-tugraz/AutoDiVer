@@ -401,14 +401,16 @@ class SboxCipher(IndexSet):
         result[1:] = model[1:] # model[0] is always None
         return result
 
-    def solve_for_boundary(self, args, cost_boundary: int):
+    def solve_for_boundary(self, args, cost_boundary: int, log_result: bool):
         cardinality_cnf = self._model_cardinality_encoding(cost_boundary)
         cnf = self.cnf.copy()
         cnf += cardinality_cnf
+        if log_result:
+            log.info(f'solving with {args} #Cost-Boundary: {cost_boundary}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
         is_sat, model = cnf.solve_dimacs(args, stop_event)
         return cost_boundary, is_sat, model
 
-    def binary_characteristic_search_singlethreaded(self, args: list) -> np.ndarray:
+    def binary_characteristic_search_singlethreaded(self, args: list, log_result: bool) -> np.ndarray:
         lowest_cost = self.num_rounds if self.cost_boundary is None else self.cost_boundary
         highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
 
@@ -425,7 +427,7 @@ class SboxCipher(IndexSet):
         while True:
             current_cost = np.uint64((lowest_cost + highest_cost) / 2)
             print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}, current_cost: {current_cost}")
-            cost_boundary, is_sat, result = self.solve_for_boundary(args, current_cost)
+            cost_boundary, is_sat, result = self.solve_for_boundary(args, current_cost, log_result)
             if is_sat:
                 highest_cost = current_cost
                 best_model = result
@@ -437,7 +439,7 @@ class SboxCipher(IndexSet):
 
         return best_model
 
-    def binary_characteristic_search_multithreaded(self, args: list) -> np.ndarray:
+    def binary_characteristic_search_multithreaded(self, args: list, log_result: bool) -> np.ndarray:
         lowest_cost = self.num_rounds if self.cost_boundary is None else self.cost_boundary
         highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
 
@@ -451,9 +453,9 @@ class SboxCipher(IndexSet):
         best_model = None
         loop_condition = True
 
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        with ThreadPoolExecutor(max_workers=8) as executor: # TODO: change 8 to available_cpus rounded down to nearest power of 2
             while loop_condition:
-                active = set(executor.submit(self.solve_for_boundary, args, i) for i in np.linspace(lowest_cost, highest_cost, 8)) # 8 threads for now
+                active = set(executor.submit(self.solve_for_boundary, args, int(i), log_result) for i in np.linspace(lowest_cost, highest_cost, 8)) # 8 threads for now
 
                 for future in as_completed(active):
                     cost_boundary, is_sat, result = future.result()
@@ -476,7 +478,7 @@ class SboxCipher(IndexSet):
 
         return best_model
 
-    def upwards_characteristic_search(self, args: list) -> np.ndarray:
+    def upwards_characteristic_search_multithreaded(self, args: list) -> np.ndarray:
 
         with ThreadPoolExecutor(max_workers=_available_cpus()) as executor:  # will wait for all running tasks to complete before exiting this block
             cost_boundary = self.num_rounds if self.cost_boundary is None else self.cost_boundary # lower bound that is necessary
@@ -513,13 +515,34 @@ class SboxCipher(IndexSet):
         return best_model
 
 
+    def upwards_characteristic_search_singlethreaded(self, args: list, log_result: bool) -> np.ndarray:
+        cost_boundary = self.num_rounds if self.cost_boundary is None else self.cost_boundary  # lower bound that is definitely necessary
+        while True:
+
+            self._model_cardinality_encoding(cost_boundary)
+            cnf = self.cnf + self._model_cardinality_encoding(cost_boundary)
+
+            if log_result:
+                log.info(
+                    f'solving with {args} #Cost-Boundary: {cost_boundary}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
+            is_sat, model = cnf.solve_dimacs(args)
+
+            if is_sat:
+                break
+
+            cost_boundary += 1
+
+        return model
+
+
+
     def _solve_for_characteristic(self, log_result: bool = True, seed: int | None = None) -> np.ndarray[Any, np.dtype[np.uint8]]:
 
         seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
 
-        #best_model = self.upwards_characteristic_search(args)
-        best_model = self.binary_characteristic_search_multithreaded(args)
+        best_model = self.upwards_characteristic_search_singlethreaded(args, log_result) # todo: probably make this choosable with a cli flag
+        #best_model = self.binary_characteristic_search_singlethreaded(args, log_result)
 
         assert best_model is not None
 

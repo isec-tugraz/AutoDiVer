@@ -284,32 +284,43 @@ def embed(obj: GlobalArgs) -> None:
     start_ipython(argv=[], user_ns=globals()|locals())
 
 
-_ciphers_char_search: dict[str, tuple[str, str, str]] = {
-    "ascon": ("autodiver.ascon.ascon_model", "Ascon", "AsconCharacteristic"),
-    "gift64": ("autodiver.gift.gift_model", "Gift64", "Gift64Characteristic"),
-    "gift128": ("autodiver.gift.gift_model", "Gift128", "Gift128Characteristic"),
-    "midori64": ("autodiver.midori64.midori64_model", "Midori64", "Midori64Characteristic"),
-    "midori128": ("autodiver.midori128.midori128_model", "Midori128", "Midori128Characteristic"),
-    "present80": ("autodiver.present.present_model", "Present80", "PresentCharacteristic"),
-    "pyjamask": ("autodiver.pyjamask.pyjamask96_model", "Pyjamask_with_Keyschedule", "Pyjamask96Characteristic"),
-    "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic"),
-    "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic"),
-    "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic"),
-    "speck32-long-key": ("autodiver.speck.speck_model", "Speck32LongKey", "SpeckCharacteristic"),
-    "speck48-long-key": ("autodiver.speck.speck_model", "Speck48LongKey", "SpeckCharacteristic"),
-    "speck64-long-key": ("autodiver.speck.speck_model", "Speck64LongKey", "SpeckCharacteristic"),
-    "speck96-long-key": ("autodiver.speck.speck_model", "Speck96LongKey", "SpeckCharacteristic"),
-    "speck128-long-key": ("autodiver.speck.speck_model", "Speck128LongKey", "SpeckCharacteristic"),
-    "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic"),
-    "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic"),
+_ciphers_char_search: dict[str, tuple[str, str, str, bool]] = {
+    "ascon": ("autodiver.ascon.ascon_model", "Ascon", "AsconCharacteristic", False),
+    "gift64": ("autodiver.gift.gift_model", "Gift64", "Gift64Characteristic", True),
+    "gift128": ("autodiver.gift.gift_model", "Gift128", "Gift128Characteristic", True),
+    "midori64": ("autodiver.midori64.midori64_model", "Midori64", "Midori64Characteristic", False),
+    "midori128": ("autodiver.midori128.midori128_model", "Midori128", "Midori128Characteristic", False),
+    "present80": ("autodiver.present.present_model", "Present80", "PresentCharacteristic", True),
+    "pyjamask96": ("autodiver.pyjamask.pyjamask96_model", "Pyjamask_with_Keyschedule", "Pyjamask96Characteristic", False),
+    "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic", False),
+    "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic", True),
+    "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic", True),
+    "speck32-long-key": ("autodiver.speck.speck_model", "Speck32LongKey", "SpeckCharacteristic", False),
+    "speck48-long-key": ("autodiver.speck.speck_model", "Speck48LongKey", "SpeckCharacteristic", False),
+    "speck64-long-key": ("autodiver.speck.speck_model", "Speck64LongKey", "SpeckCharacteristic", False),
+    "speck96-long-key": ("autodiver.speck.speck_model", "Speck96LongKey", "SpeckCharacteristic", False),
+    "speck128-long-key": ("autodiver.speck.speck_model", "Speck128LongKey", "SpeckCharacteristic", False),
+    "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic", False),
+    "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", False),
 }
+
+_tikzify_supported = sorted(
+    name for name, (_, _, _, supports_tikz) in _ciphers_char_search.items()
+    if supports_tikz
+)
+
+_tikzify_help = (
+    "Visualize the found characteristic in LaTeX. "
+    f"Supported for: {', '.join(_tikzify_supported)}"
+)
+
 
 @click.command()
 @click.argument('cipher_name', type=click.Choice(list(_ciphers_char_search.keys())), required=True)
 @click.argument('num_rounds', nargs=1, type=int, required=True)
-@click.option("--tikzify", is_flag=True, help="visualize the found characteristic in latex, supported for GIFT and PRESENT")
+@click.option("--tikzify", is_flag=True, help=_tikzify_help)
 @click.option("--seed", type=int, default=None)
-@click.option("--cost_boundary", type=int, default=None)
+@click.option("--cost_boundary", type=int, default=None) # TODO: rename to logprobability
 @click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 @click.option("--save", type=bool, default=False)
 # add path for characteristic to be saved in?
@@ -326,11 +337,16 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
               extra={"cli_args": sys.argv, "git_commit": git_commit, "git_changed_files": git_changed_files,
                      "version": version})
 
-    module_name, cipher_type_name, characteristic_type_name = _ciphers_char_search[cipher_name]
+    module_name, cipher_type_name, characteristic_type_name, _ = _ciphers_char_search[cipher_name]
 
     import importlib
     module = importlib.import_module(module_name)
     Cipher: type[SboxCipher] = getattr(module, cipher_type_name)
+
+    # todo: change to load_zero_char, defined in characteristic.py, and extra version in speck_model.py?
+    # -> change from generic Diffchar to specific char
+    # but - bit annoying because sbox_count is not defined in all characteristic classes
+    # -> might need to either add to all classes or do case differentiation here......
 
     sbox_count = Cipher.sbox_count # change to dimension of state? - but annoying with compatibility
     sbox_in = np.zeros((num_rounds, sbox_count))

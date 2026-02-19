@@ -71,6 +71,16 @@ class Pyjamask96Characteristic(DifferentialCharacteristic):
 
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
 
+    @classmethod
+    def load_from_model(cls, model) -> Pyjamask96Characteristic:
+        print(model.sbox_in)
+        print(model.sbox_out)
+
+        sbox_in = model.sbox_in[:-1]
+        sbox_out = model.sbox_out
+
+        return cls(sbox_in, sbox_out)
+
 def circulant(vector: list[int]) -> np.ndarray:
     vec = np.array(vector)
     result = np.zeros((len(vector), len(vector)), dtype=np.int32)
@@ -104,7 +114,7 @@ class Pyjamask96(SboxCipher):
         super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds
-        assert self.char.sbox_in.shape == self.char.sbox_out.shape == (self.num_rounds, 32)
+        assert self.char.sbox_in.shape[0] == self.char.sbox_out.shape[0] == self.num_rounds
         assert self.char.sbox_in.dtype == self.char.sbox_out.dtype == np.uint8
 
         # generate variables
@@ -121,11 +131,18 @@ class Pyjamask96(SboxCipher):
         self.ct = self.sbox_in[-1]
         self._fieldnames.add('ct')
 
-        self._model_key_schedule()
 
-        self.add_index_array('pt', (3, 32))
+        if self.search_char:
+            self.add_index_array("ddt_weights",(self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+            self._model_ddt()
+            self.add_index_array('key', (0,))  # no key
+            self.pt = self.sbox_in[0]
+            self._fieldnames.add('pt')
+        else:
+            self.add_index_array('pt', (3, 32))
+            self._model_sboxes()
+            self._model_key_schedule()
 
-        self._model_sboxes()
         self._model_linear_layer()
 
 
@@ -147,8 +164,24 @@ class Pyjamask96(SboxCipher):
 
         super()._model_sboxes(self.sbox_in_bitsliced, self.sbox_out_bitsliced)
 
+    def _model_ddt(self, sbox_in: None|np.ndarray=None, sbox_out: None|np.ndarray=None) -> None:
+        sbox_in = sbox_in.copy() if sbox_in is not None else self.sbox_in.copy()
+        sbox_out = sbox_out.copy() if sbox_out is not None else self.sbox_out.copy()
+
+        # swap axes for bitsliced sboxes
+        # swap bits to little endian (top most row is MSB)
+        self.sbox_in_bitsliced = sbox_in.swapaxes(-1, -2)[..., ::-1]
+        self.sbox_out_bitsliced = sbox_out.swapaxes(-1, -2)[..., ::-1]
+
+        self._fieldnames.add('sbox_in_bitsliced')
+        self._fieldnames.add('sbox_out_bitsliced')
+
+        super()._model_ddt(self.sbox_in_bitsliced, self.sbox_out_bitsliced)
+
+
     def _model_linear_layer(self):
-        self.cnf += XorCNF.create_xor(self.pt.flatten(), self.sbox_in[0].flatten(), self.round_keys[0][:3].flatten())
+        if not self.search_char:
+            self.cnf += XorCNF.create_xor(self.pt.flatten(), self.sbox_in[0].flatten(), self.round_keys[0][:3].flatten())
         for r in range(self.num_rounds):
             self._model_single_linear_layer(r)
 
@@ -160,9 +193,10 @@ class Pyjamask96(SboxCipher):
                 for idx, el in enumerate(self.mixing_matrices[i][j]): # one row of mixing matrix
                     if el == 1:
                         vars.append([self.sbox_out[round_idx][i][idx]])
-
-                self.cnf += XorCNF.create_xor(*vars, [self.sbox_in[round_idx + 1][i][j]], [self.round_keys[round_idx + 1][i][j]])
-
+                if self.search_char:
+                    self.cnf += XorCNF.create_xor(*vars, [self.sbox_in[round_idx + 1][i][j]])
+                else:
+                    self.cnf += XorCNF.create_xor(*vars, [self.sbox_in[round_idx + 1][i][j]], [self.round_keys[round_idx + 1][i][j]])
 
     @classmethod
     def _fmt_arr(cls, arr: np.ndarray, cellsize: int):
