@@ -1,0 +1,167 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{warp}[2022/01/21 Utils for illustrating the WARP block cipher]
+
+%%% PREREQUISITES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\RequirePackage{amsmath,amsfonts,amssymb,xspace}
+\RequirePackage{etoolbox,ifthen}
+
+\RequirePackage{tikz}
+\usetikzlibrary{positioning,calc,cipher}
+
+
+%%% GENERAL CRYPTO UTILS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\providecommand{\cipher}[1]{\texttt{#1}}
+
+
+%%% WARP MACROS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\providecommand{\x}[2]{\ensuremath{x^{(#1)}_{#2}}} %x^{round number}_{bit number}, starting from zero we count the bit number from left to right (0 ... 127)
+\providecommand{\X}[2]{\ensuremath{X^{(#1)}_{#2}}} %X^{round number}_{nibble number}
+\providecommand{\K}[2]{\ensuremath{K^{(#1)}_{#2}}} %K^{b}_{nibble number}, where b takes a value in {0, 1}.
+\providecommand{\Y}[2]{\ensuremath{C^{(#1)}_{#2}}}
+
+\providecommand{\Xs}[2]{\ensuremath{X^{\!(\!#1\!)}_{\!#2}}} %X^{round number}_{nibble number}
+\providecommand{\Ks}[2]{\ensuremath{K^{\!(\!#1\!)}_{\!#2}}} %K^{b}_{nibble number}
+\providecommand{\Cs}[2]{\ensuremath{C^{\!(\!#1\!)}_{\!#2}}} %C^{round number}_{nibble number}
+
+%%% WARP TIKZ STYLES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\definecolor{tug}{HTML}{F70146}
+\colorlet{col}{tug}
+\tikzset{warpfig/.style={warpscale,
+                         very thin,>=latex,
+                         every node/.style={font=\tiny,inner sep=1pt}},
+         warpscale/.style={warpscaletosc},
+         warpscaleprint/.style={xscale=.5,yscale=.4},
+         warpscalelncs/.style={xscale=.38,yscale=.38},
+         warpscaletosc/.style={xscale=.42,yscale=.36},
+         markpath/.style={col,thick,inner sep=.5pt},
+}
+
+%%% WARP TIKZ MACROS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\warpround}[2]{%
+  % #1 = round number (1..41)
+  % #2 = additional commands
+  \begin{tikzpicture}[warpfig]
+    \coordinate (ptop) at (0,-3);
+    \coordinate (pbot) at (0,-5.5);
+    \pgfmathsetmacro{\keyidx}{int(mod(#1-1,2))}
+    \pgfmathsetmacro{\varidx}{int(#1-1)}
+    \foreach \z [evaluate=\z as \zz using int(2*\z), evaluate=\z as \zzz using int(2*\z+1)] in {0,...,15} {
+      \draw (\zz,0)   node[above] {$\Xs{\varidx}{\zz}$}   ++(-.25,0) coordinate (t\zz);
+      \draw (\zzz,0)  node[above] {$\Xs{\varidx}{\zzz}$}  ++( .25,0) coordinate (t\zzz);
+      \draw (\zz,-6)  %node[below] {$X'_{\!\zz}$} 
+                                                  ++(-.25,0) coordinate (b\zz);
+      \draw (\zzz,-6) %node[below] {$X'_{\!\zzz}$}
+                                                  ++( .25,0) coordinate (b\zzz);
+      \node[box,minimum size=1pt,rounded corners=1pt] (s\z) at (\z*2+.5,-1) {$S$};
+      \coordinate[tee, scale=0.5]               (tee\zz)  at (s\z-|t\zz) ;
+      \coordinate[xor, scale=0.5]               (xor\z)   at (s\z-|t\zzz) ;
+      \coordinate[xor, scale=0.5, yshift=-.75cm] (tee\zzz) at (xor\z);
+      \node (rk\z) at (s\z|-tee\zzz) {$\Ks{\keyidx}{\z}$\!\!\null};
+      \draw[-]  (s\z) -- (xor\z);
+      \draw[->] (t\zz) |- (s\z);
+      \draw[->] (t\zzz) -- (xor\z);
+      \draw[->] (xor\z) -- (tee\zzz);
+      \draw[-]  (rk\z) -- (tee\zzz);
+    }
+    \foreach \z [evaluate=\z as \zzz using int(2*\z+1)] in {0,1} {
+      \coordinate[xor, scale=0.5, yshift=-.5cm] (tec\zzz) at (tee\zzz);
+      \node (rc\z) at (s\z|-tec\zzz) {$\text{rc}_{\z}$\!\!\null};
+      \draw[-] (rc\z) -- (tec\zzz);
+    }
+    \foreach \z/\pz in {0/31, 1/6, 2/29, 3/14, 4/1, 5/12, 6/21, 7/8, 8/27, 9/2, 10/3, 11/0, 12/25, 13/4, 14/23, 15/10, 16/15, 17/22, 18/13, 19/30, 20/17, 21/28, 22/5, 23/24, 24/11, 25/18, 26/19, 27/16, 28/9, 29/20, 30/7, 31/26} {
+      \draw[->,rounded corners=2pt] (tee\z) -- (tee\z|-ptop) -- (b\pz|-pbot) -- (b\pz);
+    }
+    #2
+  \end{tikzpicture}%
+}
+
+\newcommand{\warproundfinal}[2]{%
+  % #1 = round number (1..41)
+  % #2 = additional commands
+  \begin{tikzpicture}[warpfig]
+    \coordinate (ptop) at (0,-3);
+    \coordinate (pbot) at (0,-3);
+    \pgfmathsetmacro{\keyidx}{int(mod(#1-1,2))}
+    \pgfmathsetmacro{\varidx}{int(#1-1)}
+    \foreach \z [evaluate=\z as \zz using int(2*\z), evaluate=\z as \zzz using int(2*\z+1)] in {0,...,15} {
+      \draw (\zz,0)   node[above] {$\Xs{\varidx}{\zz}$}   ++(-.25,0) coordinate (t\zz);
+      \draw (\zzz,0)  node[above] {$\Xs{\varidx}{\zzz}$}  ++( .25,0) coordinate (t\zzz);
+      \draw (\zz,-3)  node[below] {$\Cs{#1}{\zz}$}  ++(-.25,0) coordinate (b\zz);
+      \draw (\zzz,-3) node[below] {$\Cs{#1}{\zzz}$} ++( .25,0) coordinate (b\zzz);
+      \node[box,minimum size=1pt,rounded corners=1pt] (s\z) at (\z*2+.5,-1) {$S$};
+      \coordinate[tee, scale=0.5]               (tee\zz)  at (s\z-|t\zz) ;
+      \coordinate[xor, scale=0.5]               (xor\z)   at (s\z-|t\zzz) ;
+      \coordinate[xor, scale=0.5, yshift=-.75cm] (tee\zzz) at (xor\z);
+      \node (rk\z) at (s\z|-tee\zzz) {$\Ks{\keyidx}{\z}$\!\!\null};
+      \draw[-]  (s\z) -- (xor\z);
+      \draw[->] (t\zz) |- (s\z);
+      \draw[->] (t\zzz) -- (xor\z);
+      \draw[->] (xor\z) -- (tee\zzz);
+      \draw[-]  (rk\z) -- (tee\zzz);
+    }
+    \foreach \z [evaluate=\z as \zzz using int(2*\z+1)] in {0,1} {
+      \coordinate[xor, scale=0.5, yshift=-.5cm] (tec\zzz) at (tee\zzz);
+      \node (rc\z) at (s\z|-tec\zzz) {$\text{rc}_{\z}$\!\!\null};
+      \draw[-] (rc\z) -- (tec\zzz);
+    }
+    \foreach \z/\pz in {0/31, 1/6, 2/29, 3/14, 4/1, 5/12, 6/21, 7/8, 8/27, 9/2, 10/3, 11/0, 12/25, 13/4, 14/23, 15/10, 16/15, 17/22, 18/13, 19/30, 20/17, 21/28, 22/5, 23/24, 24/11, 25/18, 26/19, 27/16, 28/9, 29/20, 30/7, 31/26} {
+      \draw[->,rounded corners=2pt] (tee\z) -- (b\z);
+    }
+    #2
+  \end{tikzpicture}
+}
+
+\newcommand{\markbranches}[2][col]{%
+  \foreach \z/\pz in {#2} {
+    \draw[markpath,#1,->,rounded corners=2pt] (t\z) -- (tee\z|-ptop) -- (b\pz|-pbot) -- (b\pz);
+    \node[markpath,#1,fill,fill opacity=.2,above] at (\z,0) {\phantom{$\Xs{0}{00}$}};
+  }
+}
+
+\newcommand{\markbranchinput}[2][col]{%
+  \foreach \z/\s in {#2} {
+    \draw[markpath,#1,rounded corners=2pt] (t\z) -- (xor\s);
+    \node[markpath,#1,fill,fill opacity=.2,above] at (\z,0) {\phantom{$\Xs{0}{00}$}};
+  }
+}
+
+\newcommand{\markbranchoutput}[2][col]{%
+  \foreach \s/\z/\pz in {#2} {
+    \draw[markpath,#1,rounded corners=2pt] (xor\s) -- (tee\z|-ptop) -- (b\pz|-pbot) -- (b\pz);
+  }
+}
+
+
+\newcommand{\marksboxes}[2][col]{%
+  \foreach \s/\z/\pz in {#2} {%
+    % Highlight S-box and its immediate connection to the XOR
+    \draw[markpath,#1] (s\s) -- (xor\s);
+    \node[markpath,#1,box,minimum size=1pt,rounded corners=1pt] at (s\s) {$S$};
+
+    % (new) Highlight the input label area above the tee and the line from input to tee
+    % Match the visual behavior of \markbranches: a translucent rectangle behind the label
+    \node[markpath,#1,fill,fill opacity=.2,above] at (\z,0) {\phantom{$\Xs{0}{00}$}};
+    \draw[markpath,#1] (t\z) -- (tee\z);
+
+    % Highlight the connection from the S-box to the tee (but stop at the tee)
+    \draw[markpath,#1] (tee\z) coordinate[tee, scale=.5] -- (s\s);
+
+    % Highlight the branch from the tee through the permutation to the output (drawn once)
+    \draw[markpath,#1,->,rounded corners=2pt] (tee\z) -- (tee\z|-ptop) -- (b\pz|-pbot) -- (b\pz);
+
+    % Highlight the XOR marker
+    \draw[markpath,#1] (xor\s) coordinate[xor,scale=0.5];
+  }
+}
+
+\newcommand{\markoutputs}[2][col]{%
+  \foreach \z in {#2} {
+    \node[markpath,#1,fill,fill opacity=.2,below] at (\z,-3) {\phantom{$\Cs{0}{00}$}};
+  }
+}
+
