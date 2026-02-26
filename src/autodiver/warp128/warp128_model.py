@@ -6,25 +6,19 @@ from __future__ import annotations
 
 TYPE_CHECKING=False
 if TYPE_CHECKING:
-    from typing import Any, Self
+    from typing import Any
 
 import logging
-from pathlib import Path
 
 import numpy as np
 from sat_toolkit.formula import XorCNF
 
-from .util import DDT, RC, perm_nibble_16, perm_nibble_16_inv
+from .util import DDT, RC, perm_nibble_16, perm_nibble_16_inv, perm_nibble_inv
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
+from .warp_characteristic import WarpCharacteristic
 
 log = logging.getLogger(__name__)
 
-class WarpCharacteristic(DifferentialCharacteristic):
-    ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
-
-    @classmethod
-    def load(cls, characteristic_path: Path) -> Self:
-        return cls.load_txt(characteristic_path)
 
 
 class WARP128(SboxCipher):
@@ -41,7 +35,7 @@ class WARP128(SboxCipher):
     Y: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: WarpCharacteristic, **kwargs):
-        if not isinstance(char, WarpCharacteristic):
+        if not isinstance(char, (WarpCharacteristic, DifferentialCharacteristic)):
             raise ValueError('char must be of type WarpCharacteristic')
 
         super().__init__(char, **kwargs)
@@ -62,11 +56,19 @@ class WARP128(SboxCipher):
         #         raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
 
         self._create_vars()
-        self._model_sboxes()
+        if self.search_char:
+            self._model_ddt()
+        else:
+            self._model_sboxes()
         self._model_linear_layer()
 
     def _create_vars(self):
-        self.add_index_array('key', (2*self.sbox_count, self.sbox_bits))
+        if self.search_char:
+            self.add_index_array('key', 0)
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+        else:
+            self.add_index_array('key', (2*self.sbox_count, self.sbox_bits))
+
         self.add_index_array('sbox_in', (self.num_rounds, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
         self.add_index_array('X', (self.sbox_count, self.sbox_bits))
@@ -75,25 +77,26 @@ class WARP128(SboxCipher):
         self.add_index_array('tweak', (0,))
         self.pt = self.get_round_var(self.sbox_in[0], self.X)
         self._fieldnames.add('pt')
-        #self.rounds_in = np.empty((self.num_rounds, 2*self.sbox_count, self.sbox_bits))
-        #self.rounds_in[0] = self.get_round_var(self.sbox_in[0], self.X[0])
-        #for i in range(1, self.num_rounds):
-        #    self.rounds_in[i] = self.get_round_var(self.sbox_in[i], perm_nibble_16(self.sbox_in[i-1]))
 
-        #self.rounds_out = np.empty((self.num_rounds, 2*self.sbox_count, self.sbox_bits))
-        #for i in range(0, self.num_rounds-1):
-        #    self.rounds_out[i] = perm_nibble_inv(self.rounds_in[i])
-        ##no permutation at the end
-        #self.rounds_out[self.num_rounds-1] = self.get_round_var(self.sbox_in[self.num_rounds-1], self.Y[0])
-        # np.empty((2*self.sbox_count, 4), dtype=np.int32)
-        # for i in range(self.sbox_count):
-        #     self.pt[2*i] = self.sbox_in[0][i]
-        #     self.pt[2*i+1] = self.X[0][i]
+        # adding this back for convenience (to implement tikzify:) )
+        self.rounds_in = np.empty((self.num_rounds, 2*self.sbox_count, self.sbox_bits), dtype=np.int32)
+        self.rounds_in[0] = self.get_round_var(self.sbox_in[0], self.X)
+        for i in range(1, self.num_rounds):
+           self.rounds_in[i] = self.get_round_var(self.sbox_in[i], perm_nibble_16(self.sbox_in[i-1]))
 
-        # print(self.sbox_in[0])
-        # print(self.X)
-        # print(self.pt)
+        self.rounds_out = np.empty((self.num_rounds, 2*self.sbox_count, self.sbox_bits), dtype=np.int32)
+        for i in range(0, self.num_rounds-1):
+           self.rounds_out[i] = perm_nibble_inv(self.rounds_in[i + 1]) # correction - unless this was intended to be something else somehow...?
+        #no permutation at the end
+        self.rounds_out[self.num_rounds-1] = self.get_round_var(self.sbox_in[self.num_rounds-1], self.Y)
+        for i in range(self.sbox_count):
+            self.pt[2*i] = self.sbox_in[0][i]
+            self.pt[2*i+1] = self.X[i]
 
+        self._fieldnames.add('rounds_in')
+        self._fieldnames.add('rounds_out')
+
+    @classmethod
     def get_round_var(self, a, b):
         v = np.empty((2*self.sbox_count, 4), dtype=np.int32)
         for i in range(self.sbox_count):
@@ -106,22 +109,30 @@ class WARP128(SboxCipher):
         xor_in_flat = temp.reshape(-1) # don't use .flatten() here because it creates a copy
 
         # flip bits according to round constant
-        xor_in_flat[0] *= np.int8(-1)**(RC0 & 0x1)
-        xor_in_flat[1] *= np.int8(-1)**((RC0 >> 1) & 0x1)
-        xor_in_flat[2] *= np.int8(-1)**((RC0 >> 2) & 0x1)
-        xor_in_flat[3] *= np.int8(-1)**((RC0 >> 3) & 0x1)
+        if not self.search_char:
+            xor_in_flat[0] *= np.int8(-1)**(RC0 & 0x1)
+            xor_in_flat[1] *= np.int8(-1)**((RC0 >> 1) & 0x1)
+            xor_in_flat[2] *= np.int8(-1)**((RC0 >> 2) & 0x1)
+            xor_in_flat[3] *= np.int8(-1)**((RC0 >> 3) & 0x1)
 
-        xor_in_flat[4] *= np.int8(-1)**(RC1 & 0x1)
-        xor_in_flat[5] *= np.int8(-1)**((RC1 >> 1) & 0x1)
-        xor_in_flat[6] *= np.int8(-1)**((RC1 >> 2) & 0x1)
-        xor_in_flat[7] *= np.int8(-1)**((RC1 >> 3) & 0x1)
+            xor_in_flat[4] *= np.int8(-1)**(RC1 & 0x1)
+            xor_in_flat[5] *= np.int8(-1)**((RC1 >> 1) & 0x1)
+            xor_in_flat[6] *= np.int8(-1)**((RC1 >> 2) & 0x1)
+            xor_in_flat[7] *= np.int8(-1)**((RC1 >> 3) & 0x1)
 
         lin_cnf = XorCNF()
-        lin_cnf += XorCNF.create_xor(xor_in_flat, xor_out.flatten(), sbox_out.flatten(), key.flatten())
+        if self.search_char:
+            lin_cnf += XorCNF.create_xor(xor_in_flat, xor_out.flatten(), sbox_out.flatten())
+        else:
+            lin_cnf += XorCNF.create_xor(xor_in_flat, xor_out.flatten(), sbox_out.flatten(), key.flatten())
         self.cnf += lin_cnf
 
     def _model_linear_layer(self):
-        key = self.key.copy().reshape(2, 16, 4)
+        if self.search_char:
+            key = np.zeros((2,16,4))
+        else:
+            key = self.key.copy().reshape(2, 16, 4)
+
         for r in range(self.num_rounds):
             if r == 0:
                 xor_in = self.X.copy()

@@ -43,8 +43,6 @@ def setup_logging(filename: Optional[Path] = None):
     logging.getLogger().setLevel(logging.DEBUG)
     logging.config.dictConfig(config)
 
-    # TODO: make second cipher list without longkey classes
-
 _ciphers: dict[str, tuple[str, str, str]] = {
     "ascon": ("autodiver.ascon.ascon_model", "Ascon", "AsconCharacteristic"),
     "gift64": ("autodiver.gift.gift_model", "Gift64", "Gift64Characteristic"),
@@ -301,7 +299,7 @@ _ciphers_char_search: dict[str, tuple[str, str, str, bool]] = {
     "speck96-long-key": ("autodiver.speck.speck_model", "Speck96LongKey", "SpeckCharacteristic", False),
     "speck128-long-key": ("autodiver.speck.speck_model", "Speck128LongKey", "SpeckCharacteristic", False),
     "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic", False),
-    "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", False),
+    "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", True),
 }
 
 _tikzify_supported = sorted(
@@ -320,11 +318,11 @@ _tikzify_help = (
 @click.argument('num_rounds', nargs=1, type=int, required=True)
 @click.option("--tikzify", is_flag=True, help=_tikzify_help)
 @click.option("--seed", type=int, default=None)
-@click.option("--cost_boundary", type=int, default=None) # TODO: rename to logprobability
+@click.option("--log_probability", type=int, default=None, help="the minimum probability we are searching for, expressed as log2(p)")
 @click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 @click.option("--save", type=bool, default=False)
 # add path for characteristic to be saved in?
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, cost_boundary: int, rounding_mode: RoundMode, save: bool) -> None:
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, save: bool) -> None:
     """search for a characteristic for the given cipher"""
     setup_logging('search_char.jsonl')
 
@@ -354,7 +352,7 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
 
     characteristic = DifferentialCharacteristic(sbox_in, sbox_out) # pro forma characteristic; could be used to indicate active sboxes if we wanted
 
-    cipher = Cipher(characteristic, search_char=True, rounding_mode=RoundMode(rounding_mode), cost_boundary=cost_boundary)
+    cipher = Cipher(characteristic, search_char=True, rounding_mode=RoundMode(rounding_mode), cost_boundary=log_probability)
 
     try:
         model = cipher.solve(seed=seed)

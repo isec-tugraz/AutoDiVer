@@ -132,7 +132,7 @@
 
 \newcommand{\markbranchoutput}[2][col]{%
   \foreach \s/\z/\pz in {#2} {
-    \draw[markpath,#1,rounded corners=2pt] (xor\s) -- (tee\z|-ptop) -- (b\pz|-pbot) -- (b\pz);
+    \draw[markpath,#1,rounded corners=2pt, ->] (xor\s) -- (tee\z|-ptop) -- (b\pz|-pbot) -- (b\pz);
   }
 }
 
