@@ -9,7 +9,7 @@ dependencies = [
    "galois",
    "pyapproxmc",
    "pycryptosat!=5.11.23",
-   "sat_toolkit>=0.4.6",
+   "sat_toolkit>=0.6.2",
    "setuptools",
    "tqdm",
    "numpy>=2.0",
