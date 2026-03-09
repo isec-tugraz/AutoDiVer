@@ -10,13 +10,12 @@ import subprocess as sp
 import sys
 from typing import Optional, Literal, TYPE_CHECKING
 import numpy as np
-from .types import RoundMode
 from .util import create_latex, unique_path
 
 import click
 
 from autodiver import version
-from autodiver.types import ModelType, UnsatException
+from autodiver.autodiver_types import ModelType, UnsatException, RoundMode
 
 if TYPE_CHECKING:
     from autodiver.cipher_model import SboxCipher
@@ -293,11 +292,11 @@ _ciphers_char_search: dict[str, tuple[str, str, str, bool]] = {
     "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic", False),
     "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic", True),
     "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic", True),
-    "speck32-long-key": ("autodiver.speck.speck_model", "Speck32LongKey", "SpeckCharacteristic", False),
-    "speck48-long-key": ("autodiver.speck.speck_model", "Speck48LongKey", "SpeckCharacteristic", False),
-    "speck64-long-key": ("autodiver.speck.speck_model", "Speck64LongKey", "SpeckCharacteristic", False),
-    "speck96-long-key": ("autodiver.speck.speck_model", "Speck96LongKey", "SpeckCharacteristic", False),
-    "speck128-long-key": ("autodiver.speck.speck_model", "Speck128LongKey", "SpeckCharacteristic", False),
+    "speck32": ("autodiver.speck.speck_model", "Speck32LongKey", "SpeckCharacteristic", False),
+    "speck48": ("autodiver.speck.speck_model", "Speck48LongKey", "SpeckCharacteristic", False),
+    "speck64": ("autodiver.speck.speck_model", "Speck64LongKey", "SpeckCharacteristic", False),
+    "speck96": ("autodiver.speck.speck_model", "Speck96LongKey", "SpeckCharacteristic", False),
+    "speck128": ("autodiver.speck.speck_model", "Speck128LongKey", "SpeckCharacteristic", False),
     "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic", False),
     "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", True),
 }
@@ -357,6 +356,8 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
     try:
         model = cipher.solve(seed=seed)
         Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
+        print(model.add_in1, model.add_in2, model.add_out)
+
         characteristic = Characteristic.load_from_model(model) # actual recovered characteristic
         print(f"probability: {characteristic.log2_ddt_probability()}")
         # print(model.sbox_in)

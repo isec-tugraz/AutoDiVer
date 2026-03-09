@@ -16,7 +16,7 @@ import pycryptosat
 import numpy as np
 
 from .util import fmt_log2
-from .types import UnsatException
+from .autodiver_types import UnsatException
 
 
 log = logging.getLogger(__name__)
