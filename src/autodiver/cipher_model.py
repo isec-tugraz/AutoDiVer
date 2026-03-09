@@ -23,13 +23,12 @@ from tqdm import tqdm
 import numpy as np
 import numpy.typing as npt
 from sat_toolkit.formula import XorCNF, CNF, Clause
-from pycryptosat import Solver
 
 from . import version
 from .util import IndexSet, Model, fmt_log2
 from .sat_util import count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
 from .characteristic import DifferentialCharacteristic
-from .types import ModelType, UnsatException, RoundMode
+from .autodiver_types import ModelType, UnsatException, RoundMode
 from pysat.card import CardEnc, IDPool
 if TYPE_CHECKING:
     from .gf2_util import AffineSpace
@@ -126,10 +125,12 @@ class SboxCipher(IndexSet):
         self._learned_clauses = {}
         self.search_char = search_char
         self.rounding_mode = rounding_mode
-        self.num_bits_ddt_weights = self.sbox_bits - 1 # self._get_num_bits_ddt_weights()
-        self.ddt_cnf = self._get_ddt_cnf()
         self.cost_boundary = cost_boundary
+        self._setup_ddt()
 
+    def _setup_ddt(self):
+        self.num_bits_ddt_weights = self.sbox_bits - 1  # self._get_num_bits_ddt_weights()
+        self.ddt_cnf = self._get_ddt_cnf()
 
     def add_index_array(self, name: str, shape: tuple[int, ...]):
         super().add_index_array(name, shape)
@@ -344,7 +345,7 @@ class SboxCipher(IndexSet):
 
         # exclude the zero characteristic:
         vpool = IDPool(start_from=self.numvars + 1)
-        exclude_zero_conditions = CardEnc.atleast(lits=self.ddt_weights.flatten()[0:self.sbox_bits*self.sbox_count].tolist(),vpool=vpool, bound=1).clauses
+        exclude_zero_conditions = CardEnc.atleast(lits=self.ddt_weights.flatten().tolist(),vpool=vpool, bound=1).clauses
         exclude_zero_cnf = CNF()
         for clause in exclude_zero_conditions:
             exclude_zero_cnf += clause + [0]
