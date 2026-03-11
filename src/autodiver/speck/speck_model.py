@@ -12,55 +12,7 @@ from autodiver.arx_util import modular_addition_probability
 from .speck_util import rotr_speck_np, ALPHA_MAP, BETA_MAP
 from pysat.card import CardEnc, IDPool
 
-
-class SpeckCharacteristic(DifferentialCharacteristic):
-    round_in: np.ndarray[Any, np.dtype[np.uint64]]
-    add_in1: np.ndarray[Any, np.dtype[np.uint64]]
-    add_in2: np.ndarray[Any, np.dtype[np.uint64]]
-    add_out: np.ndarray[Any, np.dtype[np.uint64]]
-
-    def __init__(self, round_in: np.ndarray, wordsize: int, file_path: Path|None):
-        self.rounds_from_to = None
-        self.file_path = file_path
-        self.round_in = round_in
-        self.num_rounds = len(round_in) - 1
-
-        assert self.round_in.shape == (self.num_rounds + 1, 2)
-
-        self.add_in1 = rotr_speck_np(round_in[:-1, 0], wordsize)
-        self.add_in2 = round_in[:-1, 1]
-        self.add_out = round_in[1:, 0]
-
-        self.wordsize = wordsize
-
-    @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
-        with np.load(characteristic_path) as f:
-            wordsize = int(f['wordsize'])
-            round_in = np.array(f['round_in'], dtype=np.uint64)
-
-        return cls(round_in=round_in, wordsize=wordsize, file_path=characteristic_path)
-
-    def truncate_rounds(self, rounds_from_to: tuple[int, int]):
-        current_rounds = range(self.num_rounds)
-        start, end = rounds_from_to
-
-        assert start in current_rounds
-        assert end in current_rounds
-
-        self.round_in = self.round_in[start:end + 2]
-        self.add_in1 = self.add_in1[start:end + 1]
-        self.add_in2 = self.add_in2[start:end + 1]
-        self.add_out = self.add_out[start:end + 1]
-        self.rounds_from_to = rounds_from_to
-
-        self.num_rounds = end + 1 - start
-        assert self.num_rounds == len(self.add_in1) == len(self.add_in2) == len(self.add_out) == len(self.round_in) - 1
-
-    def log2_ddt_probability(self):
-        round_probs = modular_addition_probability(self.add_in1, self.add_in2, self.add_out, self.wordsize)
-        return np.log2(round_probs).sum()
-
+from .speck_characteristic import SpeckCharacteristic, Speck32Characteristic, Speck48Characteristic, Speck64Characteristic, Speck96Characteristic, Speck128Characteristic
 
 class _SpeckBase(SboxCipher):
     num_rounds: int
@@ -95,6 +47,7 @@ class _SpeckBase(SboxCipher):
             self.add_index_array("ddt_weights", (self.num_rounds, self.wordsize - 1,))
             self.add_index_array("key", (0,))
             self.key_size = 0
+            self.cost_boundary = 0  # transitions with probability 1 possible
         else:
             self.add_index_array('_carry', (self.num_rounds,
                                             self.wordsize))  # do we need this for the differential search? I think not?

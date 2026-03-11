@@ -292,11 +292,11 @@ _ciphers_char_search: dict[str, tuple[str, str, str, bool]] = {
     "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic", False),
     "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic", True),
     "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic", True),
-    "speck32": ("autodiver.speck.speck_model", "Speck32LongKey", "SpeckCharacteristic", False),
-    "speck48": ("autodiver.speck.speck_model", "Speck48LongKey", "SpeckCharacteristic", False),
-    "speck64": ("autodiver.speck.speck_model", "Speck64LongKey", "SpeckCharacteristic", False),
-    "speck96": ("autodiver.speck.speck_model", "Speck96LongKey", "SpeckCharacteristic", False),
-    "speck128": ("autodiver.speck.speck_model", "Speck128LongKey", "SpeckCharacteristic", False),
+    "speck32": ("autodiver.speck.speck_model", "Speck32LongKey", "Speck32Characteristic", False),
+    "speck48": ("autodiver.speck.speck_model", "Speck48LongKey", "Speck48Characteristic", False),
+    "speck64": ("autodiver.speck.speck_model", "Speck64LongKey", "Speck64Characteristic", False),
+    "speck96": ("autodiver.speck.speck_model", "Speck96LongKey", "Speck96Characteristic", False),
+    "speck128": ("autodiver.speck.speck_model", "Speck128LongKey", "Speck128Characteristic", False),
     "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic", False),
     "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", True),
 }
@@ -340,12 +340,7 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
     module = importlib.import_module(module_name)
     Cipher: type[SboxCipher] = getattr(module, cipher_type_name)
 
-    # todo: change to load_zero_char, defined in characteristic.py, and extra version in speck_model.py?
-    # -> change from generic Diffchar to specific char
-    # but - bit annoying because sbox_count is not defined in all characteristic classes
-    # -> might need to either add to all classes or do case differentiation here......
-
-    sbox_count = Cipher.sbox_count # change to dimension of state? - but annoying with compatibility
+    sbox_count = Cipher.sbox_count
     sbox_in = np.zeros((num_rounds, sbox_count))
     sbox_out = np.zeros((num_rounds, sbox_count))
 
@@ -356,7 +351,6 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
     try:
         model = cipher.solve(seed=seed)
         Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
-        print(model.add_in1, model.add_in2, model.add_out)
 
         characteristic = Characteristic.load_from_model(model) # actual recovered characteristic
         print(f"probability: {characteristic.log2_ddt_probability()}")
