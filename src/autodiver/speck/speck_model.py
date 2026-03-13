@@ -47,7 +47,8 @@ class _SpeckBase(SboxCipher):
             self.add_index_array("ddt_weights", (self.num_rounds, self.wordsize - 1,))
             self.add_index_array("key", (0,))
             self.key_size = 0
-            self.cost_boundary = 0  # transitions with probability 1 possible
+            if self.cost_boundary == None:
+                self.cost_boundary = 0  # transitions with probability 1 possible
         else:
             self.add_index_array('_carry', (self.num_rounds,
                                             self.wordsize))  # do we need this for the differential search? I think not?
