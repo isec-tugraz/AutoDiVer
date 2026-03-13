@@ -1,0 +1,152 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{arx}[2024/02/17 Utils for illustrating ARX designs]
+
+%%% PREREQUISITES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{tikz}
+\usetikzlibrary{calc,cipher}
+
+%%% GENERAL CRYPTO UTILS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\providecommand{\cipher}[1]{\textsf{#1}}
+
+
+\tikzset{arx/.style={op/.append style={minimum size=2ex},
+                     rot/.append style={font=\footnotesize}}
+}
+
+\newcommand{\arxinit}[2][i]{
+  \pgfmathsetmacro{\B}{int(#2-1)}
+  \draw (1,0) coordinate (here);
+  \foreach \i in {0,...,\B} {
+    \draw (\i,0) coordinate (B\i) coordinate (H\i) node[above] {$X^{\i}_{#1}$};
+  }
+}
+
+\newcommand{\arxfini}[1][i+1]{
+  \foreach \i in {0,...,\B} {
+    \draw[->] (H\i) -- (H\i|-here) node[below] {$X^{\i}_{#1}$};
+  }
+}
+
+\newcommand{\arxstep}{\draw (here) ++(0,-.5) coordinate (here);}
+
+\newcommand{\arxadd}[2]{
+  \draw (here-|B#1) coordinate[tee] (t)
+        (here-|B#2) coordinate[sum] (s);
+  \draw[->] (t) -- (s);
+  \draw[-]  (H#1) -- (t) coordinate (H#1);
+  \draw[->] (H#2) -- (s);
+  \draw (s.south) coordinate (H#2);
+}
+
+\newcommand{\arxrot}[3][\lll]{
+  \draw (here-|B#2) node[rot] (r) {$#1 #3$};
+  \draw[->] (H#2) -- (r);
+  \draw (r.south) coordinate (H#2);
+}
+
+\newcommand{\arxxor}[2]{
+  \draw (here-|B#1) coordinate[tee] (t)
+        (here-|B#2) coordinate[xor] (s);
+  \draw[->] (t) -- (s);
+  \draw[-]  (H#1) -- (t) coordinate (H#1);
+  \draw[->] (H#2) -- (s);
+  \draw (s.south) coordinate (H#2);
+}
+
+\newcommand{\arxkey}[3][-.5]{
+  \draw (here-|B#2) coordinate[xor]     (s)
+      ++(#1,0)      node[inner sep=1pt] (k) {#3};
+  \draw[->] (k) -- (s);
+  \draw[->] (H#2) -- (s);
+  \draw (s.south) coordinate (H#2);
+}
+
+\newcommand{\arxmidkey}[3][.333]{
+  \draw (here-|B#2) coordinate[tee] (t)
+      ++(0,-.5)
+      ++(#1,0)      coordinate[xor]     (s)
+      ++(#1,0)      node[inner sep=1pt] (k) {#3};
+  \draw[->,rounded corners=2pt] (t) -| (s);
+  \draw[->] (k) -- (s);
+  \draw (s.south) coordinate (M#2);
+}
+
+\newcommand{\arxmidadd}[2]{
+  \draw (here-|B#2) coordinate[sum] (s);
+  \draw[->,rounded corners=2pt] (M#1) |- (s);
+  \draw[->] (H#2) -- (s);
+  \draw (s.south) coordinate (H#2);
+}
+
+\newcommand{\arxfeistel}{
+  \draw (here) +(0,+.15) coordinate (ptop)
+               +(0,-.15) coordinate (pbot)
+               +(0,-.3)  coordinate (pend);
+  \foreach \i in {0,...,\B} {
+    \draw (H\i)       coordinate (T\i)
+          (T\i|-pend) coordinate (H\i);
+  }
+  \foreach \i in {1,...,\B} {
+    \pgfmathsetmacro{\j}{int(\i-1)}
+    \draw[rounded corners=2pt] (T\i) -- (T\i|-ptop) -- (T\j|-pbot) -- (H\j);
+  }
+  \draw[rounded corners=2pt] (T0) -- (T0|-ptop) -- (T\B|-pbot) -- (H\B);
+}
+
+\newcommand{\arxswap}[2]{
+  \draw (here) +(0,+.15) coordinate (ptop)
+               +(0,-.15) coordinate (pbot)
+               +(0,-.3)  coordinate (pend);
+  \draw (H#1)             coordinate (T1)
+        (H#2)             coordinate (T2)
+        (T1|-pend)        coordinate (H#1)
+        (T2|-pend)        coordinate (H#2);
+  \draw[rounded corners=2pt] (T1) -- (T1|-ptop) -- (T2|-pbot) -- (H#2);
+  \draw[rounded corners=2pt] (T2) -- (T2|-ptop) -- (T1|-pbot) -- (H#1);
+}
+
+\newcommand{\arxandxor}[3]{
+  \draw (here-|B#1) coordinate[tee] (t1);
+  \draw ($(here-|B#2) + (0, -0.4)$) coordinate[tee] (t2);
+  \draw ($(here-|B#3) + (0, -0.2)$) coordinate[xor] (t3);
+  \draw[] ($(here-|B#2) + (0.5, -0.2)$)  node[andalt] (s) {$$};
+  \draw[->,rounded corners=2pt] (t1) -| (s);
+  \draw[->,rounded corners=2pt]  (t2) -| (s);
+  \draw[-] (B#2) -- (t2);
+  \draw[->] (s) -- (t3);
+  \draw (t2.south) coordinate (H#2);
+}
+\newcommand{\arxmidrot}[4][\lll]{
+  \draw (here-|B#2) coordinate[tee] (t);
+  \draw (here-|B#3) coordinate[xor] (s);
+
+  \draw[->] (t) -- node[rot,fill=white] (r) {$#1 #4$}  (s);
+  \draw (r.south) coordinate (M#2);
+}
+
+\newcommand{\arxf}{
+  \draw (here-|B0) ++(0, 0.1) coordinate (r);
+  \draw (here-|B1) ++(0, 0.1) coordinate (r1);
+  \draw[rounded corners=0.1cm] ($(r)+(-0.1,0)$) rectangle node {$F$} ($(r1)+(0.1,-0.3)$) coordinate (r2);
+  \draw[->] (H0) -- (r);
+  \draw[->] (H1) -- (r1);
+  \draw ($(r) + (0, -0.3)$) coordinate (H0);
+  \draw($(r1) + (0, -0.3)$) coordinate (H1);
+}
+
+\newcommand{\arxinitcore}[2][r]{
+  \pgfmathsetmacro{\B}{int(#2-1)}
+  \draw (1,0) coordinate (here);
+  \foreach \i in {0,...,\B} {
+    \draw (\i,0) coordinate (B\i) coordinate (H\i) node[above] {$x_{\i}$};
+  }
+}
+\newcommand{\arxfinicore}[1][r+1]{
+  \foreach \i in {0,...,\B} {
+    \draw[->] (H\i) -- (H\i|-here) node[below] {$y_{\i}$};
+  }
+}
+
+
+\endinput

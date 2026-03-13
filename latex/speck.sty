@@ -1,0 +1,167 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{speck}[2024/11/20 Utils for illustrating the SPECK ciphers]
+% TODO this is a temporary messy draft file, please clean up before reusing. overlaps with simon.sty.
+
+%%% PREREQUISITES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\RequirePackage{amsmath,amssymb}
+\RequirePackage{tikz}
+\RequirePackage{arx} % TODO
+\usetikzlibrary{calc,cipher}
+
+%%% GENERAL CRYPTO UTILS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\providecommand{\cipher}[1]{\textsf{#1}}
+
+
+%%% SPECK UTILS & OPTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\SPECK}[1][]{\if\relax\detokenize{#1}\relax\cipher{SPECK}\else\mbox{\cipher{SPECK}-#1}\fi\xspace}
+
+\tikzset{%
+  simonstateopts/.style={scale=.15},
+  simonlabelstyle/.style={font=\scriptsize,inner sep=1pt,above},
+}
+
+\newif\ifsimonshowkey\simonshowkeytrue
+\newif\ifsimoncompact\simoncompacttrue
+
+
+%%% SPECK ROUND FUNCTIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\SimonHalfState}[1]{%
+  \tikz[simonstateopts]{
+    \foreach \s in {0,...,\lastB} {
+      \draw (\s+.5,-.5) coordinate (s\s);
+      \draw (\lastB-\s+.5,-.5) coordinate (b\s); % big endian, b0 = LSB = rightmost
+    }
+    \draw (8,-.5) coordinate (label);
+    #1
+    \draw (0,0) rectangle (\sizeB,-1);
+    \foreach \x in {1,...,\lastB} {
+      \draw[raster] (\x,0) -- ++(0,-1);
+    }
+  }%
+}
+
+
+% TODO only if arx.sty is not loaded
+
+%\tikzset{arx/.style={op/.append style={minimum size=2ex},
+%                     rot/.append style={font=\footnotesize}}
+%}
+%
+%\providecommand{\arxfini}[1][i+1]{
+%  \foreach \i in {0,...,\B} {
+%    \draw[->] (H\i) -- (H\i|-here) node[below] {$X_{\i}^{#1}$};
+%  }
+%}
+%
+%\providecommand{\arxstep}{\draw (here) ++(0,-.5) coordinate (here);}
+\providecommand{\arxmedistep}{\draw (here) ++(0,-.375) coordinate (here);}
+\providecommand{\arxministep}{\draw (here) ++(0,-.25) coordinate (here);}
+%
+%\providecommand{\arxadd}[2]{
+%  \draw (here-|B#1) coordinate[tee] (t)
+%        (here-|B#2) coordinate[sum] (s);
+%  \draw[->] (t) -- (s);
+%  \draw[-]  (H#1) -- (t) coordinate (H#1);
+%  \draw[->] (H#2) -- (s);
+%  \draw (s.south) coordinate (H#2);
+%}
+%
+%\providecommand{\arxrot}[3][\lll]{
+%  \draw (here-|B#2) node[rot] (r) {$#1 #3$};
+%  \draw[->] (H#2) -- (r);
+%  \draw (r.south) coordinate (H#2);
+%}
+%
+%\providecommand{\arxxor}[2]{
+%  \draw (here-|B#1) coordinate[tee] (t)
+%        (here-|B#2) coordinate[xor] (s);
+%  \draw[->] (t) -- (s);
+%  \draw[-]  (H#1) -- (t) coordinate (H#1);
+%  \draw[->] (H#2) -- (s);
+%  \draw (s.south) coordinate (H#2);
+%}
+%
+%\providecommand{\arxkey}[3][-.5]{
+%  \draw (here-|B#2) coordinate[xor]     (s)
+%      ++(#1,0)      node[inner sep=1pt] (k) {#3};
+%  \draw[->] (k) -- (s);
+%  \draw[->] (H#2) -- (s);
+%  \draw (s.south) coordinate (H#2);
+%}
+
+
+\tikzset{%
+  speckstateopts/.style={simonstateopts},
+  specklabelstyle/.style={simonlabelstyle},
+}
+
+\newif\ifarxlink
+
+\newcommand{\SpeckHalfState}[1]{\SimonHalfState{#1}}
+
+\newcommand{\SpeckInit}[1][32]{
+  \pgfmathsetmacro{\sizeB}{int(div(#1,2))}
+  \pgfmathsetmacro{\lastB}{int(div(#1,2)-1)}
+  \pgfmathsetmacro{\bitdim}{0.15}
+  \ifnum#1=32
+    \pgfmathsetmacro{\rotA}{7}
+    \pgfmathsetmacro{\rotB}{2}
+  \else
+    \pgfmathsetmacro{\rotA}{8}
+    \pgfmathsetmacro{\rotB}{3}
+  \fi 
+
+  \pgfmathsetmacro{\halfword}{div(\sizeB,2)*\bitdim}
+  \pgfmathsetmacro{\wordvsep}{.45}
+
+  % adapted from arxinit
+  \coordinate (here);
+  \draw (0,0)             coordinate (B0) coordinate (H0) %node[above]  {$X_{0}^{#1}$};
+      ++(2*\halfword+1.5,0) coordinate (B1) coordinate (H1); %node[above]  {$X_{0}^{#1}$};
+  \arxlinkfalse
+}
+
+
+\newcommand{\arxword}[3][]{%
+  \draw (B#2|-here) node[state,label=#1] (S#2) {\SimonHalfState{#3}};
+  \ifarxlink
+  \draw[->] (H#2) -- (S#2);
+  \fi
+  \draw (S#2.south) coordinate (H#2);
+}
+
+
+\newcommand{\SpeckLeft}[1]{$L_{#1}$}
+\newcommand{\SpeckRight}[1]{$R_{#1}$}
+\newcommand{\SpeckKey}[1]{$k^{#1}$}
+
+\newcommand{\SpeckRound}[5]{
+  \pgfmathsetmacro{\inputidx}{int(#1-1)}
+  \arxword[right:\SpeckLeft{\inputidx}]{0}{#2}
+  \arxword[left:\SpeckRight{\inputidx}]{1}{#3}
+  \arxlinktrue
+  \arxstep
+  \arxrot[\ggg]{0}{\rotA}
+  \arxministep
+  \arxword{0}{#4}
+  \arxmedistep
+  \arxadd{1}{0}
+  \arxstep
+  \arxrot[\lll]{1}{\rotB}
+  \arxkey[-.75]{0}{\SpeckKey{\inputidx}}
+  \arxministep
+  \arxword{1}{#5}
+  \arxmedistep
+  \arxxor{0}{1}
+  \arxmedistep
+}
+
+\newcommand{\SpeckFinal}[3]{
+  \pgfmathsetmacro{\inputidx}{int(#1-1)}
+  %\arxstep
+  \arxword[right:\SpeckLeft{\inputidx}]{0}{#2}
+  \arxword[left:\SpeckRight{\inputidx}]{1}{#3}
+}
+
+\endinput
