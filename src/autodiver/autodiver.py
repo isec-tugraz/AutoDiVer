@@ -292,11 +292,11 @@ _ciphers_char_search: dict[str, tuple[str, str, str, bool]] = {
     "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic", False),
     "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic", True),
     "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic", True),
-    "speck32": ("autodiver.speck.speck_model", "Speck32LongKey", "Speck32Characteristic", False),
-    "speck48": ("autodiver.speck.speck_model", "Speck48LongKey", "Speck48Characteristic", False),
-    "speck64": ("autodiver.speck.speck_model", "Speck64LongKey", "Speck64Characteristic", False),
-    "speck96": ("autodiver.speck.speck_model", "Speck96LongKey", "Speck96Characteristic", False),
-    "speck128": ("autodiver.speck.speck_model", "Speck128LongKey", "Speck128Characteristic", False),
+    "speck32": ("autodiver.speck.speck_model", "Speck32LongKey", "Speck32Characteristic", True),
+    "speck48": ("autodiver.speck.speck_model", "Speck48LongKey", "Speck48Characteristic", True),
+    "speck64": ("autodiver.speck.speck_model", "Speck64LongKey", "Speck64Characteristic", True),
+    "speck96": ("autodiver.speck.speck_model", "Speck96LongKey", "Speck96Characteristic", True),
+    "speck128": ("autodiver.speck.speck_model", "Speck128LongKey", "Speck128Characteristic", True),
     "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic", False),
     "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", True),
 }
@@ -319,7 +319,7 @@ _tikzify_help = (
 @click.option("--seed", type=int, default=None)
 @click.option("--log_probability", type=int, default=None, help="the minimum probability we are searching for, expressed as log2(p)")
 @click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
-@click.option("--save", type=bool, default=False)
+@click.option("--save", type=bool, default=False, help="will save the found characteristic as a .npz file in ./found_trails")
 # add path for characteristic to be saved in?
 def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, save: bool) -> None:
     """search for a characteristic for the given cipher"""

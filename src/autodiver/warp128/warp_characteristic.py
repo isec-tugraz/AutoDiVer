@@ -46,7 +46,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
         rounds_out = model.rounds_out
         return cls(sbox_in, sbox_out, rounds_in, rounds_out, file_path=None)
 
-    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, rounds_in: npt.ArrayLike, rounds_out: npt.ArrayLike, file_path: Path|None=None):
+    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, rounds_in: npt.ArrayLike|None = None, rounds_out: npt.ArrayLike|None = None, file_path: Path|None=None):
         super().__init__(sbox_in, sbox_out, file_path)
         self.rounds_in = rounds_in
         self.rounds_out = rounds_out

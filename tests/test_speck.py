@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from autodiver.speck.speck_model import Speck32LongKey, Speck48LongKey, Speck64LongKey, Speck96LongKey, Speck128LongKey, SpeckCharacteristic
+from autodiver.speck.speck_model import Speck32LongKey, Speck48LongKey, Speck64LongKey, Speck96LongKey, Speck128LongKey, Speck32Characteristic, Speck48Characteristic, Speck64Characteristic, Speck96Characteristic, Speck128Characteristic
 from autodiver.speck.speck_util import rotr_speck, rotl_speck
 
 class SpeckLongKey():
@@ -30,17 +30,22 @@ def test_zero_char(wordsize):
     numrounds = 20
     input_diffs = np.zeros((numrounds + 1, 2), np.uint64)
 
-    char = SpeckCharacteristic(input_diffs, wordsize=wordsize, file_path=None)
+    #char = SpeckCharacteristic(input_diffs, wordsize=wordsize, file_path=None)
 
     if wordsize == 16:
+        char = Speck32Characteristic(input_diffs, wordsize=wordsize, file_path=None)
         cipher = Speck32LongKey(char)
     elif wordsize == 24:
+        char = Speck48Characteristic(input_diffs, wordsize=wordsize, file_path=None)
         cipher = Speck48LongKey(char)
     elif wordsize == 32:
+        char = Speck64Characteristic(input_diffs, wordsize=wordsize, file_path=None)
         cipher = Speck64LongKey(char)
     elif wordsize == 48:
+        char = Speck96Characteristic(input_diffs, wordsize=wordsize, file_path=None)
         cipher = Speck96LongKey(char)
     elif wordsize == 64:
+        char = Speck128Characteristic(input_diffs, wordsize=wordsize, file_path=None)
         cipher = Speck128LongKey(char)
     else:
         raise ValueError(f'wordsize {wordsize} not supported')
@@ -91,7 +96,7 @@ def test_ALLW14_char():
 
     np.set_printoptions(formatter={'int': lambda x: f'{x:04x}'})
 
-    char = SpeckCharacteristic(input_diffs, wordsize=16, file_path=None)
+    char = Speck32Characteristic(input_diffs, wordsize=16, file_path=None)
     # from IPython import embed; embed()
     cipher = Speck32LongKey(char)
 
