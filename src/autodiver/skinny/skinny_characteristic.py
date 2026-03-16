@@ -43,6 +43,7 @@ _DOCUMENT_END = r"""
 class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
     block_size = 0
     tweakeys: np.ndarray
+    sbox_count = 16 # change to (4,4)? depends
 
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
@@ -72,6 +73,12 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
             tweakeys = model.tweak
 
         return cls(sbox_in, sbox_out, tweakeys, file_path=None)
+
+    @classmethod
+    def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
+        sbox_in = sbox_out = np.zeros((num_rounds, 4, 4), dtype=np.uint8)
+        tweakeys = np.zeros((num_rounds, 3, 4, 4), dtype=np.uint8)
+        return cls(sbox_in, sbox_out, tweakeys)
 
 
     def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, tweakeys: npt.ArrayLike, **kwargs):

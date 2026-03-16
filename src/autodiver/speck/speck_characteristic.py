@@ -34,7 +34,7 @@ class SpeckCharacteristic(DifferentialCharacteristic):
     add_out: np.ndarray[Any, np.dtype[np.uint64]]
     wordsize: int
 
-    def __init__(self, round_in: np.ndarray, wordsize: int | None, file_path: Path|None):
+    def __init__(self, round_in: np.ndarray, wordsize: int | None=None, file_path: Path|None=None):
         self.rounds_from_to = None
         self.file_path = file_path
         self.round_in = round_in
@@ -62,6 +62,13 @@ class SpeckCharacteristic(DifferentialCharacteristic):
     def load_from_model(cls, model) -> DifferentialCharacteristic:
         round_in = model.round_in
         return cls(round_in=round_in, wordsize=None, file_path=None)
+
+    @classmethod
+    def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
+        input_diffs = np.zeros((num_rounds + 1, 2), np.uint64)
+
+        return cls(input_diffs)
+
 
     def truncate_rounds(self, rounds_from_to: tuple[int, int]):
         current_rounds = range(self.num_rounds)

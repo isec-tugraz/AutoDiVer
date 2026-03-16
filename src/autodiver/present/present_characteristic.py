@@ -97,6 +97,7 @@ import numpy as np
 
 class PresentCharacteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint8]] = PRESENT_DDT
+    sbox_count = 16
 
     def __init__(self, sbox_in: np.ndarray, sbox_out: np.ndarray, file_path: Path|None = None):
         if sbox_in.shape != sbox_out.shape:

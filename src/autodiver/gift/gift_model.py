@@ -29,7 +29,7 @@ class _Gift(SboxCipher):
     _round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
-        if not isinstance(char, (self.characteristic_type | DifferentialCharacteristic)):
+        if not isinstance(char, self.characteristic_type):
             raise ValueError(f'expected {self.characteristic_type}, got {type(char)}')
 
         super().__init__(char, **kwargs)

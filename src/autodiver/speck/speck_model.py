@@ -33,7 +33,7 @@ class _SpeckBase(SboxCipher):
         super().__init__(char, **kwargs)
 
 
-        if not isinstance(char, DifferentialCharacteristic) and char.wordsize != self.wordsize:
+        if char.wordsize != self.wordsize:
             raise ValueError(f'wordsize of characteristic ({char.wordsize}) does not match wordsize of cipher ({self.wordsize})')
         self.char = char
 

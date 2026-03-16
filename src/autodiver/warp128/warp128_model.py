@@ -35,7 +35,7 @@ class WARP128(SboxCipher):
     Y: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: WarpCharacteristic, **kwargs):
-        if not isinstance(char, (WarpCharacteristic, DifferentialCharacteristic)):
+        if not isinstance(char, WarpCharacteristic):
             raise ValueError('char must be of type WarpCharacteristic')
 
         super().__init__(char, **kwargs)

@@ -31,7 +31,7 @@ class Present(SboxCipher):
     round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
-        if not isinstance(char, (PresentCharacteristic | DifferentialCharacteristic)):
+        if not isinstance(char, PresentCharacteristic):
             raise ValueError('char must be a DifferentialCharacteristic or PresentCharacteristic')
 
         super().__init__(char, **kwargs)

@@ -20,8 +20,9 @@ log = logging.getLogger(__name__)
 
 class Midori128Characteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+    sbox_count = 32
 
-    def __init__(self, sbox_in: np.ndarray, sbox_out: np.ndarray, file_path: Path|None):
+    def __init__(self, sbox_in: np.ndarray, sbox_out: np.ndarray, file_path: Path|None=None):
         assert sbox_in.dtype == sbox_out.dtype == np.uint8
         assert sbox_in.shape == sbox_out.shape
         assert sbox_in.shape[-2:] == sbox_out.shape[-2:] == (4, 4)
@@ -84,6 +85,13 @@ class Midori128Characteristic(DifferentialCharacteristic):
 
         return cls(sbox_in_eightbit, sbox_out_eightbit, file_path=None)
 
+    @classmethod
+    def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
+        # sbox_count = Cipher.sbox_count
+        sbox_in = np.zeros((num_rounds, 4, 4), dtype=np.uint8)
+        sbox_out = np.zeros((num_rounds, 4, 4), dtype=np.uint8)
+        return cls(sbox_in, sbox_out)
+
 class _Midori128Base(SboxCipher):
     cipher_name = "MIDORI128"
     sbox = np.array([int(x, 16) for x in "1053e2f7da9bc846"], dtype=np.uint8)
@@ -99,7 +107,7 @@ class _Midori128Base(SboxCipher):
     round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: Midori128Characteristic, **kwargs):
-        if not isinstance(char, Midori128Characteristic | DifferentialCharacteristic):
+        if not isinstance(char, Midori128Characteristic):
             raise ValueError(f'char must be an instance of Midori128Characteristic | DifferentialCharacteristic, not {type(char)}')
 
         super().__init__(char, **kwargs)

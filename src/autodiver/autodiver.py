@@ -339,18 +339,16 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
     import importlib
     module = importlib.import_module(module_name)
     Cipher: type[SboxCipher] = getattr(module, cipher_type_name)
+    Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
 
-    sbox_count = Cipher.sbox_count
-    sbox_in = np.zeros((num_rounds, sbox_count))
-    sbox_out = np.zeros((num_rounds, sbox_count))
 
-    characteristic = DifferentialCharacteristic(sbox_in, sbox_out) # pro forma characteristic; could be used to indicate active sboxes if we wanted
+    characteristic = Characteristic.load_empty_characteristic(num_rounds) # pro forma characteristic; could be used to indicate active sboxes if we wanted
+
 
     cipher = Cipher(characteristic, search_char=True, rounding_mode=RoundMode(rounding_mode), cost_boundary=log_probability)
 
     try:
         model = cipher.solve(seed=seed)
-        Characteristic: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
 
         characteristic = Characteristic.load_from_model(model) # actual recovered characteristic
         print(f"probability: {characteristic.log2_ddt_probability()}")

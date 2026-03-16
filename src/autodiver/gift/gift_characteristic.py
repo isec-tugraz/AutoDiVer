@@ -29,7 +29,7 @@ _DOCUMENT_END = r"""
 class _GiftCharacteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint8]] = GIFT_DDT
 
-    num_sboxes: int
+    sbox_count: int
     block_size: int
     permutation: np.ndarray
 
@@ -43,8 +43,8 @@ class _GiftCharacteristic(DifferentialCharacteristic):
         if sbox_in.shape != sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
-        if sbox_in.shape[1] != cls.num_sboxes:
-            raise ValueError(f'sbox_in.shape[1] must be {cls.num_sboxes}')
+        if sbox_in.shape[1] != cls.sbox_count:
+            raise ValueError(f'sbox_in.shape[1] must be {cls.sbox_count}')
 
         num_rounds = sbox_in.shape[0]
 
@@ -88,7 +88,7 @@ class _GiftCharacteristic(DifferentialCharacteristic):
             active_sboxes, = np.nonzero(self.sbox_in[rnd])
             active_input_bits = []
             active_output_bits = []
-            for nibble_idx in range(self.num_sboxes):
+            for nibble_idx in range(self.sbox_count):
                 for bit_idx in range(4):
                     if self.sbox_in[rnd, nibble_idx] & (1 << bit_idx):
                         active_input_bits.append(4 * nibble_idx + bit_idx)
@@ -114,11 +114,11 @@ class _GiftCharacteristic(DifferentialCharacteristic):
 
 
 class Gift64Characteristic(_GiftCharacteristic):
-    num_sboxes = 16
+    sbox_count = 16
     block_size = 64
     permutation = P64
 
 class Gift128Characteristic(_GiftCharacteristic):
-    num_sboxes = 32
+    sbox_count = 32
     block_size = 128
     permutation = P128

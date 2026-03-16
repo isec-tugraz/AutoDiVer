@@ -38,6 +38,7 @@ def ascon_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[
 
 class AsconCharacteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT
+    sbox_count = 64
 
     def __init__(self, sbox_in: np.ndarray[Any, np.dtype[np.uint64]], sbox_out: np.ndarray[Any, np.dtype[np.uint64]], **kwargs):
         # do reverse bit slicing
@@ -82,6 +83,12 @@ class AsconCharacteristic(DifferentialCharacteristic):
             raise ValueError('sbox_in and sbox_out must have the same shape')
 
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
+
+    @classmethod
+    def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
+        sbox_in = np.zeros((num_rounds, 5), dtype=np.uint64)
+        sbox_out = np.zeros((num_rounds, 5), dtype=np.uint64)
+        return cls(sbox_in, sbox_out)
 
 class Ascon(SboxCipher):
     cipher_name = "Ascon"

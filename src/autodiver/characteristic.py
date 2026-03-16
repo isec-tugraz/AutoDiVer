@@ -23,6 +23,8 @@ class DifferentialCharacteristic():
 
     ddt: np.ndarray | None = None
     rounds_from_to: tuple[int, int]|None
+    sbox_count: int
+
 
     @classmethod
     def load(cls, characteristic_path: Path) -> Self:
@@ -62,6 +64,13 @@ class DifferentialCharacteristic():
         sbox_in = model.sbox_in
         sbox_out = model.sbox_out
         return cls(sbox_in, sbox_out, file_path=None)
+
+    @classmethod
+    def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
+        # sbox_count = Cipher.sbox_count
+        sbox_in = np.zeros((num_rounds, cls.sbox_count))
+        sbox_out = np.zeros((num_rounds, cls.sbox_count))
+        return cls(sbox_in, sbox_out)
 
     def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, file_path: Path|None=None):
         if sbox_in.shape[0] == sbox_out.shape[0] + 1:

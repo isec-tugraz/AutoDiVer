@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 
 class RectangleCharacteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+    sbox_count = 16
 
     @classmethod
     def load(cls, characteristic_path: Path) -> Self:
@@ -40,7 +41,7 @@ class _RectangleBase(SboxCipher):
     r_key: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: RectangleCharacteristic, **kwargs):
-        if not isinstance(char, RectangleCharacteristic | DifferentialCharacteristic):
+        if not isinstance(char, RectangleCharacteristic):
             raise ValueError('char must be of type RectangleCharacteristic')
 
         super().__init__(char, **kwargs)

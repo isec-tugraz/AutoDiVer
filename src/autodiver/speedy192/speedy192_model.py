@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-model the solutions of a differential characteristic for GIFT64 and count them.
+model the solutions of a differential characteristic for Speedy192 and count them.
 """
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 
 class Speedy192Characteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+    sbox_count = 32
 
     def verify_linear_layer(self):
         # verify even rounds (ShiftColumns)
@@ -77,6 +78,13 @@ class Speedy192Characteristic(DifferentialCharacteristic):
         res.verify_linear_layer()
         return res
 
+    @classmethod
+    def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
+        # sbox_count = Cipher.sbox_count
+        sbox_in = np.zeros((num_rounds*2, cls.sbox_count))
+        sbox_out = np.zeros((num_rounds*2, cls.sbox_count))
+        return cls(sbox_in, sbox_out)
+
 class Speedy192(SboxCipher):
     cipher_name = "SPEEDY192"
     sbox = SBOX.copy()
@@ -92,11 +100,11 @@ class Speedy192(SboxCipher):
 
     def __init__(self, char: Speedy192Characteristic, **kwargs):
         if not isinstance(char, Speedy192Characteristic):
-            raise ValueError('char must be of type Speedy192Characteristic')
+            raise ValueError('char must be of type Speedy192Characteristic or DifferentialCharacteristic')
 
         super().__init__(char, **kwargs)
         self.char = char
-        self.num_rounds = char.num_rounds # this is actually number of sboxes
+        self.num_rounds = char.num_rounds # this is actually number of sbox applications
         assert char.num_rounds%2 == 0 #nimber of sbox layers should be even
         self.num_rounds_full = char.num_rounds//2
         assert self.char.sbox_in.shape == self.char.sbox_out.shape
@@ -105,15 +113,25 @@ class Speedy192(SboxCipher):
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
         self._create_vars()
-        self._key_schedule()
-        self._model_sboxes()
         self._model_sc()  #ShiftColumn
+
+        if self.search_char:
+            self._model_ddt()
+        else:
+            self._model_sboxes()
+            self._key_schedule()
 
         self._model_add_key()
         self._model_linear_layer()
 
     def _create_vars(self):
-        self.add_index_array('key', (1, self.sbox_count, self.sbox_bits))
+        if self.search_char:
+            self.add_index_array('key', (0,))
+            self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
+
+        else:
+            self.add_index_array('key', (1, self.sbox_count, self.sbox_bits))
+
         self.add_index_array('sbox_in', (self.num_rounds, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out',(self.num_rounds, self.sbox_count, self.sbox_bits))
         self.add_index_array('mc_out', (self.num_rounds_full - 1, self.sbox_count, self.sbox_bits))
@@ -160,7 +178,10 @@ class Speedy192(SboxCipher):
     def _model_add_key(self):
         for r in range(self.num_rounds_full -1):
             #No need to model AddKey for first and last round
-            self.cnf += self._addKey(self.mc_out[r], self.sbox_in[2*(r+1)], self._round_keys[r], RC[r])
+            if self.search_char:
+                self.cnf += XorCNF.create_xor(self.mc_out[r].flatten(), self.sbox_in[2*(r+1)].flatten())
+            else:
+                self.cnf += self._addKey(self.mc_out[r], self.sbox_in[2*(r+1)], self._round_keys[r], RC[r])
 
     @staticmethod
     def model_mix_cols(A, B):

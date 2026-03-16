@@ -25,6 +25,8 @@ DDT = get_ddt(SBOX)
 
 class Pyjamask96Characteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT
+    sbox_count = 32
+
 
     def __init__(self, sbox_in: np.ndarray[Any, np.dtype[np.uint32]], sbox_out: np.ndarray[Any, np.dtype[np.uint32]], **kwargs):
         # do reverse bit slicing
@@ -73,12 +75,16 @@ class Pyjamask96Characteristic(DifferentialCharacteristic):
 
     @classmethod
     def load_from_model(cls, model) -> Pyjamask96Characteristic:
-        print(model.sbox_in)
-        print(model.sbox_out)
-
         sbox_in = model.sbox_in[:-1]
         sbox_out = model.sbox_out
 
+        return cls(sbox_in, sbox_out)
+
+    @classmethod
+    def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
+        # sbox_count = Cipher.sbox_count
+        sbox_in = np.zeros((num_rounds, 3), dtype=np.uint32)
+        sbox_out = np.zeros((num_rounds, 3), dtype=np.uint32)
         return cls(sbox_in, sbox_out)
 
 def circulant(vector: list[int]) -> np.ndarray:

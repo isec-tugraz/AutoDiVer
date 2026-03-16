@@ -54,6 +54,7 @@ def matrix_as_uint64(matrix: np.ndarray) -> int:
 
 class Midori64Characteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+    sbox_count = 16
 
     @classmethod
     def load(cls, characteristic_path: Path) -> Self:
@@ -84,7 +85,7 @@ class _Midori64Base(SboxCipher):
     mc_out: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
-        if not isinstance(char, Midori64Characteristic | DifferentialCharacteristic):
+        if not isinstance(char, Midori64Characteristic):
             raise ValueError('char must be of type Midori64Characteristic / DifferentialCharacteristic')
         super().__init__(char, **kwargs)
         self.char = char
