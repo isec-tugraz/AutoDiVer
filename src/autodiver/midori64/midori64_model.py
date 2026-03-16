@@ -86,7 +86,7 @@ class _Midori64Base(SboxCipher):
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         if not isinstance(char, Midori64Characteristic):
-            raise ValueError('char must be of type Midori64Characteristic / DifferentialCharacteristic')
+            raise ValueError('char must be of type Midori64Characteristic')
         super().__init__(char, **kwargs)
         self.char = char
         self.num_rounds = char.num_rounds

@@ -108,7 +108,7 @@ class _Midori128Base(SboxCipher):
 
     def __init__(self, char: Midori128Characteristic, **kwargs):
         if not isinstance(char, Midori128Characteristic):
-            raise ValueError(f'char must be an instance of Midori128Characteristic | DifferentialCharacteristic, not {type(char)}')
+            raise ValueError(f'char must be an instance of Midori128Characteristic, not {type(char)}')
 
         super().__init__(char, **kwargs)
         self.char = char

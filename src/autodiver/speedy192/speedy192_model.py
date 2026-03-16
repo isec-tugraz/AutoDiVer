@@ -100,7 +100,7 @@ class Speedy192(SboxCipher):
 
     def __init__(self, char: Speedy192Characteristic, **kwargs):
         if not isinstance(char, Speedy192Characteristic):
-            raise ValueError('char must be of type Speedy192Characteristic or DifferentialCharacteristic')
+            raise ValueError('char must be of type Speedy192Characteristic')
 
         super().__init__(char, **kwargs)
         self.char = char

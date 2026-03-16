@@ -32,7 +32,7 @@ class Present(SboxCipher):
 
     def __init__(self, char: DifferentialCharacteristic, **kwargs):
         if not isinstance(char, PresentCharacteristic):
-            raise ValueError('char must be a DifferentialCharacteristic or PresentCharacteristic')
+            raise ValueError('char must be a PresentCharacteristic')
 
         super().__init__(char, **kwargs)
         self.char = char
