@@ -29,7 +29,7 @@ from .util import IndexSet, Model, fmt_log2
 from .sat_util import count_solutions, lut_to_cnf, xor_cnf_as_cryptominisat_solver
 from .characteristic import DifferentialCharacteristic
 from .autodiver_types import ModelType, UnsatException, RoundMode
-from pysat.card import CardEnc, IDPool
+from pysat.card import CardEnc, IDPool, EncType
 if TYPE_CHECKING:
     from .gf2_util import AffineSpace
 
@@ -106,9 +106,9 @@ class SboxCipher(IndexSet):
     num_bits_ddt_weights: int
     ddt_cnf: CNF # always the same - only compute once
     rounding_mode: RoundMode # only used in the case of searching for differential characteristics
-    cost_boundary: int | None
+    log_prob: int | None
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, cost_boundary: int | None = None):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, log_prob: int | None = None):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -125,7 +125,7 @@ class SboxCipher(IndexSet):
         self._learned_clauses = {}
         self.search_char = search_char
         self.rounding_mode = rounding_mode
-        self.cost_boundary = cost_boundary
+        self.log_prob = log_prob
         self._setup_ddt()
 
     def _setup_ddt(self):
@@ -356,7 +356,7 @@ class SboxCipher(IndexSet):
 
     def _model_cardinality_encoding(self, bound: int) -> CNF:
         vpool = IDPool(start_from=self.numvars + 1)
-        cardinality_encoding = CardEnc.atmost(lits=self.ddt_weights.flatten().tolist(), vpool=vpool, bound=bound).clauses
+        cardinality_encoding = CardEnc.atmost(lits=self.ddt_weights.flatten().tolist(), vpool=vpool, bound=bound, encoding=EncType.kmtotalizer).clauses
 
         cardinality_encoding_cnf = CNF()
 
@@ -402,46 +402,18 @@ class SboxCipher(IndexSet):
         result[1:] = model[1:] # model[0] is always None
         return result
 
-    def solve_for_boundary(self, args, cost_boundary: int, log_result: bool):
-        cardinality_cnf = self._model_cardinality_encoding(cost_boundary)
+    def solve_for_boundary(self, args, log_prob: int, log_result: bool):
+        cardinality_cnf = self._model_cardinality_encoding(log_prob)
         cnf = self.cnf.copy()
         cnf += cardinality_cnf
         if log_result:
-            log.info(f'solving with {args} #Cost-Boundary: {cost_boundary}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
-        is_sat, model = cnf.solve_dimacs(args, stop_event)
-        return cost_boundary, is_sat, model
+            log.info(f'solving with {args} #log-prob: {log_prob}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
+        is_sat, model = cnf.solve_dimacs(args, stop_event=stop_event)
+        return log_prob, is_sat, model
 
-    def binary_characteristic_search_singlethreaded(self, args: list, log_result: bool) -> np.ndarray:
-        lowest_cost = self.num_rounds if self.cost_boundary is None else self.cost_boundary
-        highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
-
-        search_space = np.uint64(highest_cost - lowest_cost)
-        search_space_pow_2 = np.uint64(1)
-        while search_space_pow_2 < search_space:
-            search_space_pow_2 = search_space_pow_2 << 1
-            print(hex(search_space_pow_2))
-        print(f"search_space: {search_space}, pow of 2: {search_space_pow_2}")
-        highest_cost = lowest_cost + search_space_pow_2
-
-        best_model = None
-
-        while True:
-            current_cost = np.uint64((lowest_cost + highest_cost) / 2)
-            print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}, current_cost: {current_cost}")
-            cost_boundary, is_sat, result = self.solve_for_boundary(args, current_cost, log_result)
-            if is_sat:
-                highest_cost = current_cost
-                best_model = result
-            else:
-                lowest_cost = current_cost
-
-            if highest_cost == lowest_cost + 1:
-                break
-
-        return best_model
-
+    # most likely overengineered
     def binary_characteristic_search_multithreaded(self, args: list, log_result: bool) -> np.ndarray:
-        lowest_cost = self.num_rounds if self.cost_boundary is None else self.cost_boundary
+        lowest_cost = self.num_rounds if self.log_prob is None else self.log_prob
         highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
 
         search_space = np.uint64(highest_cost - lowest_cost)
@@ -459,14 +431,14 @@ class SboxCipher(IndexSet):
                 active = set(executor.submit(self.solve_for_boundary, args, int(i), log_result) for i in np.linspace(lowest_cost, highest_cost, 8)) # 8 threads for now
 
                 for future in as_completed(active):
-                    cost_boundary, is_sat, result = future.result()
-                    print(cost_boundary, is_sat)
+                    log_prob, is_sat, result = future.result()
+                    print(log_prob, is_sat)
 
-                    if is_sat == False and cost_boundary > lowest_cost:
-                        lowest_cost = cost_boundary
+                    if is_sat == False and log_prob > lowest_cost:
+                        lowest_cost = log_prob
 
-                    if is_sat and cost_boundary < highest_cost:
-                        highest_cost = cost_boundary
+                    if is_sat and log_prob < highest_cost:
+                        highest_cost = log_prob
                         best_model = result
 
                     print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}")
@@ -479,29 +451,30 @@ class SboxCipher(IndexSet):
 
         return best_model
 
+    # bad performance overall....
     def upwards_characteristic_search_multithreaded(self, args: list) -> np.ndarray:
 
         with ThreadPoolExecutor(max_workers=_available_cpus()) as executor:  # will wait for all running tasks to complete before exiting this block
-            cost_boundary = self.num_rounds if self.cost_boundary is None else self.cost_boundary # lower bound that is necessary
+            log_prob = self.num_rounds if self.log_prob is None else self.log_prob # lower bound that is necessary
             highest_unsat = 0
             lowest_sat = 0xFFFFFFFF
-            upper_bound = cost_boundary + 1 #_available_cpus() - 1
+            upper_bound = log_prob + 1 #_available_cpus() - 1
             best_model = None
             loop_condition = True
 
-            active = set(executor.submit(self.solve_for_boundary, args,i) for i in range(cost_boundary, upper_bound))
+            active = set(executor.submit(self.solve_for_boundary, args,i) for i in range(log_prob, upper_bound))
 
             while loop_condition:
                 done, active = wait(active, return_when=FIRST_COMPLETED)
 
                 for future in done:
-                    cost_boundary, is_sat, result = future.result()
-                    print(cost_boundary, is_sat)
-                    if is_sat == False and cost_boundary > highest_unsat:
-                        highest_unsat = cost_boundary
+                    log_prob, is_sat, result = future.result()
+                    print(log_prob, is_sat)
+                    if is_sat == False and log_prob > highest_unsat:
+                        highest_unsat = log_prob
 
-                    if is_sat and cost_boundary < lowest_sat:
-                        lowest_sat = cost_boundary
+                    if is_sat and log_prob < lowest_sat:
+                        lowest_sat = log_prob
                         best_model = result
 
                     if lowest_sat == highest_unsat + 1:
@@ -515,23 +488,51 @@ class SboxCipher(IndexSet):
             # pdb.set_trace()
         return best_model
 
+    def binary_characteristic_search_singlethreaded(self, args: list, log_result: bool) -> np.ndarray:
+        lowest_cost = self.num_rounds if self.log_prob is None else self.log_prob
+        highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
+
+        search_space = np.uint64(highest_cost - lowest_cost)
+        search_space_pow_2 = np.uint64(1)
+        while search_space_pow_2 < search_space:
+            search_space_pow_2 = search_space_pow_2 << 1
+            print(hex(search_space_pow_2))
+        print(f"search_space: {search_space}, pow of 2: {search_space_pow_2}")
+        highest_cost = lowest_cost + search_space_pow_2
+
+        best_model = None
+
+        while True:
+            current_cost = np.uint64((lowest_cost + highest_cost) / 2)
+            print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}, current_cost: {current_cost}")
+            log_prob, is_sat, result = self.solve_for_boundary(args, current_cost, log_result)
+            if is_sat:
+                highest_cost = current_cost
+                best_model = result
+            else:
+                lowest_cost = current_cost
+
+            if highest_cost == lowest_cost + 1:
+                break
+
+        return best_model
 
     def upwards_characteristic_search_singlethreaded(self, args: list, log_result: bool) -> np.ndarray:
-        cost_boundary = self.num_rounds if self.cost_boundary is None else self.cost_boundary  # lower bound that is definitely necessary
+        log_prob = self.num_rounds if self.log_prob is None else self.log_prob  # lower bound that is definitely necessary
         while True:
 
-            self._model_cardinality_encoding(cost_boundary)
-            cnf = self.cnf + self._model_cardinality_encoding(cost_boundary)
+            self._model_cardinality_encoding(log_prob)
+            cnf = self.cnf + self._model_cardinality_encoding(log_prob)
 
             if log_result:
                 log.info(
-                    f'solving with {args} #Cost-Boundary: {cost_boundary}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
+                    f'solving with {args} #Cost-Boundary: {log_prob}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')
             is_sat, model = cnf.solve_dimacs(args)
 
             if is_sat:
                 break
 
-            cost_boundary += 1
+            log_prob += 1
 
         return model
 
@@ -542,8 +543,10 @@ class SboxCipher(IndexSet):
         seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
 
-        best_model = self.upwards_characteristic_search_singlethreaded(args, log_result) # todo: probably make this choosable with a cli flag
-        #best_model = self.binary_characteristic_search_singlethreaded(args, log_result)
+        # TODO: probably change step size to + 2 for all ciphers that only have powers of 2 in DDT
+        # best_model = self.upwards_characteristic_search_singlethreaded(args, log_result) # todo: probably make this choosable with a cli flag
+        # best_model = self.binary_characteristic_search_singlethreaded(args, log_result)
+        best_model = self.binary_characteristic_search_multithreaded(args, log_result)
 
         assert best_model is not None
 
