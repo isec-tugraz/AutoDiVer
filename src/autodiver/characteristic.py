@@ -59,6 +59,9 @@ class DifferentialCharacteristic():
             sbox_out = f['sbox_out']
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
 
+    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, search_time: float|None=None):
+        np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, search_time=search_time)
+
     @classmethod
     def load_from_model(cls, model):
         sbox_in = model.sbox_in

@@ -16,10 +16,25 @@ from .gift.gift_model import Gift64Characteristic, Gift128Characteristic
 
 
 def main():
-    ciphers: dict[str, type[DifferentialCharacteristic]] = {
-        "gift64": Gift64Characteristic,
-        "gift128": Gift128Characteristic,
-        "present80": PresentCharacteristic
+    ciphers: dict[str, tuple[str, str, str, bool]] = {
+        "ascon": ("autodiver.ascon.ascon_model", "Ascon", "AsconCharacteristic", False),
+        "gift64": ("autodiver.gift.gift_model", "Gift64", "Gift64Characteristic", True),
+        "gift128": ("autodiver.gift.gift_model", "Gift128", "Gift128Characteristic", True),
+        "midori64": ("autodiver.midori64.midori64_model", "Midori64", "Midori64Characteristic", False),
+        "midori128": ("autodiver.midori128.midori128_model", "Midori128", "Midori128Characteristic", False),
+        "present80": ("autodiver.present.present_model", "Present80", "PresentCharacteristic", True),
+        "pyjamask96": ("autodiver.pyjamask.pyjamask96_model", "Pyjamask_with_Keyschedule", "Pyjamask96Characteristic",
+                       False),
+        "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic", False),
+        "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic", True),
+        "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic", True),
+        "speck32": ("autodiver.speck.speck_model", "Speck32LongKey", "Speck32Characteristic", True),
+        "speck48": ("autodiver.speck.speck_model", "Speck48LongKey", "Speck48Characteristic", True),
+        "speck64": ("autodiver.speck.speck_model", "Speck64LongKey", "Speck64Characteristic", True),
+        "speck96": ("autodiver.speck.speck_model", "Speck96LongKey", "Speck96Characteristic", True),
+        "speck128": ("autodiver.speck.speck_model", "Speck128LongKey", "Speck128Characteristic", True),
+        "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic", False),
+        "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", True),
     }
 
     parser = argparse.ArgumentParser(description=__doc__)
@@ -31,7 +46,13 @@ def main():
 
     args = parser.parse_args()
 
-    CharacteristicType = ciphers[args.cipher]
+    module_name, cipher_type_name, characteristic_type_name, _ = ciphers[args.cipher]
+
+    import importlib
+    module = importlib.import_module(module_name)
+    CharacteristicType: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
+
+
     char = CharacteristicType.load(args.characteristic)
     # tex_file = args.characteristic.with_suffix(".tex")
     tex_file = Path.cwd() / args.characteristic.with_suffix(".tex").name

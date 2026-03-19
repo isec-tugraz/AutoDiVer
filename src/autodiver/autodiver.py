@@ -11,11 +11,10 @@ import sys
 from typing import Optional, Literal, TYPE_CHECKING
 import numpy as np
 from .util import create_latex, unique_path
-
 import click
 
 from autodiver import version
-from autodiver.autodiver_types import ModelType, UnsatException, RoundMode
+from autodiver.autodiver_types import ModelType, UnsatException, RoundMode, SearchMode
 
 if TYPE_CHECKING:
     from autodiver.cipher_model import SboxCipher
@@ -319,11 +318,15 @@ _tikzify_help = (
 @click.option("--seed", type=int, default=None)
 @click.option("--log_probability", type=int, default=None, help="the minimum probability we are searching for, expressed as log2(p)")
 @click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
-@click.option("--save", type=bool, default=False, help="will save the found characteristic as a .npz file in ./found_trails")
-# add path for characteristic to be saved in?
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, save: bool) -> None:
+@click.option("--searching_mode",type=click.Choice([m.value for m in SearchMode]), default=SearchMode.UPWARDS.value)
+@click.option("--save", is_flag=True, help="will save the found characteristic as a .npz file in ./found_trails")
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool) -> None:
+    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save)
+
+
+def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool) -> int:
     """search for a characteristic for the given cipher"""
-    setup_logging('search_char.jsonl')
+    setup_logging('search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
 
     git_cmd = shutil.which('git')
     git_commit = git_cmd and sp.check_output([git_cmd, 'rev-parse', 'HEAD']).decode().strip()
@@ -345,26 +348,42 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
     characteristic = Characteristic.load_empty_characteristic(num_rounds) # pro forma characteristic; could be used to indicate active sboxes if we wanted
 
 
-    cipher = Cipher(characteristic, search_char=True, rounding_mode=RoundMode(rounding_mode), log_prob=log_probability)
+    cipher = Cipher(characteristic, search_char=True, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode(searching_mode), log_prob=log_probability)
 
     try:
         model = cipher.solve(seed=seed)
 
         characteristic = Characteristic.load_from_model(model) # actual recovered characteristic
-        print(f"probability: {characteristic.log2_ddt_probability()}")
+        log_probability = characteristic.log2_ddt_probability()
+        print(f"probability: {log_probability}")
         # print(model.sbox_in)
         # print(model.sbox_out)
 
         if save: # todo: per default yes in the end; probability in filename
-            char_path = Path(Path.cwd() / "found_trails" / (cipher_name + "_r" + str(num_rounds))).with_suffix('.npz')
-            np.savez(unique_path(char_path), sbox_in=characteristic.sbox_in, sbox_out=characteristic.sbox_out)
+            directory = Path.cwd() / "found_trails" / cipher_name
+            directory.mkdir(parents=True, exist_ok=True)
+            char_path = Path(Path.cwd() / "found_trails" / cipher_name /(cipher_name + "_r" + str(num_rounds))).with_suffix('.npz')
+            characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search)
 
         if tikzify:
             create_latex(characteristic)
 
+        return -log_probability
+
 
     except UnsatException:
         pass
+
+
+@click.command()
+@click.argument('cipher_name', type=click.Choice(list(_ciphers_char_search.keys())), required=True)
+def search_characteristic_all(cipher_name: str) -> None:
+    """search for a characteristic for the given cipher"""
+    num_rounds = 1
+    probability = 1
+    while True:
+        probability = run_search_characteristic(cipher_name, num_rounds, tikzify=False, seed=None, log_probability=probability, rounding_mode=RoundMode.DOWN, searching_mode=SearchMode.BINARY, save=True)
+        num_rounds += 1
 
 
 

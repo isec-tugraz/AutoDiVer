@@ -66,8 +66,11 @@ class SpeckCharacteristic(DifferentialCharacteristic):
     @classmethod
     def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
         input_diffs = np.zeros((num_rounds + 1, 2), np.uint64)
-
         return cls(input_diffs)
+
+    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, search_time: float|None = None):
+        np.savez(path, round_in=self.round_in, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, search_time=search_time)
+
 
 
     def truncate_rounds(self, rounds_from_to: tuple[int, int]):
@@ -137,6 +140,13 @@ class SpeckCharacteristic(DifferentialCharacteristic):
 
 class Speck32Characteristic(SpeckCharacteristic):
     wordsize = 16
+
+    @classmethod
+    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+        with np.load(characteristic_path) as f:
+            round_in = np.array(f['round_in'], dtype=np.uint64)
+
+        return cls(round_in=round_in, file_path=characteristic_path)
 
 class Speck48Characteristic(SpeckCharacteristic):
     wordsize = 24

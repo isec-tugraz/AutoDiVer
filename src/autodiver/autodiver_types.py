@@ -11,6 +11,9 @@ class RoundMode(Enum):
     UP = 'up'
     DOWN = 'down'
 
+class SearchMode(Enum):
+    UPWARDS = 'upwards'
+    BINARY = 'binary'
 
 class UnsatException(Exception):
     pass

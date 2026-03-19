@@ -48,4 +48,5 @@ dev = ["ipython"]
 [project.scripts]
 autodiver = "autodiver.autodiver:cli"
 autodiver-search = "autodiver.autodiver:search_characteristic"
+autodiver-search-all = "autodiver.autodiver:search_characteristic_all"
 tikzify = "autodiver.tikzify:main"

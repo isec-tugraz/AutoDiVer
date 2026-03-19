@@ -178,7 +178,7 @@ class IndexSet:
         return res
 
 
-def unique_path(path):
+def unique_path(path) -> Path:
     path = Path(path)
 
     if not path.exists():
