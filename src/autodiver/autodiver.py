@@ -326,7 +326,7 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
 
 def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool) -> int:
     """search for a characteristic for the given cipher"""
-    setup_logging('search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
+    setup_logging('logfiles/search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
 
     git_cmd = shutil.which('git')
     git_commit = git_cmd and sp.check_output([git_cmd, 'rev-parse', 'HEAD']).decode().strip()
