@@ -3,22 +3,11 @@ import numpy as np
 
 directory = "./found_trails"
 
-_PREAMBLE = r"""
-\begin{table}[htp!]
-  \centering
-  \newcommand{\none}{$-$}
-  \caption{Caption.}\label{tab:results}
-  \setlength{\tabcolsep}{8pt}
-  \begin{tabular}{lrrrr}
-    \toprule
-    Cipher                       & \#R & EDP & Search Time & Figure Reference \\
-""".strip("\n")
-
 _TABLE_END = r"""
     \bottomrule
   \end{tabular}
 \end{table}
-""".strip("\n")
+"""
 
 map_cipher_name: dict[str,str] = {
     "ascon" : "Ascon",
@@ -31,7 +20,7 @@ map_cipher_name: dict[str,str] = {
     "gift128": "GIFT-128",
     "midori64": "Midori64",
     "midori128": "Midori128",
-    "present": "PRESENT",
+    "present80": "PRESENT",
     "pyjamask96": "Pyjamask96",
     "rectangle128": "RECTANGLE",
     "skinny64": "SKINNY-64",
@@ -41,11 +30,18 @@ map_cipher_name: dict[str,str] = {
 }
 
 
-print(_PREAMBLE)
 for cipher in sorted(os.listdir(directory)):
+
+    _PREAMBLE = r"""
+\begin{table}[htbp]
+  \centering
+  \newcommand{\none}{$-$}
+    """.strip("\n") +  f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds.}}\n  \label{{tab:results-{cipher}}}" +   r"""\setlength{\tabcolsep}{8pt}
+  \begin{tabular}{rrrr}
+  \toprule""".strip("\n")
+    print(_PREAMBLE)
+
     subdirectory = os.path.join(directory, cipher)
-    print("    \midrule")
-    print(f"    \\multirow{{{len(os.listdir(subdirectory))}}}{{*}}{{\\cipher{{{map_cipher_name[cipher]}}}}}")
     for char in sorted(os.listdir(subdirectory)):
         file_path = os.path.join(subdirectory, char)
 
@@ -55,6 +51,6 @@ for cipher in sorted(os.listdir(directory)):
             log_probability = data["log_probability"]
             search_time = data["search_time"]
 
-            print(f"       & {round_number} & $2^{{{log_probability:.2f}}}$ & {search_time:.1f}s & \\none \\\\")
+            print(f"    {round_number} & $2^{{{log_probability:.2f}}}$ & {search_time:.1f}s & \\none \\\\")
 
-print(_TABLE_END)
+    print(_TABLE_END)
