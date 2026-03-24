@@ -523,11 +523,12 @@ class SboxCipher(IndexSet):
             if is_sat:
                 highest_cost = current_cost
                 best_model = result
+                self.time_sat_search = timer.elapsed()
             else:
                 lowest_cost = current_cost
 
             if highest_cost == lowest_cost + 1:
-                self.time_sat_search = timer.elapsed()
+                print(f"measured time for SAT run: {self.time_sat_search}")
                 break
 
         return best_model
