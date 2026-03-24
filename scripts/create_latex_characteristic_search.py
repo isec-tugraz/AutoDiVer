@@ -1,5 +1,10 @@
 import os
 import numpy as np
+import re
+
+def natural_key(s):
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]
+
 
 directory = "./found_trails"
 
@@ -38,11 +43,13 @@ for cipher in sorted(os.listdir(directory)):
   \newcommand{\none}{$-$}
     """.strip("\n") +  f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds.}}\n  \label{{tab:results-{cipher}}}" +   r"""\setlength{\tabcolsep}{8pt}
   \begin{tabular}{rrrr}
-  \toprule""".strip("\n")
+  \toprule
+  \#R & EDP & Search Time & Figure Reference \\
+  \midrule""".strip("\n")
     print(_PREAMBLE)
 
     subdirectory = os.path.join(directory, cipher)
-    for char in sorted(os.listdir(subdirectory)):
+    for char in sorted(os.listdir(subdirectory), key=natural_key):
         file_path = os.path.join(subdirectory, char)
 
         with np.load(file_path, allow_pickle=True) as data:
