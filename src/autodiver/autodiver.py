@@ -61,11 +61,11 @@ _ciphers: dict[str, tuple[str, str, str]] = {
     "skinny64-long-key": ("autodiver.skinny.skinny_model", "Skinny64LongKey", "Skinny64Characteristic"),
     "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic"),
     "skinny128-long-key": ("autodiver.skinny.skinny_model", "Skinny128LongKey", "Skinny128Characteristic"),
-    "speck32-long-key": ("autodiver.speck.speck_model", "Speck32LongKey", "SpeckCharacteristic"),
-    "speck48-long-key": ("autodiver.speck.speck_model", "Speck48LongKey", "SpeckCharacteristic"),
-    "speck64-long-key": ("autodiver.speck.speck_model", "Speck64LongKey", "SpeckCharacteristic"),
-    "speck96-long-key": ("autodiver.speck.speck_model", "Speck96LongKey", "SpeckCharacteristic"),
-    "speck128-long-key": ("autodiver.speck.speck_model", "Speck128LongKey", "SpeckCharacteristic"),
+    "speck32-long-key": ("autodiver.speck.speck_model", "Speck32LongKey", "Speck32Characteristic"),
+    "speck48-long-key": ("autodiver.speck.speck_model", "Speck48LongKey", "Speck48Characteristic"),
+    "speck64-long-key": ("autodiver.speck.speck_model", "Speck64LongKey", "Speck64Characteristic"),
+    "speck96-long-key": ("autodiver.speck.speck_model", "Speck96LongKey", "Speck96Characteristic"),
+    "speck128-long-key": ("autodiver.speck.speck_model", "Speck128LongKey", "Speck128Characteristic"),
     "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic"),
     "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic"),
 }
@@ -377,12 +377,13 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
 
 @click.command()
 @click.argument('cipher_name', type=click.Choice(list(_ciphers_char_search.keys())), required=True)
-def search_characteristic_all(cipher_name: str) -> None:
+@click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
+def search_characteristic_all(cipher_name: str, rounding_mode: RoundMode) -> None:
     """search for a characteristic for the given cipher"""
     num_rounds = 1
     probability = 1
     while True:
-        probability = run_search_characteristic(cipher_name, num_rounds, tikzify=False, seed=None, log_probability=probability, rounding_mode=RoundMode.DOWN, searching_mode=SearchMode.BINARY, save=True)
+        probability = run_search_characteristic(cipher_name, num_rounds, tikzify=False, seed=None, log_probability=probability, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode.BINARY, save=True)
         num_rounds += 1
 
 

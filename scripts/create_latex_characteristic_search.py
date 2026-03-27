@@ -54,10 +54,10 @@ for cipher in sorted(os.listdir(directory)):
 
         with np.load(file_path, allow_pickle=True) as data:
             cipher_name = data["cipher_name"]
-            round_number = data["num_rounds"]  # printed as round_number
+            num_rounds = data["num_rounds"]
             log_probability = data["log_probability"]
             search_time = data["search_time"]
 
-            print(f"    {round_number} & $2^{{{log_probability:.2f}}}$ & {search_time:.1f}s & \\none \\\\")
+            print(f"    {num_rounds} & $2^{{{log_probability:.2f}}}$ & {search_time:.1f}s & \\none \\\\")
 
     print(_TABLE_END)
