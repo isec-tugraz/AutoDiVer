@@ -529,6 +529,7 @@ class SboxCipher(IndexSet):
 
             if highest_cost == lowest_cost + 1:
                 print(f"measured time for SAT run: {self.time_sat_search}")
+                self.log_prob = highest_cost
                 break
 
         return best_model
@@ -549,6 +550,7 @@ class SboxCipher(IndexSet):
 
             if is_sat:
                 self.time_sat_search = timer.elapsed()
+                self.log_prob = log_prob
                 break
 
             log_prob += 1
