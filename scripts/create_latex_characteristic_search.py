@@ -1,9 +1,19 @@
 import os
 import numpy as np
 import re
+from pathlib import Path
+from io import StringIO
+from itertools import groupby
+
 
 def natural_key(s):
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', s)]
+
+prefix_re = re.compile(r'^(.*?_r\d+)')
+
+def group_key(fname):
+    m = prefix_re.match(fname)
+    return m.group(1) if m else fname
 
 
 directory = "./found_trails"
@@ -35,6 +45,9 @@ map_cipher_name: dict[str,str] = {
 }
 
 
+tex_file = Path.cwd() / "../2026_project_juettler/thesis/chapters/results_bigtable.tex"
+result = StringIO()
+
 for cipher in sorted(os.listdir(directory)):
 
     _PREAMBLE = r"""
@@ -46,18 +59,48 @@ for cipher in sorted(os.listdir(directory)):
   \toprule
   \#R & EDP & Search Time & Figure Reference \\
   \midrule""".strip("\n")
-    print(_PREAMBLE)
+    print(_PREAMBLE, file=result)
 
     subdirectory = os.path.join(directory, cipher)
-    for char in sorted(os.listdir(subdirectory), key=natural_key):
-        file_path = os.path.join(subdirectory, char)
+    files = sorted([f for f in os.listdir(subdirectory) if f.endswith(".npz")], key=natural_key)
+    for prefix, group in groupby(files, key=group_key):
 
-        with np.load(file_path, allow_pickle=True) as data:
+        # find best char in group when there's multiple:)
+        max_prob_group = -256
+        best_char_group = ""
+        for f in group:
+            file_path = os.path.join(subdirectory, f)
+            with np.load(file_path, allow_pickle=True) as data:
+                log_probability = data["log_probability"]
+                if log_probability > max_prob_group:
+                    max_prob_group = log_probability
+                    best_char_group = file_path
+            print(file_path, log_probability)
+
+        with np.load(best_char_group, allow_pickle=True) as data:
             cipher_name = data["cipher_name"]
             num_rounds = data["num_rounds"]
             log_probability = data["log_probability"]
             search_time = data["search_time"]
 
-            print(f"    {num_rounds} & $2^{{{log_probability:.2f}}}$ & {search_time:.1f}s & \\none \\\\")
+            time = StringIO()
 
-    print(_TABLE_END)
+
+            if search_time < 0.1:
+                print(f"{search_time * 1000:.0f}ms", file=time)
+            elif search_time <= 1:
+                print(f"{search_time:.1f}s", file=time)
+            elif search_time <= 60:
+                print(f"{search_time:.0f}s", file=time)
+            elif search_time <= 60*60:
+                print(f"{search_time/60:.0f}m", file=time)
+            elif search_time <= 60*60*24:
+                print(f"{search_time/(60*60):.0f}h", file=time)
+            else:
+                print(f"{search_time / (60 * 60*24):.0f}d", file=time)
+
+
+            print(f"    {num_rounds} & $2^{{{log_probability:.2f}}}$ & {time.getvalue()} & \\none \\\\", file=result)
+
+    print(_TABLE_END, file=result)
+    tex_file.write_text(result.getvalue())
