@@ -15,6 +15,57 @@ def group_key(fname):
     m = prefix_re.match(fname)
     return m.group(1) if m else fname
 
+def format_non_power_of_two_ciphers(result: StringIO, files: list, subdirectory: Path):
+    for prefix, group in groupby(files, key=group_key):
+
+        # find best char in group when there's multiple:)
+        max_prob_group = -256
+        best_char_group = ""
+        for f in group:
+            file_path = os.path.join(subdirectory, f)
+            with np.load(file_path, allow_pickle=True) as data:
+                log_probability = data["log_probability"]
+                modeled_log_prob = data["modeled_log_prob"]
+                rounding_mode = data["rounding_mode"]
+                if log_probability > max_prob_group:
+                    max_prob_group = log_probability
+                    best_char_group = file_path
+                if data["rounding_mode"] == "up":
+                    highest_modeled_log_prob = data["modeled_log_prob"]
+            print(file_path, log_probability, modeled_log_prob, rounding_mode)
+
+        with np.load(best_char_group, allow_pickle=True) as data:
+            cipher_name = data["cipher_name"]
+            num_rounds = data["num_rounds"]
+            log_probability = data["log_probability"]
+            search_time = data["search_time"]
+            modeled_log_prob = data["modeled_log_prob"]
+
+            prob = StringIO()
+            if log_probability == 0.0:
+                print("1", file=prob, end="")
+            elif int(log_probability) == log_probability:
+                print(f"2^{{{int(log_probability)}}}", file=prob, end="")
+            else:
+                print(f"2^{{{log_probability:.2f}}}", file=prob, end="")
+
+            time = StringIO()
+            if search_time < 0.1:
+                print(f"{search_time * 1000:.0f}ms", file=time, end="")
+            elif search_time <= 1:
+                print(f"{search_time:.1f}s", file=time, end="")
+            elif search_time <= 60:
+                print(f"{search_time:.0f}s", file=time, end="")
+            elif search_time <= 60*60:
+                print(f"{search_time/60:.0f}m", file=time, end="")
+            elif search_time <= 60*60*24:
+                print(f"{search_time/(60*60):.0f}h", file=time, end="")
+            else:
+                print(f"{search_time / (60 * 60*24):.0f}d", file=time, end="")
+
+            print(f"    {num_rounds} & ${prob.getvalue()}$ & $2^{{-{highest_modeled_log_prob}}}$ & {time.getvalue()} & \\none \\\\", file=result)
+
+
 
 directory = "./found_trails"
 
@@ -44,63 +95,75 @@ map_cipher_name: dict[str,str] = {
     "warp": "WARP"
 }
 
+def main():
+    tex_file = Path.cwd() / "../2026_project_juettler/thesis/chapters/results_bigtable.tex"
+    result = StringIO()
 
-tex_file = Path.cwd() / "../2026_project_juettler/thesis/chapters/results_bigtable.tex"
-result = StringIO()
-
-for cipher in sorted(os.listdir(directory)):
-
-    _PREAMBLE = r"""
+    for cipher in sorted(os.listdir(directory)):
+        if cipher == "gift64":
+            _PREAMBLE = r"""
 \begin{table}[htbp]
-  \centering
-  \newcommand{\none}{$-$}
-    """.strip("\n") +  f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds.}}\n  \label{{tab:results-{cipher}}}" +   r"""\setlength{\tabcolsep}{8pt}
-  \begin{tabular}{rrrr}
-  \toprule
-  \#R & EDP & Search Time & Figure Reference \\
-  \midrule""".strip("\n")
-    print(_PREAMBLE, file=result)
+\centering
+\newcommand{\none}{$-$}
+""" + f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds.}}\n  \label{{tab:results-{cipher}}}" + r"""\setlength{\tabcolsep}{8pt}
+\begin{tabular}{rrrrr}
+\toprule
+\#R & Found DP & upper bound for DP  & Search Time & Figure Reference \\
+\midrule""".strip("\n")
+        else:
+            _PREAMBLE = r"""
+\begin{table}[htbp]
+\centering
+\newcommand{\none}{$-$}
+""" +  f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds.}}\n  \label{{tab:results-{cipher}}}" +   r"""\setlength{\tabcolsep}{8pt}
+\begin{tabular}{rlrc}
+\toprule
+\#R & DP & Search Time & Figure Reference \\
+\midrule""".strip("\n")
 
-    subdirectory = os.path.join(directory, cipher)
-    files = sorted([f for f in os.listdir(subdirectory) if f.endswith(".npz")], key=natural_key)
-    for prefix, group in groupby(files, key=group_key):
+        print(_PREAMBLE, file=result)
 
-        # find best char in group when there's multiple:)
-        max_prob_group = -256
-        best_char_group = ""
-        for f in group:
-            file_path = os.path.join(subdirectory, f)
-            with np.load(file_path, allow_pickle=True) as data:
-                log_probability = data["log_probability"]
-                if log_probability > max_prob_group:
-                    max_prob_group = log_probability
-                    best_char_group = file_path
-            print(file_path, log_probability)
+        subdirectory = os.path.join(directory, cipher)
+        files = sorted([f for f in os.listdir(subdirectory) if f.endswith(".npz")], key=natural_key)
+        if cipher == "gift64": # just for evaluation
+            format_non_power_of_two_ciphers(result, files, subdirectory)
+        else:
+            # assumes there's just one char per round number in repo
+            for char in files:
+                file_path = os.path.join(subdirectory, char)
+                with np.load(file_path, allow_pickle=True) as data:
+                    cipher_name = data["cipher_name"]
+                    num_rounds = data["num_rounds"]
+                    log_probability = data["log_probability"]
+                    search_time = data["search_time"]
 
-        with np.load(best_char_group, allow_pickle=True) as data:
-            cipher_name = data["cipher_name"]
-            num_rounds = data["num_rounds"]
-            log_probability = data["log_probability"]
-            search_time = data["search_time"]
+                    prob = StringIO()
+                    if log_probability == 0.0:
+                        print("1", file=prob, end="")
+                    elif int(log_probability) == log_probability:
+                        print(f"2^{{{int(log_probability)}}}", file=prob, end="")
+                    else:
+                        print(f"2^{{{log_probability:.2f}}}", file=prob, end="")
 
-            time = StringIO()
+                    time = StringIO()
+                    if search_time < 0.1:
+                        print(f"{search_time * 1000:.0f}ms", file=time, end="")
+                    elif search_time <= 1:
+                        print(f"{search_time:.1f}s", file=time, end="")
+                    elif search_time <= 60:
+                        print(f"{search_time:.0f}s", file=time, end="")
+                    elif search_time <= 60 * 60:
+                        print(f"{search_time / 60:.0f}m", file=time, end="")
+                    elif search_time <= 60 * 60 * 24:
+                        print(f"{search_time / (60 * 60):.0f}h", file=time, end="")
+                    else:
+                        print(f"{search_time / (60 * 60 * 24):.0f}d", file=time, end="")
+
+                print(f"    {num_rounds} & ${prob.getvalue()}$ & {time.getvalue()} & \\none \\\\", file=result)
+
+        print(_TABLE_END, file=result)
+        tex_file.write_text(result.getvalue())
 
 
-            if search_time < 0.1:
-                print(f"{search_time * 1000:.0f}ms", file=time)
-            elif search_time <= 1:
-                print(f"{search_time:.1f}s", file=time)
-            elif search_time <= 60:
-                print(f"{search_time:.0f}s", file=time)
-            elif search_time <= 60*60:
-                print(f"{search_time/60:.0f}m", file=time)
-            elif search_time <= 60*60*24:
-                print(f"{search_time/(60*60):.0f}h", file=time)
-            else:
-                print(f"{search_time / (60 * 60*24):.0f}d", file=time)
-
-
-            print(f"    {num_rounds} & $2^{{{log_probability:.2f}}}$ & {time.getvalue()} & \\none \\\\", file=result)
-
-    print(_TABLE_END, file=result)
-    tex_file.write_text(result.getvalue())
+if __name__ == "__main__":
+    main()

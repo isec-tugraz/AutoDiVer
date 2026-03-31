@@ -363,7 +363,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
             directory = Path.cwd() / "found_trails" / cipher_name
             directory.mkdir(parents=True, exist_ok=True)
             char_path = Path(Path.cwd() / "found_trails" / cipher_name /(cipher_name + "_r" + str(num_rounds))).with_suffix('.npz')
-            characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search, cipher.log_prob)
+            characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search, cipher.log_prob, cipher.rounding_mode.value)
 
         if tikzify:
             create_latex(characteristic)
@@ -381,7 +381,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
 def search_characteristic_all(cipher_name: str, rounding_mode: RoundMode) -> None:
     """search for a characteristic for the given cipher"""
     num_rounds = 1
-    probability = 1
+    probability = 0
     while True:
         probability = run_search_characteristic(cipher_name, num_rounds, tikzify=False, seed=None, log_probability=probability, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode.BINARY, save=True)
         num_rounds += 1

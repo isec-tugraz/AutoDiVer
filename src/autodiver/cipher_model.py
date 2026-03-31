@@ -233,7 +233,7 @@ class SboxCipher(IndexSet):
                             lut[i,j,pow(2, self.num_bits_ddt_weights - k) - 1] = 1
                     else:
                         if pow(2, k) < self.ddt[i, j] <= pow(2, k + 1):
-                            # print(f"{pow(2, k)} <= {self.ddt[i, j]} <= {pow(2, k + 1)} is weighted as {pow(2, self.num_bits_ddt_weights - k) - 1} ^= {self.num_bits_ddt_weights - k} bits")
+                           # print(f"{pow(2, k)} <= {self.ddt[i, j]} <= {pow(2, k + 1)} is weighted as {pow(2, self.num_bits_ddt_weights - k) - 1} ^= {self.num_bits_ddt_weights - k} bits")
                             lut[i, j, pow(2, self.num_bits_ddt_weights - k) - 1] = 1
 
         lut[0,0,0] = 1 # no cost for zero transition = 0
@@ -493,11 +493,14 @@ class SboxCipher(IndexSet):
 
     def binary_characteristic_search_singlethreaded(self, args: list, log_result: bool) -> np.ndarray:
         lowest_cost = self.num_rounds if self.log_prob is None else self.log_prob
+        lowest_cost = lowest_cost - 1
         # highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
-        highest_cost = self.block_size + 1 # probability of random difference - no longer useful; + 1 - highest cost itself is no longer tested (lowest_cost <= x < highest_cost)
+        highest_cost = self.block_size + 1
+        # boundaries are not tested (lowest_cost < x < highest_cost)
+        # for Speck probability 2^0 can be satisfiable:)
 
         search_space = np.uint64(highest_cost - lowest_cost)
-        search_space_pow_2 = np.uint64(1)
+        search_space_pow_2 = np.int64(1)
 
         while search_space_pow_2 < search_space:
             search_space_pow_2 = search_space_pow_2 << 1
@@ -508,7 +511,7 @@ class SboxCipher(IndexSet):
         best_model = None
 
         while True:
-            current_cost = np.uint64((lowest_cost + highest_cost) / 2)
+            current_cost = np.int64((lowest_cost + highest_cost) / 2)
             print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}, current_cost: {current_cost}")
             cnf = self.cnf + self._model_cardinality_encoding(current_cost)
             if log_result:

@@ -51,7 +51,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
             rounds_out = f['rounds_out']
         return cls(sbox_in, sbox_out, rounds_in, rounds_out, file_path=characteristic_path)
 
-    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, search_time: float|None=None):
+    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, search_time: float|None, modeled_log_prob: int, rounding_mode: str):
         np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, rounds_in=self.rounds_in, rounds_out=self.rounds_out, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, search_time=search_time)
 
     @classmethod
