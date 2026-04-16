@@ -74,6 +74,10 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
 
         return cls(sbox_in, sbox_out, tweakeys, file_path=None)
 
+    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, search_time: float|None, modeled_log_prob: int, rounding_mode: str):
+        np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, tweakeys=self.tweakeys, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, search_time=search_time, modeled_log_prob=modeled_log_prob, rounding_mode=rounding_mode)
+
+
     @classmethod
     def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
         sbox_in = sbox_out = np.zeros((num_rounds, 4, 4), dtype=np.uint8)
