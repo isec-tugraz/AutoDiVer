@@ -7,7 +7,7 @@ import numpy as np
 
 from autodiver.cipher_model import DifferentialCharacteristic
 from autodiver.arx_util import modular_addition_probability
-from .speck_util import rotr_speck_np
+from .speck_util import rotr_speck_np, ALPHA_MAP, BETA_MAP
 from io import StringIO
 
 _PREAMBLE = r"""
@@ -104,21 +104,22 @@ class SpeckCharacteristic(DifferentialCharacteristic):
 
             for i in range(2):
                 print("{", file=result, end="")
+                #for bitidx in range(self.wordsize - 1, -1, -1):
                 for bitidx in range(self.wordsize):
                     if state[i] & (1 << bitidx):
-                        print(f"\\Fill{{s{bitidx}}}", file=result, end="")
+                        print(f"\\Fill{{s{self.wordsize - 1 - bitidx}}}", file=result, end="")
                 print("}", file=result)
 
             print("{", file=result, end="")
             for bitidx in range(self.wordsize):
-                if state[0] & (1 << ((bitidx + 7) % self.wordsize)):
-                    print(f"\\Fill{{s{bitidx}}}", file=result, end="")
+                if state[0] & (1 << ((bitidx + ALPHA_MAP[self.wordsize]) % self.wordsize)):
+                    print(f"\\Fill{{s{self.wordsize - 1 - bitidx}}}", file=result, end="")
             print("}", file=result)
 
             print("{", file=result, end="")
             for bitidx in range(self.wordsize):
-                if state[1] & (1 << ((bitidx - 2) % self.wordsize)):
-                    print(f"\\Fill{{s{bitidx}}}", file=result, end="")
+                if state[1] & (1 << ((bitidx - BETA_MAP[self.wordsize]) % self.wordsize)):
+                    print(f"\\Fill{{s{self.wordsize - 1 - bitidx}}}", file=result, end="")
             print("}", file=result)
 
         print(f"\\SpeckFinal{{{self.num_rounds + 1}}}", file=result)
@@ -129,7 +130,7 @@ class SpeckCharacteristic(DifferentialCharacteristic):
             print("{", file=result, end="")
             for bitidx in range(self.wordsize):
                 if state[i] & (1 << bitidx):
-                    print(f"\\Fill{{s{bitidx}}}", file=result, end="")
+                    print(f"\\Fill{{s{self.wordsize - 1 - bitidx}}}", file=result, end="")
             print("}", file=result)
 
 
