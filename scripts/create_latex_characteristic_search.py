@@ -21,6 +21,7 @@ def format_non_power_of_two_ciphers(result: StringIO, files: list, subdirectory:
         # find best char in group when there's multiple:)
         max_prob_group = -256
         best_char_group = ""
+        highest_modeled_log_prob = "NONE:)"
         for f in group:
             file_path = os.path.join(subdirectory, f)
             with np.load(file_path, allow_pickle=True) as data:
@@ -52,7 +53,7 @@ def format_non_power_of_two_ciphers(result: StringIO, files: list, subdirectory:
             time = StringIO()
             if search_time < 0.1:
                 print(f"{search_time * 1000:.0f}ms", file=time, end="")
-            elif search_time <= 1:
+            elif search_time < 1:
                 print(f"{search_time:.1f}s", file=time, end="")
             elif search_time <= 60:
                 print(f"{search_time:.0f}s", file=time, end="")
@@ -95,12 +96,14 @@ map_cipher_name: dict[str,str] = {
     "warp": "WARP"
 }
 
+non_power_of_two_ciphers = ["gift64", "gift128", "skinny128", "speedy192"]
+
 def main():
     tex_file = Path.cwd() / "../2026_project_juettler/thesis/chapters/results_bigtable.tex"
     result = StringIO()
 
     for cipher in sorted(os.listdir(directory)):
-        if cipher == "gift64":
+        if cipher in non_power_of_two_ciphers:
             _PREAMBLE = r"""
 \begin{table}[htbp]
 \centering
@@ -125,7 +128,7 @@ def main():
 
         subdirectory = os.path.join(directory, cipher)
         files = sorted([f for f in os.listdir(subdirectory) if f.endswith(".npz")], key=natural_key)
-        if cipher == "gift64": # just for evaluation
+        if cipher in non_power_of_two_ciphers:
             format_non_power_of_two_ciphers(result, files, subdirectory)
         else:
             # assumes there's just one char per round number in repo
@@ -148,7 +151,7 @@ def main():
                     time = StringIO()
                     if search_time < 0.1:
                         print(f"{search_time * 1000:.0f}ms", file=time, end="")
-                    elif search_time <= 1:
+                    elif search_time < 1:
                         print(f"{search_time:.1f}s", file=time, end="")
                     elif search_time <= 60:
                         print(f"{search_time:.0f}s", file=time, end="")
