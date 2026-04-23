@@ -320,11 +320,12 @@ _tikzify_help = (
 @click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 @click.option("--searching_mode",type=click.Choice([m.value for m in SearchMode]), default=SearchMode.UPWARDS.value)
 @click.option("--save", is_flag=True, help="will save the found characteristic as a .npz file in ./found_trails")
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool) -> None:
-    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save)
+@click.option("--related_key", is_flag=True, help="will execute the related key search; currently only available for SKINNY")
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_key: bool) -> None:
+    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save, related_key)
 
 
-def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool) -> int:
+def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_key: bool) -> int:
     """search for a characteristic for the given cipher"""
     setup_logging('logfiles/search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
 
@@ -348,7 +349,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
     characteristic = Characteristic.load_empty_characteristic(num_rounds) # pro forma characteristic; could be used to indicate active sboxes if we wanted
 
 
-    cipher = Cipher(characteristic, search_char=True, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode(searching_mode), log_prob=log_probability)
+    cipher = Cipher(characteristic, search_char=True, related_key=related_key, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode(searching_mode), log_prob=log_probability)
 
     try:
         model = cipher.solve(seed=seed)

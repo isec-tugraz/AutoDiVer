@@ -70,7 +70,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
         if model.tweak.shape == (0,):
             tweakeys = np.zeros((sbox_out.shape[0], 3, 4, 4))
         else:
-            tweakeys = model.tweak
+            tweakeys = model._round_tweakeys
 
         return cls(sbox_in, sbox_out, tweakeys, file_path=None)
 
@@ -95,7 +95,11 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
         for i in range(len(self.tweakeys) - 1):
             assert np.all(self.tweakeys[i + 1] == update_tweakey(self.tweakeys[i], self.block_size)), f'tweakey update check failed at round {i}'
             rtk = np.bitwise_xor.reduce(self.tweakeys[i], axis=0) & tweakey_mask
-            assert np.all(self.sbox_in[i + 1] == do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk)))
+            print(f"here:")
+            print(self.sbox_in[i + 1])
+            print("there:")
+            print(do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk)))
+            assert np.all(self.sbox_in[i + 1] == do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk))), f'round update check failed at round {i}'
 
         self.num_rounds = len(self.sbox_in)
 
@@ -104,12 +108,13 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
         self.tweakeys = self.tweakeys[rounds_from_to[0]:rounds_from_to[1] + 1]
 
     def tikzify(self) -> str:
+        #print(self.tweakeys)
         result = StringIO()
         print(_PREAMBLE, file=result)
 
         for rnd in range(self.num_rounds):
-            print(self.sbox_in[rnd])
-            print(self.sbox_out[rnd])
+            #print(self.sbox_in[rnd])
+            #print(self.sbox_out[rnd])
             sbox_in = self.sbox_in[rnd]
             sbox_out = self.sbox_out[rnd]
             print(f"    \\SkinnyRoundTK{{", file=result, end="")
@@ -118,39 +123,51 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
             for i in range(4):
                 for j in range(4):
                     if sbox_in[i][j] != 0:
-                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{sbox_in[i][j]:x}}}", file=result, end="")
+                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{sbox_in[i][j]:02x}}}", file=result, end="")
+            print("}", file=result)
 
-            print(f"}}\n    {{}}{{}}{{}}", file=result) # tweak - currently empty
+            # tweak
+            print("                  {", file=result, end="")
+            rtk = np.bitwise_xor.reduce(self.tweakeys[rnd], axis=0) & tweakey_mask
+            print(rtk)
+            for i in range(2):
+                for j in range(4):
+                    if rtk[i][j] != 0:
+                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{rtk[i][j]:02x}}}", file=result, end="")
+            print(f"}}{{}}{{}}", file=result) # tweak - currently empty
+
+
+            #print(f"}}\n    {{}}{{}}{{}}", file=result) # tweak - currently empty
 
             # after sbox
-            print("    {", file=result, end="")
+            print("                  {", file=result, end="")
             for i in range(4):
                 for j in range(4):
                     if sbox_out[i][j] != 0:
-                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{sbox_out[i][j]:x}}}", file=result, end="")
-
+                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{sbox_out[i][j]:02x}}}", file=result, end="")
             print("}", file=result)
 
             # after sbox and tweak
-            print("    {", file=result, end="")
+            print("                  {", file=result, end="")
             for i in range(4):
                 for j in range(4):
-                    if sbox_out[i][j] != 0:
+                    cell = sbox_out[i][j] ^ rtk[i][j]
+                    if cell != 0:
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{sbox_out[i][j]:x}}}",
+                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{cell:02x}}}",
                             file=result, end="")
-
             print("}", file=result)
 
             state_shifted = np.zeros_like(sbox_out)
             # after shiftrows
-            print("    {", file=result, end="")
+            print("                  {", file=result, end="")
             for i in range(4):
                 for j in range(4):
-                    if sbox_out[i][j] != 0:
-                        state_shifted[i][(i + j) % 4] = sbox_out[i][j]
+                    cell = sbox_out[i][j] ^ rtk[i][j]
+                    if cell != 0:
+                        state_shifted[i][(i + j) % 4] = cell
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str((j + i) % 4)}}}\Cell{{ss{str(i) + str((j + i) % 4)}}}{{{sbox_out[i][j]:x}}}",
+                            f"\\FillCell[tug!25]{{ss{str(i) + str((j + i) % 4)}}}\Cell{{ss{str(i) + str((j + i) % 4)}}}{{{cell:02x}}}",
                             file=result, end="")
 
             print("}", file=result)
@@ -172,12 +189,12 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
 
 
             # after mixcols
-            print("    {", file=result, end="")
+            print("{", file=result, end="")
             for i in range(4):
                 for j in range(4):
                     if state_mixed[i][j] != 0:
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{state_mixed[i][j]:x}}}",
+                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{state_mixed[i][j]:02x}}}",
                             file=result, end="")
 
             print("}}", file=result)

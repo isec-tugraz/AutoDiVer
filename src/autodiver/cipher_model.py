@@ -103,6 +103,7 @@ class SboxCipher(IndexSet):
     _learned_clauses: dict[Literal['key', 'tweak', 'tweakey'], CNF]
 
     search_char: bool
+    related_key: bool
     num_bits_ddt_weights: int
     ddt_cnf: CNF # always the same - only compute once
     rounding_mode: RoundMode # only used in the case of searching for differential characteristics
@@ -110,7 +111,7 @@ class SboxCipher(IndexSet):
     log_prob: int | None
     time_sat_search: float | None = None
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, searching_mode: SearchMode = SearchMode.UPWARDS, log_prob: int | None = None):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, related_key: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, searching_mode: SearchMode = SearchMode.UPWARDS, log_prob: int | None = None):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -126,6 +127,7 @@ class SboxCipher(IndexSet):
         self._affine_hull = {}
         self._learned_clauses = {}
         self.search_char = search_char
+        self.related_key = related_key
         self.rounding_mode = rounding_mode
         self.searching_mode = searching_mode
         self.log_prob = log_prob
@@ -233,7 +235,7 @@ class SboxCipher(IndexSet):
                             lut[i,j,pow(2, self.num_bits_ddt_weights - k) - 1] = 1
                     else:
                         if pow(2, k) < self.ddt[i, j] <= pow(2, k + 1):
-                           # print(f"{pow(2, k)} <= {self.ddt[i, j]} <= {pow(2, k + 1)} is weighted as {pow(2, self.num_bits_ddt_weights - k) - 1} ^= {self.num_bits_ddt_weights - k} bits")
+                            # print(f"{pow(2, k)} <= {self.ddt[i, j]} <= {pow(2, k + 1)} is weighted as {pow(2, self.num_bits_ddt_weights - k) - 1} ^= {self.num_bits_ddt_weights - k} bits")
                             lut[i, j, pow(2, self.num_bits_ddt_weights - k) - 1] = 1
 
         lut[0,0,0] = 1 # no cost for zero transition = 0

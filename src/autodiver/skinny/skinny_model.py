@@ -72,6 +72,8 @@ class SkinnyBase(SboxCipher):
         if self.search_char:
             self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
             self._model_ddt()
+            if self.related_key and self.log_prob == None:
+                    self.log_prob = 2  # TODO what is the best boundary here actually? better than for non related key for sure ; additional todo: why no better characteristics ? (empty space in the middle)
         else:
             self._model_sboxes()
 
@@ -90,8 +92,11 @@ class SkinnyBase(SboxCipher):
 
         # not considering related-key / related-tweakey characteristics for now - add as cli option later on
         if self.search_char:
-            self.add_index_array('key', 0)
-            self.add_index_array('tweak', 0)
+            if self.related_key:
+                self._model_key_schedule()
+            else:
+                self.add_index_array('key', 0)
+                self.add_index_array('tweak', 0)
         else:
             self._model_key_schedule()
 
@@ -169,7 +174,7 @@ class SkinnyBase(SboxCipher):
             for row, col in product(range(4), range(4)):
                 sb_mc_input[row, col] = [self.sbox_out[rnd, row, col]]
 
-            if not self.search_char:
+            if (not self.search_char) or (self.search_char and self.related_key):
                 for row, col in product(range(2), range(4)):
                     sb_mc_input[row, col].append(self.round_tweakeys[rnd, row, col])
 
