@@ -73,7 +73,7 @@ class SkinnyBase(SboxCipher):
             self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
             self._model_ddt()
             if self.related_key and self.log_prob == None:
-                    self.log_prob = 2  # TODO what is the best boundary here actually? better than for non related key for sure ; additional todo: why no better characteristics ? (empty space in the middle)
+                    self.log_prob = 1  # related key search enables 'empty space' in the middle
         else:
             self._model_sboxes()
 

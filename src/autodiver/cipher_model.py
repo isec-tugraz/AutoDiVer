@@ -463,7 +463,7 @@ class SboxCipher(IndexSet):
             log_prob = self.num_rounds if self.log_prob is None else self.log_prob # lower bound that is necessary
             highest_unsat = 0
             lowest_sat = 0xFFFFFFFF
-            upper_bound = log_prob + 1 #_available_cpus() - 1
+            upper_bound = log_prob + 1
             best_model = None
             loop_condition = True
 
