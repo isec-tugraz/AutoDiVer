@@ -72,7 +72,7 @@ class SkinnyBase(SboxCipher):
         if self.search_char:
             self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
             self._model_ddt()
-            if self.related_key and self.log_prob == None:
+            if self.related_tweak and self.log_prob == None:
                     self.log_prob = 1  # related key search enables 'empty space' in the middle
         else:
             self._model_sboxes()
@@ -92,7 +92,7 @@ class SkinnyBase(SboxCipher):
 
         # not considering related-key / related-tweakey characteristics for now - add as cli option later on
         if self.search_char:
-            if self.related_key:
+            if self.related_tweak:
                 self._model_key_schedule()
             else:
                 self.add_index_array('key', 0)
@@ -116,6 +116,9 @@ class SkinnyBase(SboxCipher):
 
         self._tk2_lfsrs = [LfsrState(f'tk2_{i}', self.connection_poly[::-1].tolist(), tk2_tmp[i]) for i in range(16)]
         self._tk3_lfsrs = [LfsrState(f'tk3_{i}', self.connection_poly[::-1].tolist(), tk3_tmp[i]) for i in range(16)]
+
+        if self.related_tweak:
+            self.cnf += XorCNF.create_xor(self.key.flatten()) # force the key difference to 0
 
 
         round_tweakeys = []
@@ -174,7 +177,7 @@ class SkinnyBase(SboxCipher):
             for row, col in product(range(4), range(4)):
                 sb_mc_input[row, col] = [self.sbox_out[rnd, row, col]]
 
-            if (not self.search_char) or (self.search_char and self.related_key):
+            if (not self.search_char) or (self.search_char and self.related_tweak):
                 for row, col in product(range(2), range(4)):
                     sb_mc_input[row, col].append(self.round_tweakeys[rnd, row, col])
 

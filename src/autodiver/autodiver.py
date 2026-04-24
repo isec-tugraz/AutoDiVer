@@ -320,12 +320,12 @@ _tikzify_help = (
 @click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 @click.option("--searching_mode",type=click.Choice([m.value for m in SearchMode]), default=SearchMode.UPWARDS.value)
 @click.option("--save", is_flag=True, help="will save the found characteristic as a .npz file in ./found_trails")
-@click.option("--related_key", is_flag=True, help="will execute the related key search; currently only available for SKINNY")
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_key: bool) -> None:
-    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save, related_key)
+@click.option("--related-tweak", is_flag=True, help="will execute the related tweak search; currently only available for SKINNY")
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool) -> None:
+    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save, related_tweak)
 
 
-def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_key: bool) -> int:
+def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool) -> int:
     """search for a characteristic for the given cipher"""
     setup_logging('logfiles/search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
 
@@ -349,7 +349,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
     characteristic = Characteristic.load_empty_characteristic(num_rounds) # pro forma characteristic; could be used to indicate active sboxes if we wanted
 
 
-    cipher = Cipher(characteristic, search_char=True, related_key=related_key, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode(searching_mode), log_prob=log_probability)
+    cipher = Cipher(characteristic, search_char=True, related_tweak=related_tweak, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode(searching_mode), log_prob=log_probability)
 
     try:
         model = cipher.solve(seed=seed)
@@ -363,7 +363,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
         if save: # todo: per default yes in the end; probability in filename
             directory = Path.cwd() / "found_trails" / cipher_name
             directory.mkdir(parents=True, exist_ok=True)
-            char_path = Path(Path.cwd() / "found_trails" / cipher_name /(cipher_name + ("_rel_key" if related_key else "") + "_r" + str(num_rounds))).with_suffix('.npz')
+            char_path = Path(Path.cwd() / "found_trails" / cipher_name /(("rel_tweak_" if related_tweak else "") + cipher_name  + "_r" + str(num_rounds))).with_suffix('.npz')
             characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search, cipher.log_prob, cipher.rounding_mode.value)
 
         if tikzify:
@@ -379,13 +379,13 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
 @click.command()
 @click.argument('cipher_name', type=click.Choice(list(_ciphers_char_search.keys())), required=True)
 @click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
-@click.option("--related_key", is_flag=True, help="will execute the related key search; currently only available for SKINNY")
-def search_characteristic_all(cipher_name: str, rounding_mode: RoundMode, related_key: bool) -> None:
+@click.option("--related-tweak", is_flag=True, help="will execute the related key search; currently only available for SKINNY")
+def search_characteristic_all(cipher_name: str, rounding_mode: RoundMode, related_tweak: bool) -> None:
     """search for a characteristic for the given cipher"""
     num_rounds = 1
     probability = 0
     while True:
-        probability = run_search_characteristic(cipher_name, num_rounds, tikzify=False, seed=None, log_probability=probability, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode.BINARY, save=True, related_key=related_key)
+        probability = run_search_characteristic(cipher_name, num_rounds, tikzify=False, seed=None, log_probability=probability, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode.BINARY, save=True, related_tweak=related_tweak)
         num_rounds += 1
 
 
