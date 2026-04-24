@@ -378,7 +378,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
 
 @click.command()
 @click.argument('cipher_name', type=click.Choice(list(_ciphers_char_search.keys())), required=True)
-@click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
+@click.option("--rounding-mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 @click.option("--related-tweak", is_flag=True, help="will execute the related key search; currently only available for SKINNY")
 def search_characteristic_all(cipher_name: str, rounding_mode: RoundMode, related_tweak: bool) -> None:
     """search for a characteristic for the given cipher"""
