@@ -313,12 +313,12 @@ _tikzify_help = (
 
 @click.command()
 @click.argument('cipher_name', type=click.Choice(list(_ciphers_char_search.keys())), required=True)
-@click.argument('num_rounds', nargs=1, type=int, required=True)
+@click.argument('num-rounds', nargs=1, type=int, required=True)
 @click.option("--tikzify", is_flag=True, help=_tikzify_help)
 @click.option("--seed", type=int, default=None)
-@click.option("--log_probability", type=int, default=None, help="the minimum probability we are searching for, expressed as log2(p)")
-@click.option("--rounding_mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
-@click.option("--searching_mode",type=click.Choice([m.value for m in SearchMode]), default=SearchMode.UPWARDS.value)
+@click.option("--log-probability", type=int, default=None, help="the minimum probability we are searching for, expressed as log2(p)")
+@click.option("--rounding-mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
+@click.option("--searching-mode",type=click.Choice([m.value for m in SearchMode]), default=SearchMode.UPWARDS.value)
 @click.option("--save", is_flag=True, help="will save the found characteristic as a .npz file in ./found_trails")
 @click.option("--related-tweak", is_flag=True, help="will execute the related tweak search; currently only available for SKINNY")
 def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool) -> None:
