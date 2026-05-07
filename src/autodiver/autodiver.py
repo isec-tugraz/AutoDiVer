@@ -367,7 +367,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
         if save: # todo: per default yes in the end; probability in filename
             directory = Path.cwd() / "found_trails" / cipher_name
             directory.mkdir(parents=True, exist_ok=True)
-            char_path = Path(Path.cwd() / "found_trails" / (cipher_name + ("rel_tweak_" if related_tweak else "")) /(cipher_name  + "_r" + str(num_rounds))).with_suffix('.npz')
+            char_path = Path(Path.cwd() / "found_trails" / (cipher_name + ("_rel_tweak" if related_tweak else "")) /(cipher_name  + "_r" + str(num_rounds))).with_suffix('.npz')
             characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search, cipher.log_prob, cipher.rounding_mode.value)
 
         if tikzify:
