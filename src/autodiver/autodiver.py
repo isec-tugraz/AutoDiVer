@@ -338,6 +338,10 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
               extra={"cli_args": sys.argv, "git_commit": git_commit, "git_changed_files": git_changed_files,
                      "version": version})
 
+    if related_tweak and not cipher_name in ["skinny64", "skinny128"]:
+        print(f"related-tweak search is only available for skinny, not for {cipher_name}")
+        exit(0)
+
     module_name, cipher_type_name, characteristic_type_name, _ = _ciphers_char_search[cipher_name]
 
     import importlib
