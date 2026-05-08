@@ -110,8 +110,9 @@ class SboxCipher(IndexSet):
     searching_mode: SearchMode
     log_prob: int | None
     time_sat_search: float | None = None
+    card_enc: int = 8
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, related_tweak: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, searching_mode: SearchMode = SearchMode.UPWARDS, log_prob: int | None = None):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, related_tweak: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, searching_mode: SearchMode = SearchMode.UPWARDS, log_prob: int | None = None, card_enc: int):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -131,6 +132,7 @@ class SboxCipher(IndexSet):
         self.rounding_mode = rounding_mode
         self.searching_mode = searching_mode
         self.log_prob = log_prob
+        self.card_enc = card_enc
         self._setup_ddt()
 
     def _setup_ddt(self):
@@ -302,7 +304,6 @@ class SboxCipher(IndexSet):
             self.add_index_array("sbox_assumptions", (0,))
 
         sbox_cnf = CNF()
-        # print(f"inp_vars: {sbox_in.shape}, delta_out: {self.char.sbox_out.shape}")
 
         for idx in range(delta_out.shape[0]):
             inp, out = inp_vars[idx], out_vars[idx]
@@ -361,7 +362,7 @@ class SboxCipher(IndexSet):
 
     def _model_cardinality_encoding(self, bound: int) -> CNF:
         vpool = IDPool(start_from=self.numvars + 1)
-        cardinality_encoding = CardEnc.atmost(lits=self.ddt_weights.flatten().tolist(), vpool=vpool, bound=bound, encoding=EncType.kmtotalizer).clauses
+        cardinality_encoding = CardEnc.atmost(lits=self.ddt_weights.flatten().tolist(), vpool=vpool, bound=bound, encoding=self.card_enc).clauses
 
         cardinality_encoding_cnf = CNF()
 

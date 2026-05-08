@@ -14,7 +14,7 @@ from .util import create_latex, unique_path
 import click
 
 from autodiver import version
-from autodiver.autodiver_types import ModelType, UnsatException, RoundMode, SearchMode
+from autodiver.autodiver_types import ModelType, UnsatException, RoundMode, SearchMode, CARD_ENC_MAP
 
 if TYPE_CHECKING:
     from autodiver.cipher_model import SboxCipher
@@ -318,14 +318,15 @@ _tikzify_help = (
 @click.option("--seed", type=int, default=None)
 @click.option("--log-probability", type=int, default=None, help="the minimum probability we are searching for, expressed as log2(p)")
 @click.option("--rounding-mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
-@click.option("--searching-mode",type=click.Choice([m.value for m in SearchMode]), default=SearchMode.UPWARDS.value)
+@click.option("--searching-mode",type=click.Choice([m.value for m in SearchMode]), default=SearchMode.BINARY.value)
 @click.option("--save", is_flag=True, help="will save the found characteristic as a .npz file in ./found_trails")
 @click.option("--related-tweak", is_flag=True, help="will execute the related tweak search; currently only available for SKINNY")
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool) -> None:
-    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save, related_tweak)
+@click.option("--card-enc", type=click.Choice(sorted(CARD_ENC_MAP)), default="kmtotalizer")
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: str) -> None:
+    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save, related_tweak, card_enc)
 
 
-def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool) -> int:
+def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: str) -> int:
     """search for a characteristic for the given cipher"""
     setup_logging('logfiles/search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
 
@@ -353,7 +354,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
     characteristic = Characteristic.load_empty_characteristic(num_rounds) # pro forma characteristic; could be used to indicate active sboxes if we wanted
 
 
-    cipher = Cipher(characteristic, search_char=True, related_tweak=related_tweak, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode(searching_mode), log_prob=log_probability)
+    cipher = Cipher(characteristic, search_char=True, related_tweak=related_tweak, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode(searching_mode), log_prob=log_probability, card_enc=CARD_ENC_MAP[card_enc])
 
     try:
         model = cipher.solve(seed=seed)
