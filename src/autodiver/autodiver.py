@@ -310,6 +310,22 @@ _tikzify_help = (
     f"Supported for: {', '.join(_tikzify_supported)}"
 )
 
+def profile_cardenc() -> None:
+    num_rounds = 5
+    for cipher in _ciphers_char_search:
+        if cipher not in ["ascon", "pyjamask96", "speedy192"]:
+            print(cipher)
+            for card_enc in CARD_ENC_MAP:
+                if card_enc in ["pairwise", "bitwise", "ladder", "native"]:
+                    continue
+                run_search_characteristic(cipher, num_rounds, tikzify=False, seed=None, log_probability=None, rounding_mode=RoundMode.DOWN.value, searching_mode=SearchMode.BINARY.value, save=False, related_tweak=False, card_enc=card_enc, save_perf=True)
+
+    # loop over all ciphers and all cardinality encodings here
+    # search for all ciphers for 5 rounds
+    # save time_sat_search, time_unsat_search, encoding, cipher in npz file in /misc/card_enc/<cipher>/<enc>_stat.npz ? and then make separate script to print results to latex
+    # also save # vars and # clauses just in case
+
+
 
 @click.command()
 @click.argument('cipher_name', type=click.Choice(list(_ciphers_char_search.keys())), required=True)
@@ -323,10 +339,10 @@ _tikzify_help = (
 @click.option("--related-tweak", is_flag=True, help="will execute the related tweak search; currently only available for SKINNY")
 @click.option("--card-enc", type=click.Choice(sorted(CARD_ENC_MAP)), default="kmtotalizer")
 def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: str) -> None:
-    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save, related_tweak, card_enc)
+    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save, related_tweak, card_enc, False)
 
 
-def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: str) -> int:
+def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: str, save_perf: bool) -> int:
     """search for a characteristic for the given cipher"""
     setup_logging('logfiles/search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
 
@@ -366,10 +382,16 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
         # print(model.sbox_out)
 
         if save: # todo: per default yes in the end; probability in filename
-            directory = Path.cwd() / "found_trails" / cipher_name
+            directory = Path.cwd() / "found_trails" / cipher_name + ("_rel_tweak" if related_tweak else "")
             directory.mkdir(parents=True, exist_ok=True)
             char_path = Path(Path.cwd() / "found_trails" / (cipher_name + ("_rel_tweak" if related_tweak else "")) /(cipher_name  + "_r" + str(num_rounds))).with_suffix('.npz')
             characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search, cipher.log_prob, cipher.rounding_mode.value)
+
+        if save_perf:
+            directory = Path.cwd() / "misc/card_enc" / cipher_name
+            directory.mkdir(parents=True, exist_ok=True)
+            char_path = Path(Path.cwd() /  "misc/card_enc" / cipher_name / card_enc).with_suffix('.npz')
+            np.savez(char_path, stat_sat_search=cipher.stat_sat_search, stat_unsat_search=cipher.stat_unsat_search)
 
         if tikzify:
             create_latex(characteristic)
@@ -390,9 +412,8 @@ def search_characteristic_all(cipher_name: str, rounding_mode: RoundMode, relate
     num_rounds = 1
     probability = 0
     while True:
-        probability = run_search_characteristic(cipher_name, num_rounds, tikzify=False, seed=None, log_probability=probability, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode.BINARY, save=True, related_tweak=related_tweak)
+        probability = run_search_characteristic(cipher_name, num_rounds, tikzify=False, seed=None, log_probability=probability, rounding_mode=RoundMode(rounding_mode), searching_mode=SearchMode.BINARY, save=True, related_tweak=related_tweak, save_perf=False)
         num_rounds += 1
-
 
 
 if __name__ == "__main__":
