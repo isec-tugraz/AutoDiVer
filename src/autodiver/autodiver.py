@@ -309,16 +309,29 @@ _tikzify_help = (
     "Visualize the found characteristic in LaTeX. "
     f"Supported for: {', '.join(_tikzify_supported)}"
 )
+# choose lower third of table so speed is still feasible, but also the area we care more about - (where it takes the longest)
+ciphers_round_number: dict[str, int] = {
+    "gift64" : 10,
+    "gift128" : 9,
+    "midori64" : 5,
+    "midori128" : 5,
+    "present80" : 11,
+    "rectangle" : 9,
+    "skinny64" : 5,
+    "skinny128" : 11,
+    "speck32" : 8,
+    "speck64" : 10,
+    "speck128" : 7,
+    "warp" : 16
+}
 
 def profile_cardenc() -> None:
-    num_rounds = 5
-    for cipher in _ciphers_char_search:
-        if cipher not in ["ascon", "pyjamask96", "speedy192"]:
-            print(cipher)
-            for card_enc in CARD_ENC_MAP:
-                if card_enc in ["pairwise", "bitwise", "ladder", "native"]:
-                    continue
-                run_search_characteristic(cipher, num_rounds, tikzify=False, seed=None, log_probability=None, rounding_mode=RoundMode.DOWN.value, searching_mode=SearchMode.BINARY.value, save=False, related_tweak=False, card_enc=card_enc, save_perf=True)
+    for cipher in ciphers_round_number:
+        print(cipher)
+        for card_enc in CARD_ENC_MAP:
+            if card_enc in ["pairwise", "bitwise", "ladder", "native"]:
+                continue
+            run_search_characteristic(cipher, ciphers_round_number[cipher], tikzify=False, seed=None, log_probability=None, rounding_mode=RoundMode.DOWN.value, searching_mode=SearchMode.BINARY.value, save=False, related_tweak=False, card_enc=card_enc, save_perf=True)
 
     # loop over all ciphers and all cardinality encodings here
     # search for all ciphers for 5 rounds
@@ -388,10 +401,10 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
             characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search, cipher.log_prob, cipher.rounding_mode.value)
 
         if save_perf:
-            directory = Path.cwd() / "misc/card_enc" / cipher_name
+            directory = Path.cwd() / "misc/card_enc_var_round" / cipher_name
             directory.mkdir(parents=True, exist_ok=True)
-            char_path = Path(Path.cwd() /  "misc/card_enc" / cipher_name / card_enc).with_suffix('.npz')
-            np.savez(char_path, stat_sat_search=cipher.stat_sat_search, stat_unsat_search=cipher.stat_unsat_search)
+            char_path = Path(Path.cwd() /  "misc/card_enc_var_round" / cipher_name / card_enc).with_suffix('.npz')
+            np.savez(char_path, stat_sat_search=cipher.stat_sat_search, stat_unsat_search=cipher.stat_unsat_search, num_rounds=num_rounds, boundary=cipher.log_prob)
 
         if tikzify:
             create_latex(characteristic)
