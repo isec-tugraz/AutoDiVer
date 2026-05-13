@@ -109,7 +109,11 @@ class SboxCipher(IndexSet):
     rounding_mode: RoundMode # only used in the case of searching for differential characteristics
     searching_mode: SearchMode
     log_prob: int | None
-    time_sat_search: float | None = None
+    stat_sat_search : [float, int, int]
+    stat_unsat_search : [float, int, int]
+    time_sat_search: float | None = None # todo: save these + cipher & encoding as table
+    time_unsat_search: float | None = None
+
     card_enc: int = 8
 
     def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, related_tweak: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, searching_mode: SearchMode = SearchMode.UPWARDS, log_prob: int | None = None, card_enc: int):
@@ -362,6 +366,9 @@ class SboxCipher(IndexSet):
 
     def _model_cardinality_encoding(self, bound: int) -> CNF:
         vpool = IDPool(start_from=self.numvars + 1)
+        print(vpool)
+        print(self.card_enc)
+        print(bound)
         cardinality_encoding = CardEnc.atmost(lits=self.ddt_weights.flatten().tolist(), vpool=vpool, bound=bound, encoding=self.card_enc).clauses
 
         cardinality_encoding_cnf = CNF()
@@ -529,12 +536,17 @@ class SboxCipher(IndexSet):
             if is_sat:
                 highest_cost = current_cost
                 best_model = result
+                self.stat_sat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
                 self.time_sat_search = timer.elapsed()
             else:
                 lowest_cost = current_cost
+                self.stat_unsat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
+                self.time_unsat_search = timer.elapsed()
 
             if highest_cost == lowest_cost + 1:
                 print(f"measured time for SAT run: {self.time_sat_search}")
+                print(f"measured time for UNSAT run: {self.time_sat_search}")
+
                 self.log_prob = highest_cost
                 break
 
