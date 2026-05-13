@@ -15,6 +15,26 @@ def group_key(fname):
     m = prefix_re.match(fname)
     return m.group(1) if m else fname
 
+
+def format_time(search_time: float) -> StringIO:
+    time = StringIO()
+    if search_time < 0.1:
+            print(f"{search_time * 1000:.0f}ms", file=time, end="")
+    elif search_time < 1:
+        print(f"{search_time:.1f}s", file=time, end="")
+    elif search_time <= 60:
+        print(f"{search_time:.0f}s", file=time, end="")
+    elif search_time <= 60 * 60:
+        print(f"{search_time / 60:.0f}m", file=time, end="")
+    elif search_time <= 60 * 60 * 24:
+        print(f"{search_time / (60 * 60):.0f}h", file=time, end="")
+    else:
+        print(f"{search_time / (60 * 60 * 24):.0f}d", file=time, end="")
+
+    return time
+
+
+
 def format_non_power_of_two_ciphers(result: StringIO, files: list, subdirectory: Path):
     for prefix, group in groupby(files, key=group_key):
 
@@ -50,19 +70,7 @@ def format_non_power_of_two_ciphers(result: StringIO, files: list, subdirectory:
             else:
                 print(f"2^{{{log_probability:.2f}}}", file=prob, end="")
 
-            time = StringIO()
-            if search_time < 0.1:
-                print(f"{search_time * 1000:.0f}ms", file=time, end="")
-            elif search_time < 1:
-                print(f"{search_time:.1f}s", file=time, end="")
-            elif search_time <= 60:
-                print(f"{search_time:.0f}s", file=time, end="")
-            elif search_time <= 60*60:
-                print(f"{search_time/60:.0f}m", file=time, end="")
-            elif search_time <= 60*60*24:
-                print(f"{search_time/(60*60):.0f}h", file=time, end="")
-            else:
-                print(f"{search_time / (60 * 60*24):.0f}d", file=time, end="")
+            time = format_time(search_time)
 
             print(f"    {num_rounds} & ${prob.getvalue()}$ & $2^{{-{highest_modeled_log_prob}}}$ & {time.getvalue()} & \\none \\\\", file=result)
 
@@ -93,10 +101,12 @@ map_cipher_name: dict[str,str] = {
     "skinny64": "SKINNY-64",
     "skinny128": "SKINNY-128",
     "speedy192": "SPEEDY-192",
-    "warp": "WARP"
+    "warp": "WARP",
+    "skinny64_rel_tweak": "SKINNY-64",
+    "skinny128_rel_tweak": "SKINNY-128"
 }
 
-non_power_of_two_ciphers = ["gift64", "gift128", "skinny128", "speedy192"]
+non_power_of_two_ciphers = ["gift64", "gift128", "skinny128", "speedy192", "skinny64_rel_tweak", "skinny128_rel_tweak"]
 
 def main():
     tex_file = Path.cwd() / "../2026_project_juettler/thesis/chapters/results_bigtable.tex"
@@ -148,19 +158,7 @@ def main():
                     else:
                         print(f"2^{{{log_probability:.2f}}}", file=prob, end="")
 
-                    time = StringIO()
-                    if search_time < 0.1:
-                        print(f"{search_time * 1000:.0f}ms", file=time, end="")
-                    elif search_time < 1:
-                        print(f"{search_time:.1f}s", file=time, end="")
-                    elif search_time <= 60:
-                        print(f"{search_time:.0f}s", file=time, end="")
-                    elif search_time <= 60 * 60:
-                        print(f"{search_time / 60:.0f}m", file=time, end="")
-                    elif search_time <= 60 * 60 * 24:
-                        print(f"{search_time / (60 * 60):.0f}h", file=time, end="")
-                    else:
-                        print(f"{search_time / (60 * 60 * 24):.0f}d", file=time, end="")
+                    time = format_time(search_time)
 
                 print(f"    {num_rounds} & ${prob.getvalue()}$ & {time.getvalue()} & \\none \\\\", file=result)
 
