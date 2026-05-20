@@ -310,19 +310,19 @@ _tikzify_help = (
     f"Supported for: {', '.join(_tikzify_supported)}"
 )
 # choose lower third of table so speed is still feasible, but also the area we care more about - (where it takes the longest)
-ciphers_round_number: dict[str, int] = {
+ciphers_round_number: dict[str, (int, int)] = {
     # "gift64" : 10,
     # "gift128" : 9,
     # "midori64" : 5,
     # "midori128" : 5,
     # "present80" : 11,
-    "rectangle128" : 9,
-    "skinny64" : 5,
-    "skinny128" : 11,
-    "speck32" : 8,
-    "speck64" : 10,
-    "speck128" : 7,
-    "warp" : 16
+    "rectangle128" : (9, 35),
+    "skinny64" : (5, 23),
+    "skinny128" : (11, 103),
+    "speck32" : (8, 23),
+    "speck64" : (10, 37),
+    "speck128" : (7, 20),
+    "warp" : (13, 67)
 }
 
 def profile_cardenc() -> None:
@@ -331,7 +331,7 @@ def profile_cardenc() -> None:
         for card_enc in CARD_ENC_MAP:
             if card_enc in ["pairwise", "bitwise", "ladder", "native"]:
                 continue
-            run_search_characteristic(cipher, ciphers_round_number[cipher], tikzify=False, seed=None, log_probability=None, rounding_mode=RoundMode.DOWN.value, searching_mode=SearchMode.BINARY.value, save=False, related_tweak=False, card_enc=card_enc, save_perf=True)
+            run_search_characteristic(cipher, ciphers_round_number[cipher][0], tikzify=False, seed=None, log_probability=ciphers_round_number[cipher][1], rounding_mode=RoundMode.DOWN.value, searching_mode=SearchMode.UPWARDS.value, save=False, related_tweak=False, card_enc=card_enc, save_perf=True)
 
     # loop over all ciphers and all cardinality encodings here
     # search for all ciphers for 5 rounds
