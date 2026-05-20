@@ -567,13 +567,11 @@ class SboxCipher(IndexSet):
                 log.info(f'result: {is_sat}, #log-prob: {log_prob}, took: {timer.__str__()}')
 
             if is_sat:
-                highest_cost = log_prob
-                best_model = model
+                self.log_prob = log_prob
                 self.stat_sat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
                 self.time_sat_search = timer.elapsed()
                 break
             else:
-                lowest_cost = log_prob
                 self.stat_unsat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
                 self.time_unsat_search = timer.elapsed()
 
