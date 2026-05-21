@@ -402,9 +402,10 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
             characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search, cipher.log_prob, cipher.rounding_mode.value)
 
         if save_perf:
-            directory = Path.cwd() / "misc/card_enc_var_round" / cipher_name
+            dir_name = "misc/card_enc_var_round_fixed_seed"
+            directory = Path.cwd() / dir_name / cipher_name
             directory.mkdir(parents=True, exist_ok=True)
-            char_path = Path(Path.cwd() /  "misc/card_enc_var_round_fixed_seed" / cipher_name / card_enc).with_suffix('.npz')
+            char_path = Path(Path.cwd() / dir_name / cipher_name / card_enc).with_suffix('.npz')
             np.savez(char_path, stat_sat_search=cipher.stat_sat_search, stat_unsat_search=cipher.stat_unsat_search, num_rounds=num_rounds, boundary=cipher.log_prob)
 
         if tikzify:
