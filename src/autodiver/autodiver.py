@@ -312,16 +312,16 @@ _tikzify_help = (
 
 # choose lower third of table so speed is still feasible, but also the area we care more about - (where it takes the longest)
 ciphers_round_number: dict[str, (int, int)] = {
-    "gift64" : (10, 47),
-    "gift128" : (9, 45),
-    "midori64" : (5, 45),
-    "midori128" : (5, 48),
-    "present80" : (11, 45),
-    "rectangle128" : (9, 35),
-    "skinny64" : (5, 23),
-    "skinny128" : (11, 103),
-    "speck32" : (8, 23),
-    "speck64" : (9, 33),
+    # "gift64" : (10, 47),
+    # "gift128" : (9, 45),
+    # "midori64" : (5, 45),
+    # "midori128" : (5, 48),
+    # "present80" : (11, 45),
+    # "rectangle128" : (9, 35),
+    # "skinny64" : (5, 23),
+    # "skinny128" : (11, 103),
+    # "speck32" : (8, 23),
+    "speck64" : (7, 20),
     "speck128" : (7, 20),
     "warp" : (13, 67)
 }
