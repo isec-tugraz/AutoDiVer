@@ -19,20 +19,19 @@ def group_key(fname):
 def format_time(search_time: float) -> StringIO:
     time = StringIO()
     if search_time < 0.1:
-            print(f"{search_time * 1000:.0f}ms", file=time, end="")
+            print(f"{search_time * 1000:.0f}\,ms", file=time, end="")
     elif search_time < 1:
-        print(f"{search_time:.1f}s", file=time, end="")
+        print(f"{search_time:.1f}\,s", file=time, end="")
     elif search_time <= 60:
-        print(f"{search_time:.0f}s", file=time, end="")
+        print(f"{search_time:.0f}\,s", file=time, end="")
     elif search_time <= 60 * 60:
-        print(f"{search_time / 60:.0f}m", file=time, end="")
+        print(f"{search_time / 60:.0f}\,m", file=time, end="")
     elif search_time <= 60 * 60 * 24:
-        print(f"{search_time / (60 * 60):.0f}h", file=time, end="")
+        print(f"{search_time / (60 * 60):.0f}\,h", file=time, end="")
     else:
-        print(f"{search_time / (60 * 60 * 24):.0f}d", file=time, end="")
+        print(f"{search_time / (60 * 60 * 24):.0f}\,d", file=time, end="")
 
     return time
-
 
 
 def format_non_power_of_two_ciphers(result: StringIO, files: list, subdirectory: Path):
