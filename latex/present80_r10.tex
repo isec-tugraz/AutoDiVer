@@ -1,0 +1,114 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{geometry}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath,amssymb}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{calc,positioning,cipher}
+
+\definecolor{tug}{HTML}{F70146}
+\definecolor{tugblue}{HTML}{245B78}
+
+\begin{document}
+
+\pagestyle{empty}
+% PRESENT CHARACTERISTIC
+\clearpage
+\begin{figure}
+  \centering
+  \newcommand{\activeInput}[1]{
+    \draw[activebit,->] (i0-#1) -- (i0-#1|-S1-0.north);
+  }
+  \newcommand{\activeLinear}[2]{
+    % #1 = round, #2 = bit position at sboxout
+    \pgfmathsetmacro{\newPos}{int(mod(\nbits/4*#2,\lastBit)+div(#2,\lastBit)*\lastBit)}
+    \draw[activebit,->] (i0-#2|-S#1-0.south) -- +(0,-.5em) -- (i#1-\newPos) -- (xor#1-\newPos.south);
+    \pgfmathsetmacro{\actSbx}{int(div(#2,4))}
+    \activeSbox{#1}{\actSbx}
+  }
+  \newcommand{\activeSbox}[2]{
+    % #1 = round, #2 = sbox position
+    \node[box,tug] (S#1-#2) at (#2*3em+1.1em,7em-#1*9em) {\color{white}$\mathcal{S}$};
+  }
+  \newcommand{\sboxLabel}[4]{
+    % #1 = round, #2 = sbox position, #3 input label, #4 = output label
+    %\node[box,tug] (S#1-#2) at (#2*3em+1.1em,7em-#1*9em) {};
+    \node[below=-1mm of S#1-#2.north west] {\hspace{0.5em}{\scriptsize\color{white}\texttt{#3}}};
+    \node[above=-1mm of S#1-#2.south west] {\hspace{0.5em}{\scriptsize\color{white}\texttt{#4}}};
+  }
+
+  \begin{tikzpicture}[scale=.625,
+                      rounded corners,
+                      >=latex,
+                      box/.append style={minimum size=.625cm},
+                      activebit/.style={tug,very thick}
+    ]
+    
+\pgfmathsetmacro{\nrounds}{10}
+    \pgfmathsetmacro{\nbits}{64}  % set bitsize of state
+    \pgfmathsetmacro{\lastBit}{int(\nbits-1)}
+    \pgfmathsetmacro{\secondlastBit}{int(\nbits-2)}
+    \pgfmathsetmacro{\lastSbox}{int(\nbits/4-1)}
+    \foreach \r in {0,...,\nrounds} {
+      \foreach \z in {0,...,\lastBit} {
+        \node[xor, scale=0.6] (xor\r-\z) at (\z*0.75em,-\r*9em) {};
+        \coordinate[above = 0.5em of xor\r-\z] (i\r-\z) ;
+      }
+      %\node[left = 0em of xor\r-0] (K\r) {$RK_{\r}$};
+    }
+    \foreach \z [evaluate=\z as \zz using {int(mod(16*\z,\lastBit))}] in {0,...,\lastBit} {
+      \draw[->] (i0-\z) -- (xor0-\z);
+    }
+    \foreach \r [evaluate=\r as \rr using {int(\r-1)}] in {1,...,\nrounds} {
+      \foreach \z in {0,...,\lastSbox} {
+        \node[box] (S\r-\z) at (\z*3em+1.1em,7em-\r*9em) {$\mathcal{S}$};
+      }
+      \foreach \z [evaluate=\z as \zz using {int(mod(16*\z,\lastBit))}] in {0,...,\secondlastBit} {
+        \draw[->] (xor\rr-\z|-S\r-0.south) -- +(0,-.5em) -- (i\r-\zz) -- (xor\r-\zz);
+        \draw     (xor\rr-\z) -- (xor\rr-\z|-S\r-0.north);
+      }
+      \draw[->] (xor\rr-\lastBit|-S\r-0.south) -- +(0,-.5em) -- (i\r-\lastBit) -- (xor\r-\lastBit);
+      \draw     (xor\rr-\lastBit) -- (xor\rr-\lastBit|-S\r-0.north);
+    }
+    \activeInput{0}
+    \activeInput{1}
+    \activeInput{2}
+    \activeInput{12}
+    \activeInput{13}
+    \activeInput{14}
+    \activeInput{15}
+    \activeLinear{1}{0}
+    \activeLinear{1}{12}
+    \activeLinear{2}{2}
+    \activeLinear{3}{32}
+    \activeLinear{3}{35}
+    \activeLinear{4}{8}
+    \activeLinear{4}{11}
+    \activeLinear{4}{56}
+    \activeLinear{4}{59}
+    \activeLinear{5}{0}
+    \activeLinear{5}{2}
+    \activeLinear{5}{12}
+    \activeLinear{5}{14}
+    \activeLinear{5}{48}
+    \activeLinear{5}{50}
+    \activeLinear{5}{60}
+    \activeLinear{5}{62}
+    \activeLinear{6}{2}
+    \activeLinear{6}{14}
+    \activeLinear{6}{34}
+    \activeLinear{6}{46}
+    \activeLinear{7}{34}
+    \activeLinear{7}{42}
+    \activeLinear{8}{40}
+    \activeLinear{9}{8}
+    \activeLinear{9}{10}
+    \activeLinear{10}{0}
+    \activeLinear{10}{2}
+    \activeLinear{10}{32}
+    \activeLinear{10}{34}
+  \end{tikzpicture}
+\end{figure}
+\end{document}

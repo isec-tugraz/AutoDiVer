@@ -1,0 +1,89 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{geometry}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usepackage{skinny}
+
+\usetikzlibrary{calc,positioning,cipher}
+
+\definecolor{tug}{HTML}{F70146}
+\definecolor{tugblue}{HTML}{245B78}
+
+\begin{document}
+
+\pagestyle{empty}
+\clearpage
+
+\begin{figure}[p!]
+  \newcommand{\hex}[1]{\texttt{#1}}
+  \centering
+  %\tikzsetnextfilename{skinny-char}
+  \begin{tikzpicture}[cellopts/.append style={font=\scriptsize\ttfamily}, raster/.style={gray}, yscale=.8]
+
+    \SkinnyInit{}{}{}{}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss32}\Cell{ss32}{0a}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss32}\Cell{ss32}{10}}
+                  {\FillCell[tug!25]{ss32}\Cell{ss32}{10}}
+                  {\FillCell[tug!25]{ss31}\Cell{ss31}{10}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss01}\Cell{ss01}{10}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss01}\Cell{ss01}{10}}
+                  {\FillCell[tug!25]{ss01}\Cell{ss01}{40}}{}{}
+                  {\FillCell[tug!25]{ss01}\Cell{ss01}{40}}
+                  {}
+                  {}
+    \SkinnyNewLine{{}}
+    \SkinnyRoundTK{}
+                  {}{}{}
+                  {}
+                  {}
+                  {}
+    \SkinnyNewLine{{}}
+    \SkinnyRoundTK{}
+                  {}{}{}
+                  {}
+                  {}
+                  {}
+    \SkinnyNewLine{{}}
+    \SkinnyRoundTK{}
+                  {}{}{}
+                  {}
+                  {}
+                  {}
+    \SkinnyNewLine{{}}
+    \SkinnyRoundTK{}
+                  {}{}{}
+                  {}
+                  {}
+                  {}
+    \SkinnyNewLine{{}}
+    \SkinnyRoundTK{}
+                  {}{}{}
+                  {}
+                  {}
+                  {}
+    \SkinnyNewLine{{}}
+    \SkinnyRoundTK{}
+                  {\FillCell[tug!25]{ss10}\Cell{ss10}{40}}{}{}
+                  {}
+                  {\FillCell[tug!25]{ss10}\Cell{ss10}{40}}
+                  {\FillCell[tug!25]{ss11}\Cell{ss11}{40}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss21}\Cell{ss21}{40}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss21}\Cell{ss21}{40}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss21}\Cell{ss21}{04}}
+                  {\FillCell[tug!25]{ss21}\Cell{ss21}{04}}
+                  {\FillCell[tug!25]{ss23}\Cell{ss23}{04}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss03}\Cell{ss03}{04}\FillCell[tug!25]{ss23}\Cell{ss23}{04}\FillCell[tug!25]{ss33}\Cell{ss33}{04}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss03}\Cell{ss03}{04}\FillCell[tug!25]{ss23}\Cell{ss23}{04}\FillCell[tug!25]{ss33}\Cell{ss33}{04}}
+                  {\FillCell[tug!25]{ss12}\Cell{ss12}{60}}{}{}
+                  {\FillCell[tug!25]{ss03}\Cell{ss03}{01}\FillCell[tug!25]{ss23}\Cell{ss23}{01}\FillCell[tug!25]{ss33}\Cell{ss33}{01}}
+                  {\FillCell[tug!25]{ss03}\Cell{ss03}{01}\FillCell[tug!25]{ss12}\Cell{ss12}{60}\FillCell[tug!25]{ss23}\Cell{ss23}{01}\FillCell[tug!25]{ss33}\Cell{ss33}{01}}
+                  {\FillCell[tug!25]{ss03}\Cell{ss03}{01}\FillCell[tug!25]{ss13}\Cell{ss13}{60}\FillCell[tug!25]{ss21}\Cell{ss21}{01}\FillCell[tug!25]{ss32}\Cell{ss32}{01}}
+    \SkinnyFin{{\FillCell[tug!25]{ss01}\Cell{ss01}{01}\FillCell[tug!25]{ss02}\Cell{ss02}{01}\FillCell[tug!25]{ss03}\Cell{ss03}{01}\FillCell[tug!25]{ss13}\Cell{ss13}{01}\FillCell[tug!25]{ss21}\Cell{ss21}{01}\FillCell[tug!25]{ss23}\Cell{ss23}{60}\FillCell[tug!25]{ss31}\Cell{ss31}{01}\FillCell[tug!25]{ss33}\Cell{ss33}{01}}}
+  \end{tikzpicture}
+\end{figure}
+\end{document}

@@ -1,0 +1,89 @@
+\documentclass[a4paper,11pt]{article}
+
+\usepackage{geometry}
+\usepackage{parskip}
+\usepackage[hidelinks]{hyperref}
+\usepackage{amsmath,amssymb}
+\usepackage{tikz}
+\usepackage{skinny}
+
+\usetikzlibrary{calc,positioning,cipher}
+
+\definecolor{tug}{HTML}{F70146}
+\definecolor{tugblue}{HTML}{245B78}
+
+\begin{document}
+
+\pagestyle{empty}
+\clearpage
+
+\begin{figure}[p!]
+  \newcommand{\hex}[1]{\texttt{#1}}
+  \centering
+  %\tikzsetnextfilename{skinny-char}
+  \begin{tikzpicture}[cellopts/.append style={font=\scriptsize\ttfamily}, raster/.style={gray}, yscale=.8]
+
+    \SkinnyInit{}{}{}{}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss00}\Cell{ss00}{08}\FillCell[tug!25]{ss01}\Cell{ss01}{08}\FillCell[tug!25]{ss22}\Cell{ss22}{08}\FillCell[tug!25]{ss23}\Cell{ss23}{09}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{10}\FillCell[tug!25]{ss01}\Cell{ss01}{10}\FillCell[tug!25]{ss22}\Cell{ss22}{10}\FillCell[tug!25]{ss23}\Cell{ss23}{10}}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{10}\FillCell[tug!25]{ss01}\Cell{ss01}{10}\FillCell[tug!25]{ss22}\Cell{ss22}{10}\FillCell[tug!25]{ss23}\Cell{ss23}{10}}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{10}\FillCell[tug!25]{ss01}\Cell{ss01}{10}\FillCell[tug!25]{ss20}\Cell{ss20}{10}\FillCell[tug!25]{ss21}\Cell{ss21}{10}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss10}\Cell{ss10}{10}\FillCell[tug!25]{ss11}\Cell{ss11}{10}\FillCell[tug!25]{ss20}\Cell{ss20}{10}\FillCell[tug!25]{ss21}\Cell{ss21}{10}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss10}\Cell{ss10}{10}\FillCell[tug!25]{ss11}\Cell{ss11}{10}\FillCell[tug!25]{ss20}\Cell{ss20}{10}\FillCell[tug!25]{ss21}\Cell{ss21}{10}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss10}\Cell{ss10}{40}\FillCell[tug!25]{ss11}\Cell{ss11}{50}\FillCell[tug!25]{ss20}\Cell{ss20}{50}\FillCell[tug!25]{ss21}\Cell{ss21}{40}}
+                  {\FillCell[tug!25]{ss10}\Cell{ss10}{40}\FillCell[tug!25]{ss11}\Cell{ss11}{50}\FillCell[tug!25]{ss20}\Cell{ss20}{50}\FillCell[tug!25]{ss21}\Cell{ss21}{40}}
+                  {\FillCell[tug!25]{ss11}\Cell{ss11}{40}\FillCell[tug!25]{ss12}\Cell{ss12}{50}\FillCell[tug!25]{ss22}\Cell{ss22}{50}\FillCell[tug!25]{ss23}\Cell{ss23}{40}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss02}\Cell{ss02}{50}\FillCell[tug!25]{ss03}\Cell{ss03}{40}\FillCell[tug!25]{ss21}\Cell{ss21}{40}\FillCell[tug!25]{ss23}\Cell{ss23}{40}\FillCell[tug!25]{ss32}\Cell{ss32}{50}\FillCell[tug!25]{ss33}\Cell{ss33}{40}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss02}\Cell{ss02}{50}\FillCell[tug!25]{ss03}\Cell{ss03}{40}\FillCell[tug!25]{ss21}\Cell{ss21}{40}\FillCell[tug!25]{ss23}\Cell{ss23}{40}\FillCell[tug!25]{ss32}\Cell{ss32}{50}\FillCell[tug!25]{ss33}\Cell{ss33}{40}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss02}\Cell{ss02}{04}\FillCell[tug!25]{ss03}\Cell{ss03}{04}\FillCell[tug!25]{ss21}\Cell{ss21}{04}\FillCell[tug!25]{ss23}\Cell{ss23}{04}\FillCell[tug!25]{ss32}\Cell{ss32}{04}\FillCell[tug!25]{ss33}\Cell{ss33}{04}}
+                  {\FillCell[tug!25]{ss02}\Cell{ss02}{04}\FillCell[tug!25]{ss03}\Cell{ss03}{04}\FillCell[tug!25]{ss21}\Cell{ss21}{04}\FillCell[tug!25]{ss23}\Cell{ss23}{04}\FillCell[tug!25]{ss32}\Cell{ss32}{04}\FillCell[tug!25]{ss33}\Cell{ss33}{04}}
+                  {\FillCell[tug!25]{ss02}\Cell{ss02}{04}\FillCell[tug!25]{ss03}\Cell{ss03}{04}\FillCell[tug!25]{ss23}\Cell{ss23}{04}\FillCell[tug!25]{ss21}\Cell{ss21}{04}\FillCell[tug!25]{ss31}\Cell{ss31}{04}\FillCell[tug!25]{ss32}\Cell{ss32}{04}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss12}\Cell{ss12}{04}\FillCell[tug!25]{ss13}\Cell{ss13}{04}\FillCell[tug!25]{ss21}\Cell{ss21}{04}\FillCell[tug!25]{ss23}\Cell{ss23}{04}\FillCell[tug!25]{ss31}\Cell{ss31}{04}\FillCell[tug!25]{ss32}\Cell{ss32}{04}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss12}\Cell{ss12}{04}\FillCell[tug!25]{ss13}\Cell{ss13}{04}\FillCell[tug!25]{ss21}\Cell{ss21}{04}\FillCell[tug!25]{ss23}\Cell{ss23}{04}\FillCell[tug!25]{ss31}\Cell{ss31}{04}\FillCell[tug!25]{ss32}\Cell{ss32}{04}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss12}\Cell{ss12}{01}\FillCell[tug!25]{ss13}\Cell{ss13}{01}\FillCell[tug!25]{ss21}\Cell{ss21}{01}\FillCell[tug!25]{ss23}\Cell{ss23}{01}\FillCell[tug!25]{ss31}\Cell{ss31}{01}\FillCell[tug!25]{ss32}\Cell{ss32}{01}}
+                  {\FillCell[tug!25]{ss12}\Cell{ss12}{01}\FillCell[tug!25]{ss13}\Cell{ss13}{01}\FillCell[tug!25]{ss21}\Cell{ss21}{01}\FillCell[tug!25]{ss23}\Cell{ss23}{01}\FillCell[tug!25]{ss31}\Cell{ss31}{01}\FillCell[tug!25]{ss32}\Cell{ss32}{01}}
+                  {\FillCell[tug!25]{ss13}\Cell{ss13}{01}\FillCell[tug!25]{ss10}\Cell{ss10}{01}\FillCell[tug!25]{ss23}\Cell{ss23}{01}\FillCell[tug!25]{ss21}\Cell{ss21}{01}\FillCell[tug!25]{ss30}\Cell{ss30}{01}\FillCell[tug!25]{ss31}\Cell{ss31}{01}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss00}\Cell{ss00}{01}\FillCell[tug!25]{ss03}\Cell{ss03}{01}\FillCell[tug!25]{ss20}\Cell{ss20}{01}\FillCell[tug!25]{ss21}\Cell{ss21}{01}\FillCell[tug!25]{ss31}\Cell{ss31}{01}\FillCell[tug!25]{ss33}\Cell{ss33}{01}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss00}\Cell{ss00}{01}\FillCell[tug!25]{ss03}\Cell{ss03}{01}\FillCell[tug!25]{ss20}\Cell{ss20}{01}\FillCell[tug!25]{ss21}\Cell{ss21}{01}\FillCell[tug!25]{ss31}\Cell{ss31}{01}\FillCell[tug!25]{ss33}\Cell{ss33}{01}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{20}\FillCell[tug!25]{ss03}\Cell{ss03}{20}\FillCell[tug!25]{ss20}\Cell{ss20}{20}\FillCell[tug!25]{ss21}\Cell{ss21}{20}\FillCell[tug!25]{ss31}\Cell{ss31}{20}\FillCell[tug!25]{ss33}\Cell{ss33}{20}}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{20}\FillCell[tug!25]{ss03}\Cell{ss03}{20}\FillCell[tug!25]{ss20}\Cell{ss20}{20}\FillCell[tug!25]{ss21}\Cell{ss21}{20}\FillCell[tug!25]{ss31}\Cell{ss31}{20}\FillCell[tug!25]{ss33}\Cell{ss33}{20}}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{20}\FillCell[tug!25]{ss03}\Cell{ss03}{20}\FillCell[tug!25]{ss22}\Cell{ss22}{20}\FillCell[tug!25]{ss23}\Cell{ss23}{20}\FillCell[tug!25]{ss30}\Cell{ss30}{20}\FillCell[tug!25]{ss32}\Cell{ss32}{20}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss10}\Cell{ss10}{20}\FillCell[tug!25]{ss13}\Cell{ss13}{20}\FillCell[tug!25]{ss22}\Cell{ss22}{20}\FillCell[tug!25]{ss23}\Cell{ss23}{20}\FillCell[tug!25]{ss30}\Cell{ss30}{20}\FillCell[tug!25]{ss32}\Cell{ss32}{20}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss10}\Cell{ss10}{20}\FillCell[tug!25]{ss13}\Cell{ss13}{20}\FillCell[tug!25]{ss22}\Cell{ss22}{20}\FillCell[tug!25]{ss23}\Cell{ss23}{20}\FillCell[tug!25]{ss30}\Cell{ss30}{20}\FillCell[tug!25]{ss32}\Cell{ss32}{20}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss10}\Cell{ss10}{80}\FillCell[tug!25]{ss13}\Cell{ss13}{90}\FillCell[tug!25]{ss22}\Cell{ss22}{90}\FillCell[tug!25]{ss23}\Cell{ss23}{80}\FillCell[tug!25]{ss30}\Cell{ss30}{90}\FillCell[tug!25]{ss32}\Cell{ss32}{80}}
+                  {\FillCell[tug!25]{ss10}\Cell{ss10}{80}\FillCell[tug!25]{ss13}\Cell{ss13}{90}\FillCell[tug!25]{ss22}\Cell{ss22}{90}\FillCell[tug!25]{ss23}\Cell{ss23}{80}\FillCell[tug!25]{ss30}\Cell{ss30}{90}\FillCell[tug!25]{ss32}\Cell{ss32}{80}}
+                  {\FillCell[tug!25]{ss11}\Cell{ss11}{80}\FillCell[tug!25]{ss10}\Cell{ss10}{90}\FillCell[tug!25]{ss20}\Cell{ss20}{90}\FillCell[tug!25]{ss21}\Cell{ss21}{80}\FillCell[tug!25]{ss33}\Cell{ss33}{90}\FillCell[tug!25]{ss31}\Cell{ss31}{80}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss00}\Cell{ss00}{90}\FillCell[tug!25]{ss03}\Cell{ss03}{90}\FillCell[tug!25]{ss30}\Cell{ss30}{90}\FillCell[tug!25]{ss31}\Cell{ss31}{80}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss00}\Cell{ss00}{90}\FillCell[tug!25]{ss03}\Cell{ss03}{90}\FillCell[tug!25]{ss30}\Cell{ss30}{90}\FillCell[tug!25]{ss31}\Cell{ss31}{80}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{02}\FillCell[tug!25]{ss03}\Cell{ss03}{02}\FillCell[tug!25]{ss30}\Cell{ss30}{02}\FillCell[tug!25]{ss31}\Cell{ss31}{02}}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{02}\FillCell[tug!25]{ss03}\Cell{ss03}{02}\FillCell[tug!25]{ss30}\Cell{ss30}{02}\FillCell[tug!25]{ss31}\Cell{ss31}{02}}
+                  {\FillCell[tug!25]{ss00}\Cell{ss00}{02}\FillCell[tug!25]{ss03}\Cell{ss03}{02}\FillCell[tug!25]{ss33}\Cell{ss33}{02}\FillCell[tug!25]{ss30}\Cell{ss30}{02}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss10}\Cell{ss10}{02}\FillCell[tug!25]{ss13}\Cell{ss13}{02}\FillCell[tug!25]{ss30}\Cell{ss30}{02}\FillCell[tug!25]{ss33}\Cell{ss33}{02}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss10}\Cell{ss10}{02}\FillCell[tug!25]{ss13}\Cell{ss13}{02}\FillCell[tug!25]{ss30}\Cell{ss30}{02}\FillCell[tug!25]{ss33}\Cell{ss33}{02}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss10}\Cell{ss10}{09}\FillCell[tug!25]{ss13}\Cell{ss13}{08}\FillCell[tug!25]{ss30}\Cell{ss30}{09}\FillCell[tug!25]{ss33}\Cell{ss33}{08}}
+                  {\FillCell[tug!25]{ss10}\Cell{ss10}{09}\FillCell[tug!25]{ss13}\Cell{ss13}{08}\FillCell[tug!25]{ss30}\Cell{ss30}{09}\FillCell[tug!25]{ss33}\Cell{ss33}{08}}
+                  {\FillCell[tug!25]{ss11}\Cell{ss11}{09}\FillCell[tug!25]{ss10}\Cell{ss10}{08}\FillCell[tug!25]{ss33}\Cell{ss33}{09}\FillCell[tug!25]{ss32}\Cell{ss32}{08}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss02}\Cell{ss02}{08}\FillCell[tug!25]{ss03}\Cell{ss03}{09}\FillCell[tug!25]{ss20}\Cell{ss20}{08}\FillCell[tug!25]{ss21}\Cell{ss21}{09}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss02}\Cell{ss02}{08}\FillCell[tug!25]{ss03}\Cell{ss03}{09}\FillCell[tug!25]{ss20}\Cell{ss20}{08}\FillCell[tug!25]{ss21}\Cell{ss21}{09}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss02}\Cell{ss02}{10}\FillCell[tug!25]{ss03}\Cell{ss03}{10}\FillCell[tug!25]{ss20}\Cell{ss20}{10}\FillCell[tug!25]{ss21}\Cell{ss21}{10}}
+                  {\FillCell[tug!25]{ss02}\Cell{ss02}{10}\FillCell[tug!25]{ss03}\Cell{ss03}{10}\FillCell[tug!25]{ss20}\Cell{ss20}{10}\FillCell[tug!25]{ss21}\Cell{ss21}{10}}
+                  {\FillCell[tug!25]{ss02}\Cell{ss02}{10}\FillCell[tug!25]{ss03}\Cell{ss03}{10}\FillCell[tug!25]{ss22}\Cell{ss22}{10}\FillCell[tug!25]{ss23}\Cell{ss23}{10}}
+    \SkinnyNewLine{{\FillCell[tug!25]{ss12}\Cell{ss12}{10}\FillCell[tug!25]{ss13}\Cell{ss13}{10}\FillCell[tug!25]{ss22}\Cell{ss22}{10}\FillCell[tug!25]{ss23}\Cell{ss23}{10}}}
+    \SkinnyRoundTK{\FillCell[tug!25]{ss12}\Cell{ss12}{10}\FillCell[tug!25]{ss13}\Cell{ss13}{10}\FillCell[tug!25]{ss22}\Cell{ss22}{10}\FillCell[tug!25]{ss23}\Cell{ss23}{10}}
+                  {}{}{}
+                  {\FillCell[tug!25]{ss12}\Cell{ss12}{50}\FillCell[tug!25]{ss13}\Cell{ss13}{40}\FillCell[tug!25]{ss22}\Cell{ss22}{40}\FillCell[tug!25]{ss23}\Cell{ss23}{50}}
+                  {\FillCell[tug!25]{ss12}\Cell{ss12}{50}\FillCell[tug!25]{ss13}\Cell{ss13}{40}\FillCell[tug!25]{ss22}\Cell{ss22}{40}\FillCell[tug!25]{ss23}\Cell{ss23}{50}}
+                  {\FillCell[tug!25]{ss13}\Cell{ss13}{50}\FillCell[tug!25]{ss10}\Cell{ss10}{40}\FillCell[tug!25]{ss20}\Cell{ss20}{40}\FillCell[tug!25]{ss21}\Cell{ss21}{50}}
+    \SkinnyFin{{\FillCell[tug!25]{ss00}\Cell{ss00}{40}\FillCell[tug!25]{ss01}\Cell{ss01}{50}\FillCell[tug!25]{ss21}\Cell{ss21}{50}\FillCell[tug!25]{ss23}\Cell{ss23}{50}\FillCell[tug!25]{ss30}\Cell{ss30}{40}\FillCell[tug!25]{ss31}\Cell{ss31}{50}}}
+  \end{tikzpicture}
+\end{figure}
+\end{document}

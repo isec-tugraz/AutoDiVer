@@ -1,0 +1,61 @@
+\documentclass[varwidth=20cm]{standalone}
+
+\usepackage{warp}
+ % alternative scaling for different paper sizes: warpscalelncs / warpscaletosc / warpscaleeprint
+\tikzset{warpscale/.style={warpscaleprint}}
+
+\begin{document}
+
+  \begin{tikzpicture}[warpfig]
+    \foreach \z[evaluate=\z as \zf using int(4*\z)] in {0,...,31} {
+      \draw[gray] (\z,0) node[above] {\tiny\zf};
+      \foreach \zb in {0,...,3} { \draw[gray] (\z+.25*\zb,0) -- +(0,-3pt); }
+    }
+  \end{tikzpicture}
+    
+  \warpround{1}{
+  \markbranches{3/14}
+  \marksboxes{8/16/15}
+  \markbranchinput{17/8}
+  \marksboxes{10/20/17}
+  \markbranchinput{21/10}
+  }
+  \warpround{2}{
+  \marksboxes{7/14/23}
+  \markbranchinput{15/7}
+  \markbranches{17/22}
+  }
+  \warpround{3}{
+  \marksboxes{11/22/5}
+  \markbranchinput{23/11}
+  }
+  \warpround{4}{
+  \markbranches{5/12}
+  }
+  \warpround{5}{
+  \marksboxes{6/12/25}
+  \markbranchoutput{6/13/4}
+  }
+  \warpround{6}{
+  \marksboxes{2/4/1}
+  \markbranchoutput{2/5/12}
+  \markbranches{25/18}
+  }
+  \warpround{7}{
+  \markbranches{1/6}
+  \marksboxes{6/12/25}
+  \markbranchoutput{6/13/4}
+  \marksboxes{9/18/13}
+  \markbranchoutput{9/19/30}
+  }
+  \warpround{8}{
+  \marksboxes{2/4/1}
+  \markbranchoutput{2/5/12}
+  \marksboxes{3/6/21}
+  \markbranchoutput{3/7/8}
+  \markbranches{13/4}
+  \markbranches{25/18}
+  \marksboxes{15/30/7}
+  \markbranchoutput{15/31/26}
+  }
+\end{document}

@@ -1,0 +1,17 @@
+\documentclass{standalone}
+\usepackage{tikz}
+\usepackage{gift}
+\usepackage{tugcolors}
+\begin{document}
+  \begin{tikzpicture}[gift, xscale=.8, sbox/.append style={minimum size=.4cm}, op/.append style={scale=.8}]
+      \smallgifttrue
+      \giftinit[i]
+      \spnlinktrue
+      \giftround
+      \giftmarkbits[tugblue]{1,2,34,35}{0,8}{1/17,33/25}
+      \giftround
+      \giftmarkbits[tugblue]{17,25}{4,6}{16/4,18/38,24/36,26/6}
+      \giftfini
+      \foreach \i in {0,4,...,\bits} { \draw (b\i|-here) node[below,gray,inner sep=0pt,font=\tiny] {\i}; }
+  \end{tikzpicture}
+\end{document}

@@ -1,0 +1,32 @@
+\documentclass[varwidth=20cm]{standalone}
+
+\usepackage{speck, tugcolors}
+
+\begin{document}
+
+\renewcommand{\SpeckLeft}[1]{$X^0_{#1}$}
+\renewcommand{\SpeckRight}[1]{$X^1_{#1}$}
+\renewcommand{\SpeckKey}[1]{$\text{RK}^{#1}$}
+
+\begin{tikzpicture}[>=latex,fillopts/.style={tugred},raster/.style={gray!50},rot/.append style={specklabelstyle},yscale=.95]
+\SpeckInit[32]
+\SpeckRound{1}
+{\Fill{s11}}
+{\Fill{s2}}
+{\Fill{s2}}
+{\Fill{s0}}
+\SpeckRound{2}
+{}
+{\Fill{s0}}
+{}
+{\Fill{s14}}
+\SpeckRound{3}
+{\Fill{s0}}
+{\Fill{s14}\Fill{s0}}
+{\Fill{s7}}
+{\Fill{s14}\Fill{s12}}
+\SpeckFinal{4}
+{\Fill{s14}\Fill{s7}\Fill{s0}}
+{\Fill{s12}\Fill{s7}\Fill{s0}}
+\end{tikzpicture}
+\end{document}
