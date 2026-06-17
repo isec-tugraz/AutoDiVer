@@ -71,7 +71,7 @@ def format_non_power_of_two_ciphers(result: StringIO, files: list, subdirectory:
 
             time = format_time(search_time)
 
-            print(f"    {num_rounds} & ${prob.getvalue()}$ & $2^{{-{highest_modeled_log_prob}}}$ & {time.getvalue()} & \\none \\\\", file=result)
+            print(f"    {num_rounds} & ${prob.getvalue()} \leq p \leq 2^{{-{highest_modeled_log_prob}}}$ & {time.getvalue()} & \\none \\\\", file=result)
 
 
 
@@ -105,7 +105,7 @@ map_cipher_name: dict[str,str] = {
     "skinny128_rel_tweak": "SKINNY-128"
 }
 
-non_power_of_two_ciphers = ["gift64", "gift128", "skinny128", "speedy192", "skinny64_rel_tweak", "skinny128_rel_tweak"]
+non_power_of_two_ciphers = ["gift64", "gift128", "skinny128", "speedy192", "skinny128_rel_tweak"]
 
 def main():
     tex_file = Path.cwd() / "../2026_project_juettler/thesis/chapters/results_bigtable.tex"
@@ -117,18 +117,18 @@ def main():
 \begin{table}[htbp]
 \centering
 \newcommand{\none}{$-$}
-""" + f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds.}}\n  \label{{tab:results-{cipher}}}" + r"""\setlength{\tabcolsep}{8pt}
-\begin{tabular}{rrrrr}
+""" + f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds. \#R denotes the number of rounds, and DP the probability of the differential characteristic.}}\n  \label{{tab:results-{cipher}}}" + r"""\setlength{\tabcolsep}{8pt}
+\begin{tabular}{cccc}
 \toprule
-\#R & Found DP & upper bound for DP  & Search Time & Figure Reference \\
+\#R & DP & Search Time (found DP) & Figure Reference \\
 \midrule""".strip("\n")
         else:
             _PREAMBLE = r"""
 \begin{table}[htbp]
 \centering
 \newcommand{\none}{$-$}
-""" +  f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds.}}\n  \label{{tab:results-{cipher}}}" +   r"""\setlength{\tabcolsep}{8pt}
-\begin{tabular}{rlrc}
+""" +  f"\\caption{{Best probabilities for \\cipher{{{map_cipher_name[cipher]}}} by number of rounds. \#R denotes the number of rounds, and DP the probability of the differential characteristic.}}\n  \label{{tab:results-{cipher}}}" +   r"""\setlength{\tabcolsep}{8pt}
+\begin{tabular}{clrc}
 \toprule
 \#R & DP & Search Time & Figure Reference \\
 \midrule""".strip("\n")

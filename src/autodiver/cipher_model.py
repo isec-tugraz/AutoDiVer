@@ -111,12 +111,10 @@ class SboxCipher(IndexSet):
     log_prob: int | None
     stat_sat_search : [float, int, int]
     stat_unsat_search : [float, int, int]
-    time_sat_search: float | None = None # todo: save these + cipher & encoding as table
-    time_unsat_search: float | None = None
 
     card_enc: int = 8
 
-    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, related_tweak: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, searching_mode: SearchMode = SearchMode.UPWARDS, log_prob: int | None = None, card_enc: int):
+    def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, search_char: bool = False, related_tweak: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, searching_mode: SearchMode = SearchMode.UPWARDS, log_prob: int | None = None, card_enc: int = 8):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -424,83 +422,6 @@ class SboxCipher(IndexSet):
         is_sat, model = cnf.solve_dimacs(args, stop_event=stop_event)
         return log_prob, is_sat, model
 
-    # most likely overengineered
-    def binary_characteristic_search_multithreaded(self, args: list, log_result: bool) -> np.ndarray:
-        lowest_cost = self.num_rounds if self.log_prob is None else self.log_prob
-        highest_cost = self.num_rounds*self.sbox_count*(self.sbox_bits - 1)
-
-        search_space = np.uint64(highest_cost - lowest_cost)
-        search_space_pow_2 = np.uint64(1)
-        while search_space_pow_2 < search_space:
-            search_space_pow_2 = search_space_pow_2 << 1
-        print(f"search_space: {search_space}, pow of 2: {search_space_pow_2}")
-        highest_cost = lowest_cost + search_space_pow_2
-
-        best_model = None
-        loop_condition = True
-
-        with ThreadPoolExecutor(max_workers=8) as executor: # TODO: change 8 to available_cpus rounded down to nearest power of 2
-            while loop_condition:
-                active = set(executor.submit(self.solve_for_boundary, args, int(i), log_result) for i in np.linspace(lowest_cost, highest_cost, 8)) # 8 threads for now
-
-                for future in as_completed(active):
-                    log_prob, is_sat, result = future.result()
-                    print(log_prob, is_sat)
-
-                    if is_sat == False and log_prob > lowest_cost:
-                        lowest_cost = log_prob
-
-                    if is_sat and log_prob < highest_cost:
-                        highest_cost = log_prob
-                        best_model = result
-
-                    print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}")
-
-                    if highest_cost == lowest_cost + 1:
-                        stop_event.set()  # stop the remaining threads
-                        loop_condition = False
-                        break
-
-
-        return best_model
-
-    # bad performance overall....
-    def upwards_characteristic_search_multithreaded(self, args: list) -> np.ndarray:
-
-        with ThreadPoolExecutor(max_workers=_available_cpus()) as executor:  # will wait for all running tasks to complete before exiting this block
-            log_prob = self.num_rounds if self.log_prob is None else self.log_prob # lower bound that is necessary
-            highest_unsat = 0
-            lowest_sat = 0xFFFFFFFF
-            upper_bound = log_prob + 1
-            best_model = None
-            loop_condition = True
-
-            active = set(executor.submit(self.solve_for_boundary, args,i) for i in range(log_prob, upper_bound))
-
-            while loop_condition:
-                done, active = wait(active, return_when=FIRST_COMPLETED)
-
-                for future in done:
-                    log_prob, is_sat, result = future.result()
-                    print(log_prob, is_sat)
-                    if is_sat == False and log_prob > highest_unsat:
-                        highest_unsat = log_prob
-
-                    if is_sat and log_prob < lowest_sat:
-                        lowest_sat = log_prob
-                        best_model = result
-
-                    if lowest_sat == highest_unsat + 1:
-                        stop_event.set()  # stop the remaining threads
-                        loop_condition = False
-                        break
-
-                    if best_model is not None: # stop searching upwards when we've already found satisfiable characteristics
-                        active.add(executor.submit(self.solve_for_boundary, args, upper_bound))
-                        upper_bound = upper_bound + 1
-            # pdb.set_trace()
-        return best_model
-
     def binary_characteristic_search_singlethreaded(self, args: list, log_result: bool) -> np.ndarray:
         lowest_cost = self.num_rounds if self.log_prob is None else self.log_prob
         lowest_cost = lowest_cost - 1
@@ -537,16 +458,11 @@ class SboxCipher(IndexSet):
                 highest_cost = current_cost
                 best_model = result
                 self.stat_sat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
-                self.time_sat_search = timer.elapsed()
             else:
                 lowest_cost = current_cost
                 self.stat_unsat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
-                self.time_unsat_search = timer.elapsed()
 
             if highest_cost == lowest_cost + 1:
-                print(f"measured time for SAT run: {self.time_sat_search}")
-                print(f"measured time for UNSAT run: {self.time_sat_search}")
-
                 self.log_prob = highest_cost
                 break
 
@@ -569,11 +485,9 @@ class SboxCipher(IndexSet):
             if is_sat:
                 self.log_prob = log_prob
                 self.stat_sat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
-                self.time_sat_search = timer.elapsed()
                 break
             else:
                 self.stat_unsat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
-                self.time_unsat_search = timer.elapsed()
 
             log_prob += 1
 
@@ -590,8 +504,6 @@ class SboxCipher(IndexSet):
             best_model = self.upwards_characteristic_search_singlethreaded(args, log_result)
         if self.searching_mode == SearchMode.BINARY:
             best_model = self.binary_characteristic_search_singlethreaded(args, log_result)
-
-        # best_model = self.binary_characteristic_search_multithreaded(args, log_result)
 
         assert best_model is not None
 
