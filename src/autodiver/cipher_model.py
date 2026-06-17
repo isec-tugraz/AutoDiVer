@@ -248,26 +248,6 @@ class SboxCipher(IndexSet):
         # print(cnf)
         return cnf
 
-# # simplified function for debugging
-#     def _get_ddt_cnf(self):
-#         lut = np.zeros(shape=(self.ddt.shape[0], self.ddt.shape[1], pow(2,self.num_bits_ddt_weights)))
-#         # print(f"num bits ddt weights: {self.num_bits_ddt_weights}")
-#         for i in range(self.ddt.shape[0]):
-#             for j in range(self.ddt.shape[1]):
-#                 # print(f"i: {i}, j: {j}, ddt value: {self.ddt[i,j]}, num bits: {self.num_bits_ddt_weights}")
-#                 if self.ddt[i, j] == 2: # 2^-3 -> 3 bits
-#                     lut[i,j,7] = 1
-#                 if self.ddt[i, j] == 4:
-#                     lut[i, j, 3] = 1 # 2^-2 -> 2 bits
-#                 if self.ddt[i, j] == 8:
-#                     lut[i, j, 1] = 1  # 2^-1
-#
-#         lut[0,0,0] = 1 # no cost for zero transition = 0
-#
-#         cnf = lut_to_cnf(lut)
-#         return cnf
-
-
     def _model_sboxes(self, sbox_in: None|np.ndarray[Any, np.dtype[np.int32]]=None, sbox_out: None|np.ndarray[Any, np.dtype[np.int32]]=None):
         """
         Add cnf constraints for all S-boxes to self.cnf.
@@ -364,9 +344,6 @@ class SboxCipher(IndexSet):
 
     def _model_cardinality_encoding(self, bound: int) -> CNF:
         vpool = IDPool(start_from=self.numvars + 1)
-        print(vpool)
-        print(self.card_enc)
-        print(bound)
         cardinality_encoding = CardEnc.atmost(lits=self.ddt_weights.flatten().tolist(), vpool=vpool, bound=bound, encoding=self.card_enc).clauses
 
         cardinality_encoding_cnf = CNF()
@@ -436,14 +413,14 @@ class SboxCipher(IndexSet):
         while search_space_pow_2 < search_space:
             search_space_pow_2 = search_space_pow_2 << 1
 
-        print(f"search_space: {search_space}, pow of 2: {search_space_pow_2}")
+        #print(f"search_space: {search_space}, pow of 2: {search_space_pow_2}")
         highest_cost = lowest_cost + search_space_pow_2
 
         best_model = None
 
         while True:
             current_cost = np.int64((lowest_cost + highest_cost) / 2)
-            print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}, current_cost: {current_cost}")
+            #print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}, current_cost: {current_cost}")
             cnf = self.cnf + self._model_cardinality_encoding(current_cost)
             if log_result:
                 log.info(f'solving with {args} #log-prob: {current_cost}, #Clauses: {len(cnf._clauses)}, #XORs: {len(cnf._xor_clauses)}, #Vars: {cnf.nvars}')

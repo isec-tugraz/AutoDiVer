@@ -95,10 +95,6 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
         for i in range(len(self.tweakeys) - 1):
             assert np.all(self.tweakeys[i + 1] == update_tweakey(self.tweakeys[i], self.block_size)), f'tweakey update check failed at round {i}'
             rtk = np.bitwise_xor.reduce(self.tweakeys[i], axis=0) & tweakey_mask
-            print(f"here:")
-            print(self.sbox_in[i + 1])
-            print("there:")
-            print(do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk)))
             assert np.all(self.sbox_in[i + 1] == do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk))), f'round update check failed at round {i}'
 
         self.num_rounds = len(self.sbox_in)
