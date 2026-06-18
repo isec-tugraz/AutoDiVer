@@ -70,6 +70,12 @@ class Midori64Characteristic(DifferentialCharacteristic):
 
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
 
+    @classmethod
+    def load_empty_characteristic(cls, num_rounds) -> DifferentialCharacteristic:
+        sbox_in = np.zeros((num_rounds, 4, 4))
+        sbox_out = np.zeros((num_rounds, 4, 4))
+        return cls(sbox_in, sbox_out)
+
 
 class _Midori64Base(SboxCipher):
     cipher_name = "MIDORI64"
@@ -95,14 +101,13 @@ class _Midori64Base(SboxCipher):
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
-        if not self.search_char:
-            for i in range(1, self.num_rounds):
-                lin_input = matrix_as_uint64(self.char.sbox_out[i - 1])
-                lin_output = matrix_as_uint64(self.char.sbox_in[i])
+        for i in range(1, self.num_rounds):
+            lin_input = matrix_as_uint64(self.char.sbox_out[i - 1])
+            lin_output = matrix_as_uint64(self.char.sbox_in[i])
 
-                temp = midori64_mc(midori64_sr(lin_input))
-                if not temp == lin_output:
-                    raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
+            temp = midori64_mc(midori64_sr(lin_input))
+            if not temp == lin_output:
+                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
 
         self._create_vars()
 
