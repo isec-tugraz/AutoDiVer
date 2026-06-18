@@ -86,7 +86,7 @@ class WARP128(SboxCipher):
 
         self.rounds_out = np.empty((self.num_rounds, 2*self.sbox_count, self.sbox_bits), dtype=np.int32)
         for i in range(0, self.num_rounds-1):
-           self.rounds_out[i] = perm_nibble_inv(self.rounds_in[i + 1]) # correction - unless this was intended to be something else somehow...?
+           self.rounds_out[i] = perm_nibble_inv(self.rounds_in[i + 1])
         #no permutation at the end
         self.rounds_out[self.num_rounds-1] = self.get_round_var(self.sbox_in[self.num_rounds-1], self.Y)
         for i in range(self.sbox_count):

@@ -11,7 +11,6 @@ from typing import Any
 import numpy as np
 from sat_toolkit.formula import XorCNF
 
-from .convert import unpack_bits
 from .util import DDT, RC, do_shift_rows, mixing_mat, do_mix_columns
 from .generate_perm import permutation
 from ..cipher_model import SboxCipher, DifferentialCharacteristic

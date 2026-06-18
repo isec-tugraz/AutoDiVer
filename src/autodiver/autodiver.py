@@ -312,15 +312,15 @@ _tikzify_help = (
 
 # choose lower third of table so speed is still feasible, but also the area we care more about - (where it takes the longest)
 ciphers_round_number: dict[str, (int, int)] = {
-    # "gift64" : (10, 47),
-    # "gift128" : (9, 45),
-    # "midori64" : (5, 45),
-    # "midori128" : (5, 48),
-    # "present80" : (11, 45),
-    # "rectangle128" : (9, 35),
-    # "skinny64" : (5, 23),
-    # "skinny128" : (11, 103),
-    # "speck32" : (8, 23),
+    "gift64" : (10, 47),
+    "gift128" : (9, 45),
+    "midori64" : (5, 45),
+    "midori128" : (5, 48),
+    "present80" : (11, 45),
+    "rectangle128" : (9, 35),
+    "skinny64" : (5, 23),
+    "skinny128" : (11, 103),
+    "speck32" : (8, 23),
     "speck64" : (7, 20),
     "speck128" : (7, 20),
     "warp" : (13, 67)
@@ -330,7 +330,7 @@ def profile_cardenc() -> None:
     for cipher in ciphers_round_number:
         print(cipher)
         for card_enc in CARD_ENC_MAP:
-            if card_enc in ["pairwise", "bitwise", "ladder", "native"]:
+            if card_enc in ["pairwise", "bitwise", "ladder", "native"]: # don't support our usecase
                 continue
             run_search_characteristic(cipher, ciphers_round_number[cipher][0], tikzify=False, seed=7, log_probability=ciphers_round_number[cipher][1], rounding_mode=RoundMode.DOWN.value, searching_mode=SearchMode.UPWARDS.value, save=False, related_tweak=False, card_enc=card_enc, save_perf=True)
 
@@ -394,8 +394,6 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
         characteristic = Characteristic.load_from_model(model) # actual recovered characteristic
         log_probability = characteristic.log2_ddt_probability()
         print(f"probability: {log_probability}")
-        # print(model.sbox_in)
-        # print(model.sbox_out)
 
         if save:
             directory = Path.cwd() / "found_trails" / str(cipher_name + ("_rel_tweak" if related_tweak else ""))

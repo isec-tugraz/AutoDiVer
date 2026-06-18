@@ -113,7 +113,7 @@ class Ascon(SboxCipher):
         self.add_index_array('sbox_in', (self.num_rounds, 5, 64))
         self.add_index_array('sbox_out', (self.num_rounds, 5, 64))
 
-        self.add_index_array('key', (0,)) # MAR: Why no key? - answer: not part of permutation, XORed to state at initialization
+        self.add_index_array('key', (0,))
         self.add_index_array('tweak', (0,))
 
 
@@ -158,7 +158,7 @@ class Ascon(SboxCipher):
         constants = np.pad(constants, ((0, 0), (0, 64 - 8))) # type:ignore
 
         for r in range(self.num_rounds):
-            sbox_in[r, 2] *= np.int8(-1)**constants[12 - self.num_rounds + r] # addition of round constants
+            sbox_in[r, 2] *= np.int8(-1)**constants[12 - self.num_rounds + r]
 
         # swap axes for bitsliced sboxes
         # swap bits for compatibility with big-endian s-box table

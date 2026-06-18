@@ -95,7 +95,7 @@ class _Midori64Base(SboxCipher):
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
-        if not self.search_char: # currently treating passed characteristic as dummy variable in this case
+        if not self.search_char:
             for i in range(1, self.num_rounds):
                 lin_input = matrix_as_uint64(self.char.sbox_out[i - 1])
                 lin_output = matrix_as_uint64(self.char.sbox_in[i])

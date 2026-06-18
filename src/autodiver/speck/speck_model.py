@@ -50,8 +50,7 @@ class _SpeckBase(SboxCipher):
             if self.log_prob == None:
                 self.log_prob = 0  # transitions with probability 1 possible
         else:
-            self.add_index_array('_carry', (self.num_rounds,
-                                            self.wordsize))  # do we need this for the differential search? I think not?
+            self.add_index_array('_carry', (self.num_rounds, self.wordsize))
             self.add_index_array('round_key', (self.num_rounds, self.wordsize))
             self.key = self.round_key
             self._fieldnames.add('key')
@@ -121,9 +120,6 @@ class _SpeckBase(SboxCipher):
             reg_CNF = CNF()
 
             for i in range(self.wordsize - 1):
-                # cnf += XorCNF.create_xor(self.aux1[r][i-1], -self.add_in1[r][i-1], self.add_in2[r][i-1])
-                # cnf += XorCNF.create_xor(self.aux2[r][i-1], -self.add_in1[r][i-1], self.add_out[r][i-1])
-                # cnf += XorCNF.create_xor(self.aux3[r][i-1], self.add_in1[r][i], self.add_in2[r][i], self.add_out[r][i], self.add_in2[r][i-1])
                 reg_CNF += [-self.aux1[r][i], -self.aux2[r][i], -self.aux3[r][i], 0]
 
                 # weight encoding:
