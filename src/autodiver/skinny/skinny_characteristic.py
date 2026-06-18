@@ -43,7 +43,7 @@ _DOCUMENT_END = r"""
 class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
     block_size = 0
     tweakeys: np.ndarray
-    sbox_count = 16 # change to (4,4)? depends
+    sbox_count = 16
 
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:

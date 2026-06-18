@@ -43,7 +43,7 @@ class SkinnyBase(SboxCipher):
     key_size = 128
     tweak_size = 256
     sbox_bits = 8
-    sbox_count = 16 # change to (4,4)? depends
+    sbox_count = 16
     connection_poly: np.ndarray
 
     _tk2: np.ndarray[Any, np.dtype[np.int32]]
