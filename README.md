@@ -64,29 +64,29 @@ autodiver-search <cipher_name> <num_rounds>
 
 Here, a variety of options are available:
 
-### --save
+### --no-save
 ```
-autodiver-search present 12 --save
+autodiver-search present80 12 --save
 ```
-Saves the found characteristic at ./found_trails/\<cipher\>/\<cipher\>_<num_rounds>.npz.
+By default, the found characteristic is saved at ./found_trails/\<cipher\>/\<cipher\>_<num_rounds>.npz. If no-save is passed, the characteristic is not saved.
 
 ### --tikzify
 ```
-autodiver-search present 12 --tikzify
+autodiver-search present80 12 --tikzify
 ```
 Visualizes the found characteristics as a tikz figure, which is saved at ./latex/char.tex and compiled if latexmk is available.
 The figure is then available at ./latex/char.pdf. This functionality is available for: 
-gift128, gift64, present80, skinny128, skinny64, speck128, speck32, speck48, speck64, speck96, warp.
+gift128, gift64, present8080, skinny128, skinny64, speck128, speck32, speck48, speck64, speck96, warp.
 
 ### --seed
 ```
-autodiver-search present 12 --seed=42
+autodiver-search present80 12 --seed=42
 ```
 Can be used to pass a fixed seed to the SAT-solver for reproducible results.
 
 ### --log-probability
 ```
-autodiver-search present 12 --log-probability=50
+autodiver-search present80 12 --log-probability=50
 ```
 Tells the tool a highest possible probability (2^{-log-probability}) at which it should start the search. 
 Can be used to reduce to reduce the search time.
@@ -100,7 +100,7 @@ Per default, rounding down is used.
 
 ### --searching-mode
 ```
-autodiver-search present 12 --searching-mode=upwards
+autodiver-search present80 12 --searching-mode=upwards
 ```
 Specifies the searching strategy. By default, binary search is used. Upwards search performs better for low probabilities, otherwise, binary search is faster.
 
@@ -112,7 +112,7 @@ Can be used to search for related-tweak characteristics. Available for SKINNY-64
 
 ### card-enc
 ```
-autodiver-search present --card-enc=totalizer
+autodiver-search present80 --card-enc=totalizer
 ```
 Can be used to specify that a specific cardinality encoding should be used. The implementations from the PySAT project are supported. By default, kmtotalizer is used. 
 # Licensing

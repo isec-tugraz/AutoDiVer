@@ -349,15 +349,17 @@ def profile_cardenc() -> None:
 @click.option("--log-probability", type=int, default=None, help="the minimum probability we are searching for, expressed as log2(p)")
 @click.option("--rounding-mode",type=click.Choice([m.value for m in RoundMode]), default=RoundMode.DOWN.value)
 @click.option("--searching-mode",type=click.Choice([m.value for m in SearchMode]), default=SearchMode.BINARY.value)
-@click.option("--save", is_flag=True, help="will save the found characteristic as a .npz file in ./found_trails")
+@click.option("--no-save", is_flag=True, help="don't save this characteristic")
 @click.option("--related-tweak", is_flag=True, help="will execute the related tweak search; currently only available for SKINNY")
 @click.option("--card-enc", type=click.Choice(sorted(CARD_ENC_MAP)), default="kmtotalizer")
-def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: str) -> None:
-    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, save, related_tweak, card_enc, False)
+def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, no_save: bool, related_tweak: bool, card_enc: str) -> None:
+    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, not no_save, related_tweak, card_enc, False)
 
 
 def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: str, save_perf: bool) -> int:
     """search for a characteristic for the given cipher"""
+    directory = Path.cwd() / "logfiles"
+    directory.mkdir(parents=True, exist_ok=True)
     setup_logging('logfiles/search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
 
     git_cmd = shutil.which('git')
@@ -395,11 +397,11 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
         # print(model.sbox_in)
         # print(model.sbox_out)
 
-        if save: # todo: per default yes in the end; probability in filename
-            directory = Path.cwd() / "found_trails" / cipher_name + ("_rel_tweak" if related_tweak else "")
+        if save:
+            directory = Path.cwd() / "found_trails" / str(cipher_name + ("_rel_tweak" if related_tweak else ""))
             directory.mkdir(parents=True, exist_ok=True)
             char_path = Path(Path.cwd() / "found_trails" / (cipher_name + ("_rel_tweak_xeon" if related_tweak else "")) /(cipher_name  + "_r" + str(num_rounds))).with_suffix('.npz')
-            characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.time_sat_search, cipher.log_prob, cipher.rounding_mode.value)
+            characteristic.save_npz(unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.stat_sat_search, cipher.log_prob, cipher.rounding_mode.value)
 
         if save_perf:
             dir_name = "misc/card_enc_var_round_fixed_seed"

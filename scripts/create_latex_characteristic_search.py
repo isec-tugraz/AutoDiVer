@@ -58,7 +58,7 @@ def format_non_power_of_two_ciphers(result: StringIO, files: list, subdirectory:
             cipher_name = data["cipher_name"]
             num_rounds = data["num_rounds"]
             log_probability = data["log_probability"]
-            search_time = data["search_time"]
+            search_time = data["stat_sat_search"][0]
             modeled_log_prob = data["modeled_log_prob"]
 
             prob = StringIO()
