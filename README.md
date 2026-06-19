@@ -123,6 +123,10 @@ The test cases in `tests/` are licensed under GPL to provide compatibility with 
 This includes the cipher implementations which are originally distributed under various licenses.
 See [tests/src/autodiver_ciphers/README.md](tests/src/autodiver_ciphers/README.md) for details.
 
+# autodiver-tikzify
+Can be used to visualize a characteristic that is saved as .npz file. Supported for
+gift128, gift64, present8080, skinny128, skinny64, speck128, speck32, speck48, speck64, speck96, warp.
+Has to be executed in the ./latex folder so that the .sty files are available. 
 
 # Running the tests
 

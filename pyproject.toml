@@ -51,4 +51,4 @@ autodiver-search = "autodiver.autodiver:search_characteristic"
 autodiver-search-all = "autodiver.autodiver:search_characteristic_all"
 card-eval = "autodiver.autodiver:profile_cardenc"
 
-tikzify = "autodiver.tikzify:main"
+autodiver-tikzify = "autodiver.tikzify:main"
