@@ -72,7 +72,7 @@ class SkinnyBase(SboxCipher):
         if self.search_char:
             self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
             self._model_ddt()
-            if self.related_tweak and self.log_prob == None:
+            if self.related_tweak and self.log_prob_boundary == None:
                     self.log_prob = 1  # related key search enables 'empty space' in the middle
         else:
             self._model_sboxes()

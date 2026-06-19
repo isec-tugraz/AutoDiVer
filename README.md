@@ -84,11 +84,11 @@ autodiver-search present80 12 --seed=42
 ```
 Can be used to pass a fixed seed to the SAT-solver for reproducible results.
 
-### --log-probability
+### --probability-bound
 ```
-autodiver-search present80 12 --log-probability=50
+autodiver-search present80 12 --probability-bound=50
 ```
-Tells the tool a highest possible probability (2^{-log-probability}) at which it should start the search. 
+Tells the tool a highest possible probability (2^{-probability-bound}) at which it should start the search. 
 Can be used to reduce to reduce the search time.
 
 ### --rounding-mode
