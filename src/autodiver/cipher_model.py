@@ -133,12 +133,13 @@ class SboxCipher(IndexSet):
         self._affine_hull = {}
         self._learned_clauses = {}
         self.search_char = char_search_params is not None
-        self.related_tweak = char_search_params.related_tweak
-        self.rounding_mode = char_search_params.rounding_mode
-        self.searching_mode = char_search_params.searching_mode
-        self.log_prob_boundary = char_search_params.log_prob_boundary
-        self.card_enc = char_search_params.card_enc
-        self._setup_ddt()
+        if self.search_char:
+            self.related_tweak = char_search_params.related_tweak
+            self.rounding_mode = char_search_params.rounding_mode
+            self.searching_mode = char_search_params.searching_mode
+            self.log_prob_boundary = char_search_params.log_prob_boundary
+            self.card_enc = char_search_params.card_enc
+            self._setup_ddt()
 
     def _setup_ddt(self):
         self.num_bits_ddt_weights = self.sbox_bits - 1  # self._get_num_bits_ddt_weights()
