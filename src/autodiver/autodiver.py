@@ -322,7 +322,7 @@ _tikzify_help = (
 @click.option("--related-tweak", is_flag=True, help="will execute the related tweak search; currently only available for SKINNY")
 @click.option("--card-enc", type=click.Choice(sorted(CARD_ENC_MAP)), default="kmtotalizer")
 def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, no_save: bool, related_tweak: bool, card_enc: str) -> None:
-    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, not no_save, related_tweak, card_enc, False)
+    run_search_characteristic(cipher_name, num_rounds, tikzify, seed, log_probability, rounding_mode, searching_mode, not no_save, related_tweak, card_enc)
 
 
 def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: str) -> int:

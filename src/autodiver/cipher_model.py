@@ -95,6 +95,7 @@ class SboxCipher(IndexSet):
     pt: np.ndarray[Any, np.dtype[np.int32]]
     tweak: np.ndarray[Any, np.dtype[np.int32]]
     sbox_assumptions: np.ndarray[Any, np.dtype[np.int32]]
+    ddt_weights: np.ndarray[Any, np.dtype[np.int32]]
     sbox_count: int
     cnf: XorCNF
 
@@ -109,8 +110,8 @@ class SboxCipher(IndexSet):
     rounding_mode: RoundMode # only used in the case of searching for differential characteristics
     searching_mode: SearchMode
     log_prob: int | None
-    stat_sat_search : [float, int, int]
-    stat_unsat_search : [float, int, int]
+    stat_sat_search : tuple[float, int, int]
+    stat_unsat_search : tuple[float, int, int]
 
     card_enc: int = 8
 
@@ -277,7 +278,7 @@ class SboxCipher(IndexSet):
         self._actual_sbox_in = inp_vars.copy()
         self._actual_sbox_out = out_vars.copy()
 
-        self._fieldnames.add('_actual_sbox_in') # is this used apart from test_ascon?
+        self._fieldnames.add('_actual_sbox_in') # debugging variables
         self._fieldnames.add('_actual_sbox_out')
 
         if self.model_sbox_assumptions:
@@ -336,7 +337,7 @@ class SboxCipher(IndexSet):
         exclude_zero_conditions = CardEnc.atleast(lits=self.ddt_weights.flatten().tolist(),vpool=vpool, bound=1).clauses
         exclude_zero_cnf = CNF()
         for clause in exclude_zero_conditions:
-            exclude_zero_cnf += clause + [0]
+            exclude_zero_cnf.add_clause(clause)
 
         self.add_index_array("exclude_zero_vars", (vpool.top - self.numvars))
         self.cnf += exclude_zero_cnf
@@ -349,7 +350,7 @@ class SboxCipher(IndexSet):
         cardinality_encoding_cnf = CNF()
 
         for clause in cardinality_encoding:
-            cardinality_encoding_cnf += clause + [0]
+            cardinality_encoding_cnf.add_clause(clause)
 
         # self.update_index_array("cardinality_encoding_vars", (vpool.top - self.numvars))
         # kept separate from SboxCipher.cnf and SboxCipher.numvars, is only connected in thread that solves specific SAT problem

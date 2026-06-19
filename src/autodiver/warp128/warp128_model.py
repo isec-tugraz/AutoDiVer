@@ -78,7 +78,7 @@ class WARP128(SboxCipher):
         self.pt = self.get_round_var(self.sbox_in[0], self.X)
         self._fieldnames.add('pt')
 
-        # adding this back for convenience (to implement tikzify:) )
+        # the rounds_in, rounds_out variables are not necessary for the model, but are used int the warp_characteristic.tikzify implementation.
         self.rounds_in = np.empty((self.num_rounds, 2*self.sbox_count, self.sbox_bits), dtype=np.int32)
         self.rounds_in[0] = self.get_round_var(self.sbox_in[0], self.X)
         for i in range(1, self.num_rounds):

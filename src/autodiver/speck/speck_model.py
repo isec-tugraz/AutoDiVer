@@ -21,6 +21,10 @@ class _SpeckBase(SboxCipher):
     add_in2: np.ndarray[Any, np.dtype[np.int32]]
     add_out: np.ndarray[Any, np.dtype[np.int32]]
     _carry: np.ndarray[Any, np.dtype[np.int32]]
+    aux1: np.ndarray[Any, np.dtype[np.int32]]
+    aux2: np.ndarray[Any, np.dtype[np.int32]]
+    aux3: np.ndarray[Any, np.dtype[np.int32]]
+
     sbox_count = 2 # pro forma:)
 
     adder_assumptions: np.ndarray[Any, np.dtype[np.int32]]
