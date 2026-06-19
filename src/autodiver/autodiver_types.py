@@ -2,7 +2,6 @@ from __future__ import annotations
 from pysat.card import EncType
 from enum import Enum, unique
 from dataclasses import dataclass
-from sat_toolkit.formula import CNF
 
 @unique
 class ModelType(Enum):

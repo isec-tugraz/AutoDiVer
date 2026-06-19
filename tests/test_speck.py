@@ -33,19 +33,19 @@ def test_zero_char(wordsize):
     #char = SpeckCharacteristic(input_diffs, wordsize=wordsize, file_path=None)
 
     if wordsize == 16:
-        char = Speck32Characteristic(input_diffs, wordsize=wordsize, file_path=None)
+        char = Speck32Characteristic(input_diffs, file_path=None)
         cipher = Speck32LongKey(char)
     elif wordsize == 24:
-        char = Speck48Characteristic(input_diffs, wordsize=wordsize, file_path=None)
+        char = Speck48Characteristic(input_diffs, file_path=None)
         cipher = Speck48LongKey(char)
     elif wordsize == 32:
-        char = Speck64Characteristic(input_diffs, wordsize=wordsize, file_path=None)
+        char = Speck64Characteristic(input_diffs, file_path=None)
         cipher = Speck64LongKey(char)
     elif wordsize == 48:
-        char = Speck96Characteristic(input_diffs, wordsize=wordsize, file_path=None)
+        char = Speck96Characteristic(input_diffs, file_path=None)
         cipher = Speck96LongKey(char)
     elif wordsize == 64:
-        char = Speck128Characteristic(input_diffs, wordsize=wordsize, file_path=None)
+        char = Speck128Characteristic(input_diffs, file_path=None)
         cipher = Speck128LongKey(char)
     else:
         raise ValueError(f'wordsize {wordsize} not supported')
@@ -96,7 +96,7 @@ def test_ALLW14_char():
 
     np.set_printoptions(formatter={'int': lambda x: f'{x:04x}'})
 
-    char = Speck32Characteristic(input_diffs, wordsize=16, file_path=None)
+    char = Speck32Characteristic(input_diffs, file_path=None)
     # from IPython import embed; embed()
     cipher = Speck32LongKey(char)
 

@@ -117,7 +117,6 @@ class SboxCipher(IndexSet):
     card_enc: int = 8
 
     def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, char_search_params: CharSearchParams | None = None):
-                 #search_char: bool = False, related_tweak: bool = False, rounding_mode: RoundMode = RoundMode.DOWN, searching_mode: SearchMode = SearchMode.UPWARDS, log_prob_boundary: int | None = None, card_enc: int = 8):
         super().__init__()
 
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
@@ -132,8 +131,9 @@ class SboxCipher(IndexSet):
         self.__model_sboxes_called = False
         self._affine_hull = {}
         self._learned_clauses = {}
+
         self.search_char = char_search_params is not None
-        if self.search_char:
+        if char_search_params is not None:
             self.related_tweak = char_search_params.related_tweak
             self.rounding_mode = char_search_params.rounding_mode
             self.searching_mode = char_search_params.searching_mode
@@ -338,7 +338,7 @@ class SboxCipher(IndexSet):
         for clause in exclude_zero_conditions:
             exclude_zero_cnf.add_clause(clause)
 
-        self.add_index_array("exclude_zero_vars", (vpool.top - self.numvars))
+        self.add_index_array("exclude_zero_vars", (vpool.top - self.numvars,))
         self.cnf += exclude_zero_cnf
 
 
@@ -419,7 +419,7 @@ class SboxCipher(IndexSet):
         best_model = None
 
         while True:
-            current_cost = np.int64((lowest_cost + highest_cost) / 2)
+            current_cost = int((lowest_cost + highest_cost) / 2)
             print(f"lowest_cost: {lowest_cost}, highest_cost: {highest_cost}, current_cost: {current_cost}")
             cnf = self.cnf + self._model_cardinality_encoding(current_cost)
             if log_result:
@@ -440,13 +440,15 @@ class SboxCipher(IndexSet):
                 self.stat_unsat_search = (timer.elapsed(), cnf.nvars, len(cnf._clauses))
 
             if highest_cost == lowest_cost + 1:
-                self.log_prob_boundary = highest_cost
+                self.log_prob_boundary = int(highest_cost)
                 break
 
+        assert best_model is not None, "no sat instance found during binary search"
         return best_model
 
     def upwards_characteristic_search_singlethreaded(self, args: list, log_result: bool) -> np.ndarray:
         log_prob = self.num_rounds if self.log_prob_boundary is None else self.log_prob_boundary  # lower bound that is definitely necessary
+        model = None
         while True:
             cnf = self.cnf + self._model_cardinality_encoding(log_prob)
 
@@ -468,6 +470,7 @@ class SboxCipher(IndexSet):
 
             log_prob += 1
 
+        assert model is not None
         return model
 
 
@@ -479,8 +482,10 @@ class SboxCipher(IndexSet):
 
         if self.searching_mode == SearchMode.UPWARDS:
             best_model = self.upwards_characteristic_search_singlethreaded(args, log_result)
-        if self.searching_mode == SearchMode.BINARY:
+        elif self.searching_mode == SearchMode.BINARY:
             best_model = self.binary_characteristic_search_singlethreaded(args, log_result)
+        else:
+            raise ValueError(f'unsupported search mode {self.searching_mode!r}')
 
         assert best_model is not None
 

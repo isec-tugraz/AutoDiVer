@@ -68,8 +68,13 @@ class SpeckCharacteristic(DifferentialCharacteristic):
         input_diffs = np.zeros((num_rounds + 1, 2), np.uint64)
         return cls(input_diffs)
 
-    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, stat_sat_search: tuple[float, int, int]|None, modeled_log_prob: int, rounding_mode: str):
-        np.savez(path, round_in=self.round_in, wordsize = self.wordsize, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, stat_sat_search=stat_sat_search)
+    def save_npz(self, path: Path, cipher_name: str, stat_sat_search: tuple[float, int, int]|None, modeled_log_prob: int|None, rounding_mode: str):
+        kwargs = {}
+        if stat_sat_search:
+            kwargs["stat_sat_search"] = stat_sat_search
+        if modeled_log_prob:
+            kwargs["modeled_log_prob"] = modeled_log_prob
+        np.savez(path, round_in=self.round_in, wordsize=self.wordsize, cipher_name=cipher_name, num_rounds=self.num_rounds, log_probability=self.log2_ddt_probability(), rounding_mode=rounding_mode, **kwargs)
 
 
     def truncate_rounds(self, rounds_from_to: tuple[int, int]):
@@ -140,15 +145,25 @@ class SpeckCharacteristic(DifferentialCharacteristic):
 
 class Speck32Characteristic(SpeckCharacteristic):
     wordsize = 16
+    def __init__(self, round_in: np.ndarray, file_path: Path|None=None):
+        super().__init__(round_in, self.wordsize, file_path)
 
 class Speck48Characteristic(SpeckCharacteristic):
     wordsize = 24
+    def __init__(self, round_in: np.ndarray, file_path: Path|None=None):
+        super().__init__(round_in, self.wordsize, file_path)
 
 class Speck64Characteristic(SpeckCharacteristic):
     wordsize = 32
+    def __init__(self, round_in: np.ndarray, file_path: Path|None=None):
+        super().__init__(round_in, self.wordsize, file_path)
 
 class Speck96Characteristic(SpeckCharacteristic):
     wordsize = 48
+    def __init__(self, round_in: np.ndarray, file_path: Path|None=None):
+        super().__init__(round_in, self.wordsize, file_path)
 
 class Speck128Characteristic(SpeckCharacteristic):
     wordsize = 64
+    def __init__(self, round_in: np.ndarray, file_path: Path|None=None):
+        super().__init__(round_in, self.wordsize, file_path)

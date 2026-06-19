@@ -74,8 +74,13 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
 
         return cls(sbox_in, sbox_out, tweakeys, file_path=None)
 
-    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, stat_sat_search: tuple[float, int, int]|None, modeled_log_prob: int, rounding_mode: str):
-        np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, tweakeys=self.tweakeys, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, stat_sat_search=stat_sat_search, modeled_log_prob=modeled_log_prob, rounding_mode=rounding_mode)
+    def save_npz(self, path: Path, cipher_name: str, stat_sat_search: tuple[float, int, int]|None, modeled_log_prob: int|None, rounding_mode: str):
+        kwargs = {}
+        if stat_sat_search:
+            kwargs["stat_sat_search"] = stat_sat_search
+        if modeled_log_prob:
+            kwargs["modeled_log_prob"] = modeled_log_prob
+        np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, tweakeys=self.tweakeys, cipher_name=cipher_name, num_rounds=self.num_rounds, log_probability=self.log2_ddt_probability(), rounding_mode=rounding_mode, **kwargs)
 
 
     @classmethod
@@ -119,7 +124,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
             for i in range(4):
                 for j in range(4):
                     if sbox_in[i][j] != 0:
-                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{sbox_in[i][j]:02x}}}", file=result, end="")
+                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{sbox_in[i][j]:02x}}}", file=result, end="")
             print("}", file=result)
 
             # tweak
@@ -129,7 +134,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
             for i in range(2):
                 for j in range(4):
                     if rtk[i][j] != 0:
-                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{rtk[i][j]:02x}}}", file=result, end="")
+                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{rtk[i][j]:02x}}}", file=result, end="")
             print(f"}}{{}}{{}}", file=result) # tweak - currently empty
 
 
@@ -140,7 +145,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
             for i in range(4):
                 for j in range(4):
                     if sbox_out[i][j] != 0:
-                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{sbox_out[i][j]:02x}}}", file=result, end="")
+                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{sbox_out[i][j]:02x}}}", file=result, end="")
             print("}", file=result)
 
             # after sbox and tweak
@@ -150,7 +155,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
                     cell = sbox_out[i][j] ^ rtk[i][j]
                     if cell != 0:
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{cell:02x}}}",
+                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{cell:02x}}}",
                             file=result, end="")
             print("}", file=result)
 
@@ -163,7 +168,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
                     if cell != 0:
                         state_shifted[i][(i + j) % 4] = cell
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str((j + i) % 4)}}}\Cell{{ss{str(i) + str((j + i) % 4)}}}{{{cell:02x}}}",
+                            f"\\FillCell[tug!25]{{ss{str(i) + str((j + i) % 4)}}}\\Cell{{ss{str(i) + str((j + i) % 4)}}}{{{cell:02x}}}",
                             file=result, end="")
 
             print("}", file=result)
@@ -190,7 +195,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
                 for j in range(4):
                     if state_mixed[i][j] != 0:
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\Cell{{ss{str(i) + str(j)}}}{{{state_mixed[i][j]:02x}}}",
+                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{state_mixed[i][j]:02x}}}",
                             file=result, end="")
 
             print("}}", file=result)

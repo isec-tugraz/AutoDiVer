@@ -143,7 +143,7 @@ class _SpeckBase(SboxCipher):
         for clause in exclude_zero_conditions:
             exclude_zero_cnf += clause + [0]
 
-        self.add_index_array("exclude_zero_vars", (vpool.top - self.numvars))
+        self.add_index_array("exclude_zero_vars", (vpool.top - self.numvars,))
         self.cnf += exclude_zero_cnf
 
 

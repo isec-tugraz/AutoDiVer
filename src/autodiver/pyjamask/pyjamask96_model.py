@@ -237,9 +237,9 @@ class Pyjamask_with_Keyschedule(Pyjamask96):
 
     row_mixing_matrix_ks = circulant([1,0,1,0,1,0,0,1,1,1,0,0,1,1,1,0,1,1,0,0,0,0,0,0,1,0,0,0,1,1,1,0])
 
-    ks_state_after_mixing_top_row : np.ndarray[Any, np.dtype[np.uint32]]
-    ks_state_after_mixing : np.ndarray[Any, np.dtype[np.uint32]]
-    ks_state_after_row_diffusion : np.ndarray[Any, np.dtype[np.uint32]]
+    ks_state_after_mixing_top_row : np.ndarray[Any, np.dtype[np.int32]]
+    ks_state_after_mixing : np.ndarray[Any, np.dtype[np.int32]]
+    ks_state_after_row_diffusion : np.ndarray[Any, np.dtype[np.int32]]
 
     def _mix_columns(self, round_idx):
         for i in range(32):

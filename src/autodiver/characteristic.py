@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-TYPE_CHECKING=False
-if TYPE_CHECKING:
-    from typing import Any, Self
-
 from pathlib import Path
 import logging
 
 import numpy as np
 import numpy.typing as npt
 
+TYPE_CHECKING=False
+if TYPE_CHECKING:
+    from typing import Any, Self
 
 log = logging.getLogger(__name__)
 
@@ -59,8 +58,13 @@ class DifferentialCharacteristic():
             sbox_out = f['sbox_out']
         return cls(sbox_in, sbox_out, file_path=characteristic_path)
 
-    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, stat_sat_search: tuple[float, int, int]|None, modeled_log_prob: int, rounding_mode: str):
-        np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, stat_sat_search=stat_sat_search, modeled_log_prob=modeled_log_prob, rounding_mode=rounding_mode)
+    def save_npz(self, path: Path, cipher_name: str, stat_sat_search: tuple[float, int, int]|None, modeled_log_prob: int|None, rounding_mode: str):
+        kwargs = {}
+        if stat_sat_search:
+            kwargs["stat_sat_search"] = stat_sat_search
+        if modeled_log_prob:
+            kwargs["modeled_log_prob"] = modeled_log_prob
+        np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, cipher_name=cipher_name, num_rounds=self.num_rounds, log_probability=self.log2_ddt_probability(), rounding_mode=rounding_mode, **kwargs)
 
     @classmethod
     def load_from_model(cls, model):
@@ -76,6 +80,9 @@ class DifferentialCharacteristic():
         return cls(sbox_in, sbox_out)
 
     def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, file_path: Path|None=None):
+        sbox_in = np.array(sbox_in)
+        sbox_out = np.array(sbox_out)
+
         if sbox_in.shape[0] == sbox_out.shape[0] + 1:
             sbox_in = sbox_in[0:-1]
         self.sbox_in = np.array(sbox_in, dtype=np.uint8)
@@ -96,6 +103,7 @@ class DifferentialCharacteristic():
         self.num_rounds = self.sbox_in.shape[0]
 
     def log2_ddt_probability(self):
+        assert self.ddt is not None, f"cannot calculate DDT probability of {self.__class__} without DDT"
         ddt = self.ddt
         ddt_prob = np.log2(ddt[self.sbox_in, self.sbox_out] / len(ddt)).sum()
         return ddt_prob
@@ -110,4 +118,3 @@ class DifferentialCharacteristic():
         self.sbox_out = self.sbox_out[rounds_from_to[0]:rounds_from_to[1] + 1]
         self.num_rounds = rounds_from_to[1] + 1 - rounds_from_to[0]
         self.rounds_from_to = rounds_from_to
-

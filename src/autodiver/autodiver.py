@@ -102,7 +102,7 @@ def cli(ctx, cipher_name: str, characteristic_path: str|Path, sbox_assumptions: 
     log.info(f"loaded characteristic with {characteristic.num_rounds} rounds from {relative_characteristic_path} with ddt probability 2**{ddt_prob_log2:.1f}")
 
     if characteristic.file_path is None:
-        log.warning(f"file path not stored in characteristic object")
+        log.warning("file path not stored in characteristic object")
         characteristic.file_path = characteristic_path
 
     log.info(f"generated {cipher.cnf!r}")
@@ -247,7 +247,6 @@ def find_conflicts(obj: GlobalArgs) -> None:
 @click.pass_obj
 def write_cnf(obj: GlobalArgs, filename: Path, convert_xors: bool, assumptions: bool) -> None:
     """write the CNF to a file"""
-    from sat_toolkit.formula import CNF
 
     if convert_xors:
         cnf = obj.cipher.cnf.to_cnf()
@@ -257,7 +256,7 @@ def write_cnf(obj: GlobalArgs, filename: Path, convert_xors: bool, assumptions: 
     cnf = cnf.copy()
     if assumptions and obj.cipher.model_sbox_assumptions:
         for assumption_var in obj.cipher.sbox_assumptions.flatten():
-            cnf += CNF([assumption_var, 0])
+            cnf.add_clauses(np.array([assumption_var, 0]))
 
     with open(filename, 'w') as f:
         log.info(f"writing CNF to {filename}")
@@ -333,12 +332,12 @@ def search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed
     run_search_characteristic(cipher_name, num_rounds, tikzify, seed, search_params, no_save)
 
 
-def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int, search_params:  CharSearchParams, no_save: bool):
+def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, seed: int|None, search_params:  CharSearchParams, no_save: bool):
                              # log_probability: int, rounding_mode: RoundMode, searching_mode: SearchMode, save: bool, related_tweak: bool, card_enc: int) -> int:
     """search for a characteristic for the given cipher"""
     directory = Path.cwd() / "logfiles"
     directory.mkdir(parents=True, exist_ok=True)
-    setup_logging('logfiles/search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl')
+    setup_logging(Path('logfiles/search_char' + cipher_name + '_' + str(num_rounds) + '.jsonl'))
 
     git_cmd = shutil.which('git')
     git_commit = git_cmd and sp.check_output([git_cmd, 'rev-parse', 'HEAD']).decode().strip()
@@ -349,7 +348,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
               extra={"cli_args": sys.argv, "git_commit": git_commit, "git_changed_files": git_changed_files,
                      "version": version})
 
-    if search_params.related_tweak and not cipher_name in ["skinny64", "skinny128"]:
+    if search_params.related_tweak and cipher_name not in ["skinny64", "skinny128"]:
         print(f"related-tweak search is only available for skinny, not for {cipher_name}")
         exit(0)
 
@@ -378,7 +377,7 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
             directory = Path.cwd() / "found_trails" / str(cipher_name + ("_rel_tweak" if search_params.related_tweak else ""))
             directory.mkdir(parents=True, exist_ok=True)
             char_path = Path(Path.cwd() / "found_trails" / (cipher_name + ("_rel_tweak" if search_params.related_tweak else "")) /(cipher_name  + "_r" + str(num_rounds))).with_suffix('.npz')
-            characteristic.save_npz(create_unique_path(char_path), cipher_name, num_rounds, log_probability, cipher.stat_sat_search, cipher.log_prob_boundary, cipher.rounding_mode.value)
+            characteristic.save_npz(create_unique_path(char_path), cipher_name, cipher.stat_sat_search, search_params.log_prob_boundary, cipher.rounding_mode.value)
 
         if tikzify:
             create_latex(characteristic)

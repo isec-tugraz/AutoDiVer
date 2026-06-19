@@ -120,7 +120,7 @@ class _Midori128Base(SboxCipher):
         self._create_vars()
 
         if self.search_char:
-            self.add_index_array('key', 0)
+            self.add_index_array('key', (0,))
             self._model_add_no_key()
             self.add_index_array("ddt_weights",(self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
             self._model_ddt()
@@ -242,4 +242,3 @@ class Midori128LongKey(_Midori128Base):
         X_flat = X.copy().reshape(16, 8).flatten()
         key_xor_cnf = XorCNF.create_xor(X_flat, Y.flatten(), K.flatten())
         return key_xor_cnf
-

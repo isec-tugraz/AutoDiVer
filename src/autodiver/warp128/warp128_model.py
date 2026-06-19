@@ -99,9 +99,9 @@ class WARP128(SboxCipher):
         self._fieldnames.add('rounds_out')
 
     @classmethod
-    def get_round_var(self, a, b):
-        v = np.empty((2*self.sbox_count, 4), dtype=np.int32)
-        for i in range(self.sbox_count):
+    def get_round_var(cls, a, b):
+        v = np.empty((2*cls.sbox_count, 4), dtype=np.int32)
+        for i in range(cls.sbox_count):
             v[2*i] = a[i]
             v[2*i+1] = b[i]
         return v

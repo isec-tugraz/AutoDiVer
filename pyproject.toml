@@ -9,7 +9,7 @@ dependencies = [
    "galois",
    "pyapproxmc",
    "pycryptosat!=5.11.23",
-   "sat_toolkit>=0.6.2",
+   "sat_toolkit>=0.6.3",
    "setuptools",
    "tqdm",
    "numpy>=2.0",
@@ -41,6 +41,11 @@ classifiers = [
 
 [tool.setuptools.package-data]
 autodiver = ["**/log_config.json"]
+
+[tool.basedpyright]
+typeCheckingMode = "basic"
+reportUninitializedInstanceVariable = "none"
+reportAny = "none"
 
 [project.optional-dependencies]
 dev = ["ipython"]

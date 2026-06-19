@@ -95,8 +95,8 @@ class SkinnyBase(SboxCipher):
             if self.related_tweak:
                 self._model_key_schedule()
             else:
-                self.add_index_array('key', 0)
-                self.add_index_array('tweak', 0)
+                self.add_index_array('key', (0,))
+                self.add_index_array('tweak', (0,))
         else:
             self._model_key_schedule()
 
@@ -117,7 +117,7 @@ class SkinnyBase(SboxCipher):
         self._tk2_lfsrs = [LfsrState(f'tk2_{i}', self.connection_poly[::-1].tolist(), tk2_tmp[i]) for i in range(16)]
         self._tk3_lfsrs = [LfsrState(f'tk3_{i}', self.connection_poly[::-1].tolist(), tk3_tmp[i]) for i in range(16)]
 
-        if self.related_tweak:
+        if self.search_char and self.related_tweak:
             self.cnf += XorCNF.create_xor(self.key.flatten()) # force the key difference to 0
 
 

@@ -37,7 +37,7 @@ def ascon_linear_layer(inp: np.ndarray[Any, np.dtype[np.uint64]]) -> np.ndarray[
     return S
 
 class AsconCharacteristic(DifferentialCharacteristic):
-    ddt: np.ndarray[Any, np.dtype[np.uint16]] = DDT
+    ddt = DDT
     sbox_count = 64
 
     def __init__(self, sbox_in: np.ndarray[Any, np.dtype[np.uint64]], sbox_out: np.ndarray[Any, np.dtype[np.uint64]], **kwargs):
