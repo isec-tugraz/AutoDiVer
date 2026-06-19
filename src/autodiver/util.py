@@ -169,11 +169,14 @@ class IndexSet:
         return res
 
 
-def unique_path(path) -> Path:
+def create_unique_path(path) -> Path:
     path = Path(path)
 
-    if not path.exists():
+    try:
+        path.touch(exist_ok=False)
         return path
+    except FileExistsError:
+        pass
 
     stem = path.stem
     suffix = path.suffix
@@ -182,10 +185,12 @@ def unique_path(path) -> Path:
     i = 1
     while True:
         candidate = parent / f"{stem}_{i}{suffix}"
-        if not candidate.exists():
+        try:
+            candidate.touch(exist_ok=False)
             return candidate
+        except FileExistsError:
+            pass
         i += 1
-
 
 def create_latex(characteristic) -> None:
     workdir = Path.cwd() / "latex"

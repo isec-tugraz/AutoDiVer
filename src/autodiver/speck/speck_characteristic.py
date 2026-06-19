@@ -141,13 +141,6 @@ class SpeckCharacteristic(DifferentialCharacteristic):
 class Speck32Characteristic(SpeckCharacteristic):
     wordsize = 16
 
-    @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
-        with np.load(characteristic_path) as f:
-            round_in = np.array(f['round_in'], dtype=np.uint64)
-
-        return cls(round_in=round_in, file_path=characteristic_path)
-
 class Speck48Characteristic(SpeckCharacteristic):
     wordsize = 24
 

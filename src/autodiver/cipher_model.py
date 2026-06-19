@@ -474,7 +474,7 @@ class SboxCipher(IndexSet):
     def _solve_for_characteristic(self, log_result: bool = True, seed: int | None = None) -> np.ndarray[Any, np.dtype[np.uint8]]:
 
         seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
-        args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
+        args = ['cryptominisat5', f'--random={seed}', '--polar=false']
 
         if self.searching_mode == SearchMode.UPWARDS:
             best_model = self.upwards_characteristic_search_singlethreaded(args, log_result)

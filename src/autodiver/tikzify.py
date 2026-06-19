@@ -56,8 +56,6 @@ def main():
     char = CharacteristicType.load(args.characteristic)
     # tex_file = args.characteristic.with_suffix(".tex")
     tex_file = Path.cwd() / args.characteristic.with_suffix(".tex").name
-    print(tex_file)
-    print(type(tex_file))
     tex_file.write_text(char.tikzify())
 
     if args.compile:
