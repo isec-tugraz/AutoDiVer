@@ -11,6 +11,7 @@ import numpy.typing as npt
 from pathlib import Path
 from shutil import which
 import subprocess as sp
+import sys
 
 def fmt_log2(number: float, width: int=0) -> str:
     if number == 0:
@@ -81,16 +82,6 @@ class IndexSet:
         self._fieldnames.add(name)
 
         setattr(self, name, res)
-
-    def remove_index_array(self, name: str):
-        assert(name in self._fieldnames)
-        self.numvars -= np.prod(getattr(self, name).shape, dtype=np.int32) # remove attribute
-        self._fieldnames.remove(name)
-
-    def update_index_array(self, name: str, shape: tuple[int, ...]):
-        if name in self._fieldnames:
-            self.remove_index_array(name)
-        self.add_index_array(name, shape)
 
     def describe_idx_array(self, index_array: np.ndarray):
         """

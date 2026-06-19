@@ -68,7 +68,7 @@ class SpeckCharacteristic(DifferentialCharacteristic):
         input_diffs = np.zeros((num_rounds + 1, 2), np.uint64)
         return cls(input_diffs)
 
-    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, stat_sat_search: [float, int, int]|None, modeled_log_prob: int, rounding_mode: str):
+    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, stat_sat_search: tuple[float, int, int]|None, modeled_log_prob: int, rounding_mode: str):
         np.savez(path, round_in=self.round_in, wordsize = self.wordsize, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, stat_sat_search=stat_sat_search)
 
 

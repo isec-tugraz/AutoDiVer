@@ -32,7 +32,7 @@ _DOCUMENT_END = r"""
 
 
 class WarpCharacteristic(DifferentialCharacteristic):
-    ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
+    ddt: np.ndarray | None = DDT
     sbox_count = 16
 
     @classmethod
@@ -51,7 +51,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
             rounds_out = f['rounds_out']
         return cls(sbox_in, sbox_out, rounds_in, rounds_out, file_path=characteristic_path)
 
-    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, stat_sat_search: [float, int, int]|None, modeled_log_prob: int, rounding_mode: str):
+    def save_npz(self, path: Path, cipher_name: str, num_rounds: int, log_probability: int, stat_sat_search: tuple[float, int, int]|None, modeled_log_prob: int, rounding_mode: str):
         np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, rounds_in=self.rounds_in, rounds_out=self.rounds_out, cipher_name=cipher_name, num_rounds=num_rounds, log_probability=log_probability, stat_sat_search=stat_sat_search)
 
     @classmethod
@@ -62,7 +62,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
         rounds_out = model.rounds_out
         return cls(sbox_in, sbox_out, rounds_in, rounds_out, file_path=None)
 
-    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, rounds_in: npt.ArrayLike|None = None, rounds_out: npt.ArrayLike|None = None, file_path: Path|None=None):
+    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, rounds_in: np.ndarray[Any, np.dtype[np.int32]], rounds_out: np.ndarray[Any, np.dtype[np.int32]], file_path: Path|None=None):
         super().__init__(sbox_in, sbox_out, file_path)
         self.rounds_in = rounds_in
         self.rounds_out = rounds_out

@@ -148,10 +148,6 @@ class SboxCipher(IndexSet):
         super().add_index_array(name, shape)
         self.cnf.nvars = self.numvars
 
-    def update_index_array(self, name: str, shape: tuple[int, ...]):
-        super().update_index_array(name, shape)
-        self.cnf.nvars = self.numvars
-
     def log_result(self, **kwargs):
         """log results in machine readable json"""
         git_cmd = shutil.which('git')

@@ -33,6 +33,8 @@ class WARP128(SboxCipher):
 
     X: np.ndarray[Any, np.dtype[np.int32]]
     Y: np.ndarray[Any, np.dtype[np.int32]]
+    rounds_in: np.ndarray[Any, np.dtype[np.int32]]
+    rounds_out: np.ndarray[Any, np.dtype[np.int32]]
 
     def __init__(self, char: WarpCharacteristic, **kwargs):
         if not isinstance(char, WarpCharacteristic):
@@ -64,7 +66,7 @@ class WARP128(SboxCipher):
 
     def _create_vars(self):
         if self.search_char:
-            self.add_index_array('key', 0)
+            self.add_index_array('key', (0,))
             self.add_index_array("ddt_weights", (self.num_rounds, self.sbox_count, self.num_bits_ddt_weights))
         else:
             self.add_index_array('key', (2*self.sbox_count, self.sbox_bits))
