@@ -144,4 +144,5 @@ class PresentLongKey(Present):
         self.add_index_array('round_keys', (self.num_rounds + 1, self.block_size))
         assert self.key_size == self.round_keys.size
 
-        self.key = self.round_keys
+        self.key = self.round_keys.flatten()
+        self._fieldnames.add('key')

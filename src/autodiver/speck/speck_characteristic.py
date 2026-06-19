@@ -56,7 +56,10 @@ class SpeckCharacteristic(DifferentialCharacteristic):
             wordsize = int(f['wordsize'])
             round_in = np.array(f['round_in'], dtype=np.uint64)
 
-        return cls(round_in=round_in, wordsize=wordsize, file_path=characteristic_path)
+        if wordsize != cls.wordsize:
+            raise ValueError(f"wordsize mismatch, expected {cls.wordsize} got {wordsize}")
+
+        return cls(round_in=round_in, file_path=characteristic_path)
 
     @classmethod
     def load_from_model(cls, model) -> DifferentialCharacteristic:
