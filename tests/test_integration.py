@@ -69,7 +69,7 @@ SOLVE_CASES = [
     ('speck96-long-key', 'trails/speck/speck96_r15_BR22_table_22c.npz'),
     ('speck128-long-key', 'trails/speck/speck128_r20_BR22_table_23a.npz'),
     ('speedy192', 'trails/speedy192/speedy192_demo.txt'),
-    ('warp', 'trails/warp/warp_Hadipour_22.txt'),
+    ('warp', 'trails/warp/warp_KY22_r18_table_8.npz'),
 ]
 
 

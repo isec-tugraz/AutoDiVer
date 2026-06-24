@@ -26,27 +26,33 @@ def latex_support_dir() -> Path:
     return Path.cwd() / "latex"
 
 
+# cipher name -> (model module, cipher class, characteristic class, tikzify_supported).
+# tikzify_supported is True exactly for the ciphers whose characteristic class
+# implements tikzify(); the others only support modelling/counting.
+CIPHERS: dict[str, tuple[str, str, str, bool]] = {
+    "ascon": ("autodiver.ascon.ascon_model", "Ascon", "AsconCharacteristic", False),
+    "gift64": ("autodiver.gift.gift_model", "Gift64", "Gift64Characteristic", True),
+    "gift128": ("autodiver.gift.gift_model", "Gift128", "Gift128Characteristic", True),
+    "midori64": ("autodiver.midori64.midori64_model", "Midori64", "Midori64Characteristic", False),
+    "midori128": ("autodiver.midori128.midori128_model", "Midori128", "Midori128Characteristic", False),
+    "present80": ("autodiver.present.present_model", "Present80", "PresentCharacteristic", True),
+    "pyjamask96": ("autodiver.pyjamask.pyjamask96_model", "Pyjamask_with_Keyschedule", "Pyjamask96Characteristic",
+                   False),
+    "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic", False),
+    "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic", True),
+    "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic", True),
+    "speck32": ("autodiver.speck.speck_model", "Speck32LongKey", "Speck32Characteristic", True),
+    "speck48": ("autodiver.speck.speck_model", "Speck48LongKey", "Speck48Characteristic", True),
+    "speck64": ("autodiver.speck.speck_model", "Speck64LongKey", "Speck64Characteristic", True),
+    "speck96": ("autodiver.speck.speck_model", "Speck96LongKey", "Speck96Characteristic", True),
+    "speck128": ("autodiver.speck.speck_model", "Speck128LongKey", "Speck128Characteristic", True),
+    "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic", False),
+    "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", True),
+}
+
+
 def main():
-    ciphers: dict[str, tuple[str, str, str, bool]] = {
-        "ascon": ("autodiver.ascon.ascon_model", "Ascon", "AsconCharacteristic", False),
-        "gift64": ("autodiver.gift.gift_model", "Gift64", "Gift64Characteristic", True),
-        "gift128": ("autodiver.gift.gift_model", "Gift128", "Gift128Characteristic", True),
-        "midori64": ("autodiver.midori64.midori64_model", "Midori64", "Midori64Characteristic", False),
-        "midori128": ("autodiver.midori128.midori128_model", "Midori128", "Midori128Characteristic", False),
-        "present80": ("autodiver.present.present_model", "Present80", "PresentCharacteristic", True),
-        "pyjamask96": ("autodiver.pyjamask.pyjamask96_model", "Pyjamask_with_Keyschedule", "Pyjamask96Characteristic",
-                       False),
-        "rectangle128": ("autodiver.rectangle128.rectangle_model", "Rectangle128", "RectangleCharacteristic", False),
-        "skinny64": ("autodiver.skinny.skinny_model", "Skinny64", "Skinny64Characteristic", True),
-        "skinny128": ("autodiver.skinny.skinny_model", "Skinny128", "Skinny128Characteristic", True),
-        "speck32": ("autodiver.speck.speck_model", "Speck32LongKey", "Speck32Characteristic", True),
-        "speck48": ("autodiver.speck.speck_model", "Speck48LongKey", "Speck48Characteristic", True),
-        "speck64": ("autodiver.speck.speck_model", "Speck64LongKey", "Speck64Characteristic", True),
-        "speck96": ("autodiver.speck.speck_model", "Speck96LongKey", "Speck96Characteristic", True),
-        "speck128": ("autodiver.speck.speck_model", "Speck128LongKey", "Speck128Characteristic", True),
-        "speedy192": ("autodiver.speedy192.speedy192_model", "Speedy192", "Speedy192Characteristic", False),
-        "warp": ("autodiver.warp128.warp128_model", "WARP128", "WarpCharacteristic", True),
-    }
+    ciphers = CIPHERS
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('cipher', choices=ciphers.keys())

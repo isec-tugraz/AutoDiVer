@@ -184,3 +184,9 @@ build/
 *.fdb_latexmk
 *.fls
 *.log
+*.synctex.gz
+# generated tikz output; keep the tracked source .tex files
+*.tex
+*.pdf
+!latex/*.code.tex
+!latex/*.sty
