@@ -34,6 +34,8 @@ _DOCUMENT_END = r"""
 class WarpCharacteristic(DifferentialCharacteristic):
     ddt: np.ndarray | None = DDT
     sbox_count = 16
+    rounds_in: np.ndarray[Any, np.dtype[np.int32]] | None
+    rounds_out: np.ndarray[Any, np.dtype[np.int32]] | None
 
     @classmethod
     def load(cls, characteristic_path: Path):
@@ -57,7 +59,11 @@ class WarpCharacteristic(DifferentialCharacteristic):
             kwargs["stat_sat_search"] = stat_sat_search
         if modeled_log_prob:
             kwargs["modeled_log_prob"] = modeled_log_prob
-        np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, rounds_in=self.rounds_in, rounds_out=self.rounds_out, cipher_name=cipher_name, num_rounds=self.num_rounds, log_probability=self.log2_ddt_probability(), rounding_mode=rounding_mode, **kwargs)
+        if self.rounds_in is not None:
+            kwargs["rounds_in"] = self.rounds_in
+        if self.rounds_out is not None:
+            kwargs["rounds_out"] = self.rounds_out
+        np.savez(path, sbox_in=self.sbox_in, sbox_out=self.sbox_out, cipher_name=cipher_name, num_rounds=self.num_rounds, log_probability=self.log2_ddt_probability(), rounding_mode=rounding_mode, **kwargs)
 
     @classmethod
     def load_from_model(cls, model):
@@ -67,7 +73,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
         rounds_out = model.rounds_out
         return cls(sbox_in, sbox_out, rounds_in, rounds_out, file_path=None)
 
-    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, rounds_in: np.ndarray[Any, np.dtype[np.int32]], rounds_out: np.ndarray[Any, np.dtype[np.int32]], file_path: Path|None=None):
+    def __init__(self, sbox_in: npt.ArrayLike, sbox_out: npt.ArrayLike, rounds_in: np.ndarray[Any, np.dtype[np.int32]]|None=None, rounds_out: np.ndarray[Any, np.dtype[np.int32]]|None=None, file_path: Path|None=None):
         super().__init__(sbox_in, sbox_out, file_path)
         self.rounds_in = rounds_in
         self.rounds_out = rounds_out
