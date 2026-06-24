@@ -79,6 +79,8 @@ class WarpCharacteristic(DifferentialCharacteristic):
         self.rounds_out = rounds_out
 
     def tikzify(self) -> str:
+        assert self.rounds_in is not None
+        assert self.rounds_out is not None
         result = StringIO()
         print(_PREAMBLE, file=result)
 
