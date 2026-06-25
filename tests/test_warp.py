@@ -1,4 +1,5 @@
 from random import randint
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -10,6 +11,8 @@ from autodiver.warp128.util import get_round_in_out, perm_nibble_inv
 
 from sat_toolkit.formula import CNF
 from icecream import ic
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def print_state(S, state = "s"):
@@ -104,25 +107,8 @@ def test_zero_characteristic():
     assert num_solutions == 1
 
 def test_nonzero_characteristic():
-    char =  (('0000000000041000', '0000000000022000'),
-             ('0020000000000000', '0040000000000000'),
-             ('1000000000000000', '2000000000000000'),
-             ('0000000000000000', '0000000000000000'),
-             ('0000000000000100', '0000000000000200'),
-             ('0000000020000000', '0000000040000000'),
-             ('0000000000040001', '0000000000020002'),
-             ('0000020000002200', '00000c000000c400'))
-
-    inds =  ('00000000000002000000004212000000', '00002400000100000000000000000000',
-             '12000000000000000000000000000000', '00000000000000000000000000000001',
-             '00000000000000000000000000100000', '00000000000000002001000000000000',
-             '00000000000000020000004000000010', '00000401002000000000000020200000',
-             'c00200001002400040c2000000000000')
-
-
-    sbi_delta = np.array([[int(x, 16) for x in in_out[0]] for in_out in char], dtype=np.uint8)
-    sbo_delta = np.array([[int(x, 16) for x in in_out[1]] for in_out in char], dtype=np.uint8)
-    char = WarpCharacteristic(sbi_delta, sbo_delta)
+    char = WarpCharacteristic.load(REPO_ROOT / "trails" / "warp" / "warp_KY22_r18_table_8.npz")
+    char.truncate_rounds((0, 8))
 
     warp = WARP128(char)
     model = warp.solve(seed=3983)
@@ -137,7 +123,7 @@ def test_nonzero_characteristic():
     assert np.all(warp.sbox[sbi[:warp.num_rounds]] == sbo)
 
     print_state(pt, "pt")
-    delta0 = read_hex(inds[0])
+    delta0 = char.round_in[0]
     for r in range(1, char.num_rounds):
         print(f' round {r} '.center(80, '='))
         ref = warp_enc(pt, key, r)
@@ -147,7 +133,7 @@ def test_nonzero_characteristic():
 
         found_diff = Add(ref, ref_xor)
         print_state(found_diff)
-        expected_diff = perm_nibble_inv(read_hex(inds[r]))
+        expected_diff = perm_nibble_inv(char.round_in[r])
         print_state(expected_diff)
         assert np.all(expected_diff == found_diff)
 
