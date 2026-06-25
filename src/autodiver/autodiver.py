@@ -269,6 +269,7 @@ def embed(obj: GlobalArgs) -> None:
     """launch an interactive IPython shell"""
     cipher = obj.cipher
     characteristic = obj.characteristic
+    char = characteristic
 
     try:
         from IPython import start_ipython
