@@ -181,7 +181,7 @@ class _ApproxMcLoggingContext:
         else:
             pass
 
-        if self.pbar:
+        if self.pbar is not None:
             self.pbar.refresh()
 
     def __enter__(self):
