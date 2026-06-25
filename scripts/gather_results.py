@@ -50,7 +50,7 @@ def find_log_files(path: Path):
     find and yield all .jsonl files in the given directory and its subdirectories
     """
     for file in sorted(path.iterdir()):
-        if file.name.startswith('.'):
+        if file.name.startswith('.') or file.name == 'logfiles':
             continue
         if file.name in ['__pycache__', 'venv', 'build']:
             continue
