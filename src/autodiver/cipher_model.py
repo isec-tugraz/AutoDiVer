@@ -670,7 +670,7 @@ class SboxCipher(IndexSet):
         #                 + self.sbox_out[nr_half].flatten().tolist())
         sampling_set = None
 
-        seed = int.from_bytes(os.urandom(4), 'little')
+        seed = int.from_bytes(os.urandom(4), 'little') & 0x7fffffff
         with Timer() as timer:
             num_solutions = count_solutions(cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set, seed=seed)
 
@@ -716,7 +716,7 @@ class SboxCipher(IndexSet):
         if self.model_sbox_assumptions:
             cnf += CNF.create_all_zero(-self.sbox_assumptions.flatten())
 
-        seed = int.from_bytes(os.urandom(4), 'little')
+        seed = int.from_bytes(os.urandom(4), 'little') & 0x7fffffff
         with Timer() as timer:
             num_keys = count_solutions(cnf, epsilon, delta, verbosity=verbosity, sampling_set=sampling_set, seed=seed)
 
