@@ -197,7 +197,7 @@ def count_solutions(cnf: XorCNF, epsilon: float, delta: float, verbosity: int=2,
     global _warning_emited
 
     if seed is None:
-        seed = int.from_bytes(os.urandom(4), 'little')
+        seed = int.from_bytes(os.urandom(4), 'little') & 0x7fffffff
 
     sampling_set_log = f" over {len(sampling_set)} variables" if sampling_set is not None else ""
     log.info(f'counting solutions to cnf with {cnf.nvars} variables, {cnf.nclauses} clauses, and {cnf.nxor_clauses} xor clauses{sampling_set_log}, {epsilon=}, {delta=}')

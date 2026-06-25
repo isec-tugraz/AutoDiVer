@@ -362,7 +362,7 @@ class SboxCipher(IndexSet):
         if assumptions is None:
             assumptions = self.sbox_assumptions
 
-        seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
+        seed = int.from_bytes(os.urandom(4), 'little') & 0x7fffffff if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=rnd']
 
         cnf = cnf if cnf is not None else self.cnf
@@ -477,7 +477,7 @@ class SboxCipher(IndexSet):
 
     def _solve_for_characteristic(self, log_result: bool = True, seed: int | None = None) -> np.ndarray[Any, np.dtype[np.uint8]]:
 
-        seed = int.from_bytes(os.urandom(4), 'little') if seed is None else seed
+        seed = int.from_bytes(os.urandom(4), 'little') & 0x7fffffff if seed is None else seed
         args = ['cryptominisat5', f'--random={seed}', '--polar=false']
 
         if self.searching_mode == SearchMode.UPWARDS:
@@ -512,7 +512,7 @@ class SboxCipher(IndexSet):
     def solve(self, seed: int|None=None) -> Model:
         with Timer() as timer:
             if seed is None:
-                seed = int.from_bytes(os.urandom(4), 'little')
+                seed = int.from_bytes(os.urandom(4), 'little') & 0x7fffffff
             try:
                 if self.search_char:
                     raw_model = self._solve_for_characteristic(seed=seed)
