@@ -5,7 +5,7 @@ model the solutions of a differential characteristic for Ascon
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Self
 from pathlib import Path
 
 import numpy as np
@@ -76,7 +76,7 @@ class AsconCharacteristic(DifferentialCharacteristic):
                 raise ValueError(f"Ascon linear layer violated in round {i}")
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         with np.load(characteristic_path) as f:
             sbox_in = f['sbox_in']
             sbox_out = f['sbox_out']

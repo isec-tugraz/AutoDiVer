@@ -8,7 +8,7 @@ import logging
 import sys
 
 import numpy as np
-from typing import Any
+from typing import Any, Self
 from sat_toolkit.formula import XorCNF
 
 from .util import pyjamask_mix_rows_96, unload_state
@@ -64,7 +64,7 @@ class Pyjamask96Characteristic(DifferentialCharacteristic):
                 raise ValueError(f"Pyjamask linear layer violated in round {i}")
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> Pyjamask96Characteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         with np.load(characteristic_path) as f:
             sbox_in = f['sbox_in']
             sbox_out = f['sbox_out']

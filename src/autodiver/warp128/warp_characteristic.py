@@ -6,7 +6,7 @@ from .util import DDT, PERM, perm_nibble, perm_nibble_16, perm_nibble_16_inv
 from pathlib import Path
 import numpy as np
 import numpy.typing as npt
-from typing import Any
+from typing import Any, Self
 from io import StringIO
 
 
@@ -39,7 +39,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
     rounds_out: np.ndarray[Any, np.dtype[np.int32]] | None
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> "WarpCharacteristic":
+    def load(cls, characteristic_path: Path) -> Self:
         if os.path.splitext(characteristic_path)[1] == ".npz":
             result = cls.load_npz(characteristic_path)
         else:
@@ -48,7 +48,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
         return result
 
     @classmethod
-    def load_npz(cls, characteristic_path: Path) -> "WarpCharacteristic":
+    def load_npz(cls, characteristic_path: Path) -> Self:
         with np.load(characteristic_path) as f:
             sbox_in = f['sbox_in']
             sbox_out = f['sbox_out']

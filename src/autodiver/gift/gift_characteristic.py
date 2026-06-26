@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import Any, Self, TYPE_CHECKING
 from io import StringIO
 
 import numpy as np
@@ -56,7 +56,7 @@ class _GiftCharacteristic(DifferentialCharacteristic):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         if characteristic_path.suffix == '.txt':
             result = cls.load_txt(characteristic_path)
         elif characteristic_path.suffix == '.npz':

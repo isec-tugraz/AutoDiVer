@@ -3,7 +3,7 @@ from ..cipher_model import DifferentialCharacteristic
 from pathlib import Path
 from .constants import do_mix_cols, do_shift_rows,tweakey_mask, update_tweakey, DDT4, DDT8
 import numpy.typing as npt
-from typing import Any
+from typing import Any, Self
 from io import StringIO
 
 _PREAMBLE = r"""
@@ -45,7 +45,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
     sbox_count = 16
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         rounds = 100
 
         with np.load(characteristic_path) as f:

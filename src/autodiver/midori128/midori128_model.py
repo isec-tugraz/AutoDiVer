@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 from sat_toolkit.formula import XorCNF
@@ -59,7 +59,7 @@ class Midori128Characteristic(DifferentialCharacteristic):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i}] -> sbox_in[{i + 1}]')
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         with np.load(characteristic_path) as f:
             sbox_in = f['sbox_in']
             sbox_out = f['sbox_out']

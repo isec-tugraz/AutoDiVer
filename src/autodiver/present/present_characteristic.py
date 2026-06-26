@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Self
 from io import StringIO
 
 from .present_util import bit_perm, PRESENT_DDT
@@ -127,7 +127,7 @@ class PresentCharacteristic(DifferentialCharacteristic):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         with np.load(characteristic_path) as f:
             sbox_in = f['sbox_in']
             sbox_out = f['sbox_out']
