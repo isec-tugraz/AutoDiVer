@@ -13,7 +13,8 @@ from io import StringIO
 _PREAMBLE = r"""
 \documentclass[varwidth=20cm]{standalone}
 
-\usepackage{speck, tugcolors}
+\usepackage{speck}
+\colorlet{diffcolor}{red}
 
 \begin{document}
 
@@ -21,7 +22,7 @@ _PREAMBLE = r"""
 \renewcommand{\SpeckRight}[1]{$X^1_{#1}$}
 \renewcommand{\SpeckKey}[1]{$\text{RK}^{#1}$}
 
-\begin{tikzpicture}[>=latex,fillopts/.style={tugred},raster/.style={gray!50},rot/.append style={specklabelstyle},yscale=.95]
+\begin{tikzpicture}[>=latex,fillopts/.style={diffcolor},raster/.style={gray!50},rot/.append style={specklabelstyle},yscale=.95]
 """.strip("\n")
 
 _DOCUMENT_END = r"""\end{tikzpicture}

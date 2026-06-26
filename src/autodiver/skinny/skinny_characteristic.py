@@ -18,8 +18,7 @@ _PREAMBLE = r"""
 
 \usetikzlibrary{calc,positioning,cipher}
 
-\definecolor{tug}{HTML}{F70146}
-\definecolor{tugblue}{HTML}{245B78}
+\colorlet{diffcolor}{red}
 
 \begin{document}
 
@@ -124,7 +123,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
             for i in range(4):
                 for j in range(4):
                     if sbox_in[i][j] != 0:
-                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{sbox_in[i][j]:02x}}}", file=result, end="")
+                        print(f"\\FillCell[diffcolor!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{sbox_in[i][j]:02x}}}", file=result, end="")
             print("}", file=result)
 
             # tweak
@@ -134,7 +133,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
             for i in range(2):
                 for j in range(4):
                     if rtk[i][j] != 0:
-                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{rtk[i][j]:02x}}}", file=result, end="")
+                        print(f"\\FillCell[diffcolor!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{rtk[i][j]:02x}}}", file=result, end="")
             print(f"}}{{}}{{}}", file=result) # tweak - currently empty
 
 
@@ -145,7 +144,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
             for i in range(4):
                 for j in range(4):
                     if sbox_out[i][j] != 0:
-                        print(f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{sbox_out[i][j]:02x}}}", file=result, end="")
+                        print(f"\\FillCell[diffcolor!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{sbox_out[i][j]:02x}}}", file=result, end="")
             print("}", file=result)
 
             # after sbox and tweak
@@ -155,7 +154,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
                     cell = sbox_out[i][j] ^ rtk[i][j]
                     if cell != 0:
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{cell:02x}}}",
+                            f"\\FillCell[diffcolor!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{cell:02x}}}",
                             file=result, end="")
             print("}", file=result)
 
@@ -168,7 +167,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
                     if cell != 0:
                         state_shifted[i][(i + j) % 4] = cell
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str((j + i) % 4)}}}\\Cell{{ss{str(i) + str((j + i) % 4)}}}{{{cell:02x}}}",
+                            f"\\FillCell[diffcolor!25]{{ss{str(i) + str((j + i) % 4)}}}\\Cell{{ss{str(i) + str((j + i) % 4)}}}{{{cell:02x}}}",
                             file=result, end="")
 
             print("}", file=result)
@@ -195,7 +194,7 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
                 for j in range(4):
                     if state_mixed[i][j] != 0:
                         print(
-                            f"\\FillCell[tug!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{state_mixed[i][j]:02x}}}",
+                            f"\\FillCell[diffcolor!25]{{ss{str(i) + str(j)}}}\\Cell{{ss{str(i) + str(j)}}}{{{state_mixed[i][j]:02x}}}",
                             file=result, end="")
 
             print("}}", file=result)

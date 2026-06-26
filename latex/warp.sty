@@ -28,8 +28,7 @@
 
 %%% WARP TIKZ STYLES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\definecolor{tug}{HTML}{F70146}
-\colorlet{col}{tug}
+\colorlet{col}{red}
 \tikzset{warpfig/.style={warpscale,
                          very thin,>=latex,
                          every node/.style={font=\tiny,inner sep=1pt}},
@@ -53,7 +52,7 @@
     \foreach \z [evaluate=\z as \zz using int(2*\z), evaluate=\z as \zzz using int(2*\z+1)] in {0,...,15} {
       \draw (\zz,0)   node[above] {$\Xs{\varidx}{\zz}$}   ++(-.25,0) coordinate (t\zz);
       \draw (\zzz,0)  node[above] {$\Xs{\varidx}{\zzz}$}  ++( .25,0) coordinate (t\zzz);
-      \draw (\zz,-6)  %node[below] {$X'_{\!\zz}$} 
+      \draw (\zz,-6)  %node[below] {$X'_{\!\zz}$}
                                                   ++(-.25,0) coordinate (b\zz);
       \draw (\zzz,-6) %node[below] {$X'_{\!\zzz}$}
                                                   ++( .25,0) coordinate (b\zzz);
@@ -164,4 +163,3 @@
     \node[markpath,#1,fill,fill opacity=.2,below] at (\z,-3) {\phantom{$\Cs{0}{00}$}};
   }
 }
-

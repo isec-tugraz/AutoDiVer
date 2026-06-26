@@ -16,8 +16,7 @@ _PREAMBLE = r"""
 \usepackage{tikz}
 \usetikzlibrary{calc,positioning,cipher}
 
-\definecolor{tug}{HTML}{F70146}
-\definecolor{tugblue}{HTML}{245B78}
+\colorlet{diffcolor}{red}
 
 \begin{document}
 
@@ -38,11 +37,11 @@ _PREAMBLE = r"""
   }
   \newcommand{\activeSbox}[2]{
     % #1 = round, #2 = sbox position
-    \node[box,tug] (S#1-#2) at (#2*3em+1.1em,7em-#1*9em) {\color{white}$\mathcal{S}$};
+    \node[box,diffcolor] (S#1-#2) at (#2*3em+1.1em,7em-#1*9em) {\color{white}$\mathcal{S}$};
   }
   \newcommand{\sboxLabel}[4]{
     % #1 = round, #2 = sbox position, #3 input label, #4 = output label
-    %\node[box,tug] (S#1-#2) at (#2*3em+1.1em,7em-#1*9em) {};
+    %\node[box,diffcolor] (S#1-#2) at (#2*3em+1.1em,7em-#1*9em) {};
     \node[below=-1mm of S#1-#2.north west] {\hspace{0.5em}{\scriptsize\color{white}\texttt{#3}}};
     \node[above=-1mm of S#1-#2.south west] {\hspace{0.5em}{\scriptsize\color{white}\texttt{#4}}};
   }
@@ -51,7 +50,7 @@ _PREAMBLE = r"""
                       rounded corners,
                       >=latex,
                       box/.append style={minimum size=.625cm},
-                      activebit/.style={tug,very thick}
+                      activebit/.style={diffcolor,very thick}
     ]
     """.strip("\n")
 
