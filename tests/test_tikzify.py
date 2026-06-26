@@ -44,7 +44,7 @@ CHARACTERISTICS: dict[str, Path] = {
     "skinny64": TRAILS / "skinny64" / "skinny64_tk3_ddh+21_r15_table_9.npz",
     "skinny128": TRAILS / "skinny128" / "skinny128_tk3_NPE23_r10_figure_8.npz",
     "speck32": TRAILS / "speck" / "speck32_r9_ALLW14_table_7.npz",
-    "speck48": TRAILS / "speck" / "speck48_r10_ALLW14_table_7.npz",
+    "speck48": TRAILS / "speck" / "speck48_r10_ALLW14_table_7_fixed.npz",
     "speck64": TRAILS / "speck" / "speck64_r13_ALLW14_table_9.npz",
     "speck96": TRAILS / "speck" / "speck96_r15_BR22_table_22c.npz",
     "speck128": TRAILS / "speck" / "speck128_r20_BR22_table_23a.npz",

@@ -16,8 +16,11 @@ Cahracteristic from Table 7 of
     xeditor = {Carlos Cid and Christian Rechberger},
 }
 
-probability: 2^-41
-probability_acc: 2^{-40.55}
+stated probability: 2^-41
+stated probability_acc: 2^{-40.55}
+
+The characteristic is wrong as there is an extra incorrect difference bit in round 1
+after fixing bit 12 in round 1, the probability is 2^-40
 """
 from pathlib import Path
 import numpy as np
@@ -25,7 +28,8 @@ import numpy as np
 if __name__ == "__main__":
     diff_indices = [
         ([0,8,9,11,19,22],  [0,3,14,16,19]),
-        ([1,11,12,19],      [1,3,6,11,17,22]),
+        # ([1,11,12,19],      [1,3,6,11,17,22]), # reported incorrect differences for round 1
+        ([1,11,19],         [1,3,6,11,17,22]),  # fixed differences for round 1: difference at bit 12 (left) removed
         ([1,4,6,22],        [9,14,20,22]),
         ([9,17,23],         [1,9,12]),
         ([12,15],           [4]),

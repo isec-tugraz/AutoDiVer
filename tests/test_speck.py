@@ -1,12 +1,26 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pytest
 
-from autodiver.speck.speck_model import Speck32LongKey, Speck48LongKey, Speck64LongKey, Speck96LongKey, Speck128LongKey, Speck32Characteristic, Speck48Characteristic, Speck64Characteristic, Speck96Characteristic, Speck128Characteristic
+from autodiver.speck.speck_characteristic import SpeckCharacteristic
+from autodiver.speck.speck_model import _SpeckBase, Speck32LongKey, Speck48LongKey, Speck64LongKey, Speck96LongKey, Speck128LongKey, Speck32Characteristic, Speck48Characteristic, Speck64Characteristic, Speck96Characteristic, Speck128Characteristic
 from autodiver.speck.speck_util import rotr_speck, rotl_speck
+
+REPO_ROOT: Path = Path(__file__).resolve().parent.parent
+TRAILS_DIR: Path = REPO_ROOT / "trails" / "speck"
+
+# wordsize -> (characteristic class, long-key cipher class)
+SPECK_VARIANTS: dict[int, tuple[type[SpeckCharacteristic], type[_SpeckBase]]] = {
+    16: (Speck32Characteristic, Speck32LongKey),
+    24: (Speck48Characteristic, Speck48LongKey),
+    32: (Speck64Characteristic, Speck64LongKey),
+    48: (Speck96Characteristic, Speck96LongKey),
+    64: (Speck128Characteristic, Speck128LongKey),
+}
 
 class SpeckLongKey():
     def __init__(self, wordsize: int):
@@ -63,49 +77,47 @@ def test_zero_char(wordsize):
         assert ref_r == round_inputs[rnd, 1]
 
 
-def test_ALLW14_char():
-    """
-    Cahracteristic from Table 7 of
+SPECK_CHARS: list[tuple[int, Path, tuple[int, int]|None]] = [
+    (16, TRAILS_DIR / "speck32_r6_BR22_table_18a.npz", None),
+    # (16, TRAILS_DIR / "speck32_r7_BR22_table_18b.npz", None),
+    # (16, TRAILS_DIR / "speck32_r8_BR22_table_19a.npz", None),
+    # (16, TRAILS_DIR / "speck32_r8_BR22_table_19b.npz", None),
+    (16, TRAILS_DIR / "speck32_r9_ALLW14_table_7.npz", None),
+    # (16, TRAILS_DIR / "speck32_r9_BR22_table_20a.npz", None),
+    # (16, TRAILS_DIR / "speck32_r9_BR22_table_20b.npz", None),
+    # (16, TRAILS_DIR / "speck32_r9_BR22_table_20c.npz", None),
+    (24, TRAILS_DIR / "speck48_r10_ALLW14_table_7_fixed.npz", None),
+    # (24, TRAILS_DIR / "speck48_r11_BR22_table_22_1a.npz", None),
+    # (24, TRAILS_DIR / "speck48_r11_BR22_table_22_1b.npz", None),
+    (32, TRAILS_DIR / "speck64_r13_ALLW14_table_9.npz", None),
+    # (32, TRAILS_DIR / "speck64_r15_BR22_table_22b.npz", None),
+    # (48, TRAILS_DIR / "speck96_r15_BR22_table_22c.npz", None),
+    (64, TRAILS_DIR / "speck128_r20_BR22_table_23a.npz", None),
+    # (64, TRAILS_DIR / "speck128_r20_BR22_table_23b.npz", None),
+    # (64, TRAILS_DIR / "speck128_r20_BR22_table_23c.npz", None),
+    # (64, TRAILS_DIR / "speck128_r20_BR22_table_23d.npz", None),
+]
 
-    @inproceedings{fse/AbedLLW14,
-        author = {Farzaneh Abed and Eik List and Stefan Lucks and Jakob Wenzel},
-        title = {Differential Cryptanalysis of Round-Reduced {Simon} and {Speck}},
-        booktitle = {{FSE} 2014},
-        series = {LNCS},
-        volume = {8540},
-        pages = {525--545},
-        publisher = {Springer},
-        year = {2014},
-        doi = {10.1007/978-3-662-46706-0_27},
-        biburl = {https://dblp.org/rec/conf/fse/AbedLLW14.bib},
-        xeditor = {Carlos Cid and Christian Rechberger},
-    }
-    """
-    input_diffs = np.array([
-        [0x0a60, 0x4205],
-        [0x0211, 0x0a04],
-        [0x2800, 0x0010],
-        [0x0040, 0x0000],
-        [0x8000, 0x8000],
-        [0x8100, 0x8102],
-        [0x8000, 0x840a],
-        [0x850a, 0x9520],
-        [0x802a, 0xd4a8],
-        [0x81a8, 0xd30b],
-    ], dtype=np.uint64)
 
+@pytest.mark.parametrize('wordsize,characteristic_path,truncate_rounds',
+                         SPECK_CHARS,
+                         ids=[path.stem for _, path, _ in SPECK_CHARS])
+def test_nonzero_char(wordsize: int, characteristic_path: Path, truncate_rounds: tuple[int, int]|None):
+    """check that the SAT model reproduces the published differential characteristic"""
     np.set_printoptions(formatter={'int': lambda x: f'{x:04x}'})
 
-    char = Speck32Characteristic(input_diffs, file_path=None)
-    # from IPython import embed; embed()
-    cipher = Speck32LongKey(char)
+    characteristic_cls, cipher_cls = SPECK_VARIANTS[wordsize]
 
+    char = characteristic_cls.load(characteristic_path)
+    if truncate_rounds is not None:
+        char.truncate_rounds(truncate_rounds)
+    cipher = cipher_cls(char)
 
     model = cipher.solve()
     round_inputs = np.array(model.round_in, dtype=np.uint64) # type: ignore
     round_keys = np.array(model.round_key, dtype=np.uint64) # type: ignore
 
-    ref_cipher = SpeckLongKey(wordsize=16)
+    ref_cipher = SpeckLongKey(wordsize=wordsize)
     for rnd in range(1, cipher.num_rounds):
         ref_l, ref_r = ref_cipher.enc(round_inputs[0], round_keys[:rnd])
         ref2_l, ref2_r = ref_cipher.enc(round_inputs[0] ^ char.round_in[0], round_keys[:rnd])

@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import numpy as np
 
 from autodiver.cipher_model import DifferentialCharacteristic
 from autodiver.arx_util import modular_addition_probability
-from .speck_util import rotr_speck_np, ALPHA_MAP, BETA_MAP
+from .speck_util import rotl_sepck_np, rotr_speck_np, ALPHA_MAP, BETA_MAP
 from io import StringIO
 
 _PREAMBLE = r"""
@@ -50,9 +50,16 @@ class SpeckCharacteristic(DifferentialCharacteristic):
         self.add_in2 = round_in[:-1, 1]
         self.add_out = round_in[1:, 0]
 
+        after_rot = rotl_sepck_np(round_in[:, 1], self.wordsize)
+
+        diff = round_in[1:, 0] ^ after_rot[:-1] ^ round_in[1:, 1]
+        if np.any(diff != 0):
+            print(f"mismatch in linear layer (should be all zero):\n{diff}")
+            raise ValueError("linear layer condition of speck not met")
+
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         with np.load(characteristic_path) as f:
             wordsize = int(f['wordsize'])
             round_in = np.array(f['round_in'], dtype=np.uint64)
