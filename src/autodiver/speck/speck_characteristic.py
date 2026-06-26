@@ -50,9 +50,10 @@ class SpeckCharacteristic(DifferentialCharacteristic):
         self.add_in2 = round_in[:-1, 1]
         self.add_out = round_in[1:, 0]
 
-        after_rot = rotl_sepck_np(round_in[:, 1], self.wordsize)
 
-        diff = round_in[1:, 0] ^ after_rot[:-1] ^ round_in[1:, 1]
+    def verify_linear_layer(self):
+        after_rot = rotl_sepck_np(self.round_in[:, 1], self.wordsize)
+        diff = self.round_in[1:, 0] ^ after_rot[:-1] ^ self.round_in[1:, 1]
         if np.any(diff != 0):
             print(f"mismatch in linear layer (should be all zero):\n{diff}")
             raise ValueError("linear layer condition of speck not met")

@@ -44,7 +44,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
             result = cls.load_npz(characteristic_path)
         else:
             result = cls.load_txt(characteristic_path)
-        result.check_linear_layer()
+        result.verify_linear_layer()
         return result
 
     @classmethod
@@ -134,7 +134,7 @@ class WarpCharacteristic(DifferentialCharacteristic):
         before_perm[:] = round_in[1:, PERM]
         return before_perm
 
-    def check_linear_layer(self) -> None:
+    def verify_linear_layer(self) -> None:
         """Verify sbox_in/sbox_out are consistent through WARP's linear layer.
 
         WARP's linear layer is the nibble permutation that maps each round's

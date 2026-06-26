@@ -28,13 +28,6 @@ class Midori128Characteristic(DifferentialCharacteristic):
         assert np.all((sbox_in == 0) == (sbox_out == 0))
         assert len(sbox_in) == len(sbox_out)
 
-        num_rounds = len(sbox_in)
-
-        # verify linear layer
-        for i in range(0, num_rounds - 1):
-            if not np.all(do_mix_columns(do_shift_rows(sbox_out[i])) == sbox_in[i + 1]):
-                raise ValueError(f'linear layer condition violated at sbox_out[{i}] -> sbox_in[{i + 1}]')
-
         self.original_sbox_in = sbox_in
         self.original_sbox_out = sbox_out
 
@@ -59,6 +52,11 @@ class Midori128Characteristic(DifferentialCharacteristic):
 
         super().__init__(sbox_in, sbox_out, file_path=file_path)
 
+    def verify_linear_layer(self):
+        # verify linear layer
+        for i in range(0, self.num_rounds - 1):
+            if not np.all(do_mix_columns(do_shift_rows(self.original_sbox_out[i])) == self.original_sbox_in[i + 1]):
+                raise ValueError(f'linear layer condition violated at sbox_out[{i}] -> sbox_in[{i + 1}]')
 
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:

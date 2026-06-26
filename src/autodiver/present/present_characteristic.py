@@ -118,6 +118,13 @@ class PresentCharacteristic(DifferentialCharacteristic):
 
         super().__init__(sbox_in, sbox_out, file_path=file_path)
 
+    def verify_linear_layer(self):
+        for i in range(1, self.num_rounds):
+            lin_input = self.sbox_out[i - 1]
+            lin_output = self.sbox_in[i]
+            permuted = bit_perm(lin_input)
+            if not np.all(permuted == lin_output):
+                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
 
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:

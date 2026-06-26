@@ -41,4 +41,3 @@ def get_row(state, k):
 
 def get_col(state, k):
     return state[:, k]
-

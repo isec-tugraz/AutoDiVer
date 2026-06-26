@@ -5,6 +5,7 @@ model the solutions of a differential characteristic for Speedy192 and count the
 from __future__ import annotations
 
 import logging
+from typing import Self
 
 import numpy as np
 from typing import Any
@@ -53,7 +54,7 @@ class Speedy192Characteristic(DifferentialCharacteristic):
 
 
     @classmethod
-    def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
+    def load(cls, characteristic_path: Path) -> Self:
         trail = []
         with open(characteristic_path, 'r') as f:
             for line in f:

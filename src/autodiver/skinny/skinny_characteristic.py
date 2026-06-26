@@ -95,13 +95,17 @@ class _SkinnyBaseCharacteristic(DifferentialCharacteristic):
         if self.tweakeys.shape != (self.num_rounds, 3, 4, 4):
             raise ValueError('tweakeys must have shape (num_rounds, 3, 4, 4)')
 
-        # sanity check characteristic
-        for i in range(len(self.tweakeys) - 1):
-            assert np.all(self.tweakeys[i + 1] == update_tweakey(self.tweakeys[i], self.block_size)), f'tweakey update check failed at round {i}'
-            rtk = np.bitwise_xor.reduce(self.tweakeys[i], axis=0) & tweakey_mask
-            assert np.all(self.sbox_in[i + 1] == do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk))), f'round update check failed at round {i}'
 
         self.num_rounds = len(self.sbox_in)
+
+    def verify_linear_layer(self):
+        # sanity check characteristic
+        for i in range(len(self.tweakeys) - 1):
+            if not np.all(self.tweakeys[i + 1] == update_tweakey(self.tweakeys[i], self.block_size)):
+                raise ValueError(f'tweakey update check failed at round {i}')
+            rtk = np.bitwise_xor.reduce(self.tweakeys[i], axis=0) & tweakey_mask
+            if not np.all(self.sbox_in[i + 1] == do_mix_cols(do_shift_rows(self.sbox_out[i] ^ rtk))):
+               raise ValueError(f'round update check failed at round {i}')
 
     def truncate_rounds(self, rounds_from_to: tuple[int, int]):
         super().truncate_rounds(rounds_from_to)

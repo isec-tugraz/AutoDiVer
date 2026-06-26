@@ -119,6 +119,8 @@ class SboxCipher(IndexSet):
     def __init__(self, char: DifferentialCharacteristic, *, model_type: ModelType = ModelType.solution_set, model_sbox_assumptions: bool = False, char_search_params: CharSearchParams | None = None):
         super().__init__()
 
+        char.verify_linear_layer()
+
         if model_type not in (ModelType.solution_set, ModelType.split_solution_set):
             raise ValueError(f'unknown model_type {model_type}')
 
@@ -640,7 +642,7 @@ class SboxCipher(IndexSet):
             key_bits = np.unpackbits(np.array(bytearray(os.urandom(self.key_size // 8))))
             key_bits = key_bits.reshape(-1, self.key.shape[-1])
             key_str = self._fmt_tweak_or_key(key_bits)
-            key_str = self._fmt_arr(model.key, self.key.shape[-1]) # type: ignore
+            key_str = self._fmt_arr(key_bits, self.key.shape[-1]) # type: ignore
             constraints_description.append(f'key={key_str}')
 
             cnf += CNF.create_xor(self.key.flatten(), rhs=key_bits.flatten())

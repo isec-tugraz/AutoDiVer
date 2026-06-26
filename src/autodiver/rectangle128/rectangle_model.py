@@ -4,10 +4,6 @@ model the solutions of a differential characteristic for RECTANGLE
 """
 from __future__ import annotations
 
-TYPE_CHECKING=False
-if TYPE_CHECKING:
-    from typing import Any, Self
-
 import logging
 from pathlib import Path
 
@@ -15,10 +11,50 @@ import numpy as np
 from sat_toolkit.formula import XorCNF
 
 from .util import DDT, RC
-from .util import rotate_left, rotate_column_down, get_col, add_round_constants
+from .util import get_col, add_round_constants
 from ..cipher_model import SboxCipher, DifferentialCharacteristic
 
+TYPE_CHECKING=False
+if TYPE_CHECKING:
+    from typing import Any, Self
+
+
 log = logging.getLogger(__name__)
+
+def _apply_perm(array: np.ndarray[Any, np.dtype[np.int32]]) -> np.ndarray[Any, np.dtype[np.int32]]:
+    offset = [0, 1, 12, 13]
+    arrayOut = array.copy()
+    # print(f'{array = }')
+    #for each row
+    for i in range(4):
+        arrayOut[:, i] = np.roll(array[:, i], offset[i])
+    # print(f'{arrayOut = }')
+    return arrayOut
+
+def _apply_perm_nibble(instate):
+    outstate = instate.copy()
+    array = np.empty((16, 4), dtype=np.int32)
+    #first get bit state from nibble state
+    # print(f"{instate = }")
+    for i in range(16):
+        for j in range(4):
+            b = (instate[i] >> j) & 0x1
+            # print(b, type(b))
+            array[i][j] = b
+
+    # print(array)
+    array = np.array(array)
+    array = _apply_perm(array)
+    # print(array)
+    #Then get nibble state from bit state
+    for i in range(16):
+        b = 0
+        for j in range(4):
+            b = b | (array[i][j] << j)
+        outstate[i] = b
+    return outstate
+
+
 
 class RectangleCharacteristic(DifferentialCharacteristic):
     ddt: np.ndarray[Any, np.dtype[np.uint8]] = DDT
@@ -27,6 +63,17 @@ class RectangleCharacteristic(DifferentialCharacteristic):
     @classmethod
     def load(cls, characteristic_path: Path) -> Self:
         return cls.load_txt(characteristic_path)
+
+    def verify_linear_layer(self):
+        for i in range(1, self.num_rounds):
+            lin_input = self.sbox_out[i - 1]
+            lin_output = self.sbox_in[i]
+            # print(lin_input, lin_output)
+            permuted = _apply_perm_nibble(lin_input)
+            # print(permuted, lin_output)
+            if not np.all(permuted == lin_output):
+                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}]->sbox_in[{i}]')
+
 
 class _RectangleBase(SboxCipher):
     sbox = np.array([int(x, 16) for x in "65CA1E79B03D8F42"], dtype=np.uint8)
@@ -53,15 +100,6 @@ class _RectangleBase(SboxCipher):
         if self.char.sbox_in.shape != self.char.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
-        for i in range(1, self.num_rounds):
-            lin_input = self.char.sbox_out[i - 1]
-            lin_output = self.char.sbox_in[i]
-            # print(lin_input, lin_output)
-            permuted = self.apply_perm_nibble(lin_input)
-            # print(permuted, lin_output)
-            if not np.all(permuted == lin_output):
-                raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}]->sbox_in[{i}]')
-
         #generate Variables
         self.add_index_array('sbox_in', (self.num_rounds+1, self.sbox_count, self.sbox_bits))
         self.add_index_array('sbox_out', (self.num_rounds, self.sbox_count, self.sbox_bits))
@@ -79,39 +117,6 @@ class _RectangleBase(SboxCipher):
             self._model_key_schedule()
 
         self._model_linear_layer()
-
-    def applyPerm(self, array: np.ndarray[Any, np.dtype[np.int32]]) -> np.ndarray[Any, np.dtype[np.int32]]:
-        offset = [0, 1, 12, 13]
-        arrayOut = array.copy()
-        # print(f'{array = }')
-        #for each row
-        for i in range(4):
-            arrayOut[:, i] = np.roll(array[:, i], offset[i])
-        # print(f'{arrayOut = }')
-        return arrayOut
-
-    def apply_perm_nibble(self, instate):
-        outstate = instate.copy()
-        array = np.empty((16, 4), dtype=np.int32)
-        #first get bit state from nibble state
-        # print(f"{instate = }")
-        for i in range(16):
-            for j in range(4):
-                b = (instate[i] >> j) & 0x1
-                # print(b, type(b))
-                array[i][j] = b
-
-        # print(array)
-        array = np.array(array)
-        array = self.applyPerm(array)
-        # print(array)
-        #Then get nibble state from bit state
-        for i in range(16):
-            b = 0
-            for j in range(4):
-                b = b | (array[i][j] << j)
-            outstate[i] = b
-        return outstate
 
     def _model_key_schedule(self) -> None:
         raise NotImplementedError("Subclasses must implement _model_key_schedule")
@@ -132,7 +137,7 @@ class _RectangleBase(SboxCipher):
             self._addKey(self.sbox_in[0], self.pt, self._round_keys[0])
 
         for r in range(self.num_rounds):
-            permOut = self.applyPerm(self.sbox_out[r])
+            permOut = _apply_perm(self.sbox_out[r])
             if self.search_char:
                 self.cnf += XorCNF.create_xor(self.sbox_in[r+1].flatten(), permOut.flatten())
             else:
@@ -199,4 +204,3 @@ class RectangleLongKey(_RectangleBase):
         self.add_index_array('_round_keys', (self.num_rounds + 1, self.sbox_count, self.sbox_bits))
         assert self.key_size == self._round_keys.size
         self.key = self._round_keys.reshape(self.num_rounds + 1, self.sbox_count, self.sbox_bits)
-

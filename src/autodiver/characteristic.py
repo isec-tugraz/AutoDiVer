@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import ABC, abstractmethod
 from pathlib import Path
 import logging
 
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 
-class DifferentialCharacteristic():
+class DifferentialCharacteristic(ABC):
     num_rounds: int
     sbox_in: np.ndarray[Any, np.dtype[np.uint8]]
     sbox_out: np.ndarray[Any, np.dtype[np.uint8]]
@@ -102,7 +103,16 @@ class DifferentialCharacteristic():
 
         self.num_rounds = self.sbox_in.shape[0]
 
+    @abstractmethod
+    def verify_linear_layer(self) -> None:
+        """
+        Verifies that the differences properly work with the linear layer.
+        Raises ValueError if there are any mismatches.
+        Implemented for each subclass.
+        """
+
     def log2_ddt_probability(self):
+        self.verify_linear_layer()
         assert self.ddt is not None, f"cannot calculate DDT probability of {self.__class__} without DDT"
         ddt = self.ddt
         ddt_prob = np.log2(ddt[self.sbox_in, self.sbox_out] / len(ddt)).sum()

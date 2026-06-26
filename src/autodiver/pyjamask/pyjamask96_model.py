@@ -35,8 +35,8 @@ class Pyjamask96Characteristic(DifferentialCharacteristic):
         assert sbox_out.dtype.byteorder in ['<', '=']
         assert sbox_in.dtype == sbox_out.dtype == np.uint32
 
-        for i in range(len(sbox_in) - 1):
-            assert np.all(pyjamask_mix_rows_96(sbox_out[i]) == sbox_in[i + 1])
+        self.original_sbox_in = sbox_in
+        self.original_sbox_out = sbox_out
 
         # unpack bits
         sbox_in_bits = np.unpackbits(sbox_in.view(np.uint8), axis=-1, bitorder='little').reshape(-1, 3, 32)
@@ -58,6 +58,10 @@ class Pyjamask96Characteristic(DifferentialCharacteristic):
 
         super().__init__(sbox_in_unbitsliced, sbox_out_unbitsliced, **kwargs)
 
+    def verify_linear_layer(self):
+        for i in range(len(self.original_sbox_in) - 1):
+            if not np.all(pyjamask_mix_rows_96(self.original_sbox_out[i]) == self.original_sbox_in[i + 1]):
+                raise ValueError(f"Pyjamask linear layer violated in round {i}")
 
     @classmethod
     def load(cls, characteristic_path: Path) -> Pyjamask96Characteristic:

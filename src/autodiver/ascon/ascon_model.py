@@ -47,8 +47,8 @@ class AsconCharacteristic(DifferentialCharacteristic):
         assert sbox_out.dtype.byteorder in ['<', '=']
         assert sbox_in.dtype == sbox_out.dtype == np.uint64
 
-        for i in range(len(sbox_in) - 1):
-            assert np.all(ascon_linear_layer(sbox_out[i]) == sbox_in[i + 1])
+        self.original_sbox_in = sbox_in
+        self.original_sbox_out = sbox_out
 
         # unpack bits
         sbox_in_bits = np.unpackbits(sbox_in.view(np.uint8), axis=-1, bitorder='little').reshape(-1, 5, 64)
@@ -69,6 +69,11 @@ class AsconCharacteristic(DifferentialCharacteristic):
         assert np.all(Ascon.ddt[sbox_in_unbitsliced, sbox_out_unbitsliced] > 0)
 
         super().__init__(sbox_in_unbitsliced, sbox_out_unbitsliced, **kwargs)
+
+    def verify_linear_layer(self):
+        for i in range(len(self.original_sbox_in) - 1):
+            if not np.all(ascon_linear_layer(self.original_sbox_out[i]) == self.original_sbox_in[i + 1]):
+                raise ValueError(f"Ascon linear layer violated in round {i}")
 
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:

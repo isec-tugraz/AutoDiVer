@@ -36,23 +36,22 @@ class _GiftCharacteristic(DifferentialCharacteristic):
 
     _round_keys: np.ndarray[Any, np.dtype[np.int32]]
 
-    @classmethod
-    def verify(cls, sbox_in: np.ndarray, sbox_out: np.ndarray) -> None:
-        if len(sbox_in.shape) != 2:
-            raise ValueError(f'sbox_in must have 2 dimensions (round, sbox), sbxo_in.shape = {sbox_in.shape}')
+    def verify_linear_layer(self) -> None:
+        if len(self.sbox_in.shape) != 2:
+            raise ValueError(f'sbox_in must have 2 dimensions (round, sbox), sbxo_in.shape = {self.sbox_in.shape}')
 
-        if sbox_in.shape != sbox_out.shape:
+        if self.sbox_in.shape != self.sbox_out.shape:
             raise ValueError('sbox_in.shape must equal sbox_out.shape')
 
-        if sbox_in.shape[1] != cls.sbox_count:
-            raise ValueError(f'sbox_in.shape[1] must be {cls.sbox_count}')
+        if self.sbox_in.shape[1] != self.sbox_count:
+            raise ValueError(f'self.sbox_in.shape[1] must be {self.sbox_count}')
 
-        num_rounds = sbox_in.shape[0]
+        num_rounds = self.sbox_in.shape[0]
 
         for i in range(1, num_rounds):
-            lin_input = sbox_out[i - 1]
-            lin_output = sbox_in[i]
-            permuted = bit_perm(lin_input, cls.permutation)
+            lin_input = self.sbox_out[i - 1]
+            lin_output = self.sbox_in[i]
+            permuted = bit_perm(lin_input, self.permutation)
             if not np.all(permuted == lin_output):
                 raise ValueError(f'linear layer condition violated at sbox_out[{i - 1}] -> sbox_in[{i}]')
 
@@ -65,7 +64,6 @@ class _GiftCharacteristic(DifferentialCharacteristic):
         else:
             raise ValueError(f'unsupported file type {characteristic_path.suffix}')
 
-        cls.verify(result.sbox_in, result.sbox_out)
         return result
 
     def tikzify(self) -> str:
