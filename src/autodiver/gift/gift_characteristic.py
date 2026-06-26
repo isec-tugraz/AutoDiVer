@@ -59,11 +59,14 @@ class _GiftCharacteristic(DifferentialCharacteristic):
     @classmethod
     def load(cls, characteristic_path: Path) -> DifferentialCharacteristic:
         if characteristic_path.suffix == '.txt':
-            return cls.load_txt(characteristic_path)
+            result = cls.load_txt(characteristic_path)
         elif characteristic_path.suffix == '.npz':
-            return cls.load_npz(characteristic_path)
+            result = cls.load_npz(characteristic_path)
         else:
             raise ValueError(f'unsupported file type {characteristic_path.suffix}')
+
+        cls.verify(result.sbox_in, result.sbox_out)
+        return result
 
     def tikzify(self) -> str:
         result = StringIO()
