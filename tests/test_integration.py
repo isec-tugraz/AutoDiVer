@@ -14,9 +14,10 @@ def fix_chdir(monkeypatch):
 
 def test_count_tweakey_space_lin():
     expected_output = """
-INFO gathered keys span affine space of dimension 111
+INFO gathered keys span affine space of dimension 111 (17 missing for full dim)
 INFO solving for counterexample
-INFO RESULT no counterexample found -> conditions on key are necessary
+INFO no counterexample found -> linear conditions on key are necessary
+INFO RESULT there are 17 linear conditions on the key
 INFO RESULT key[0, 0, 0, 3] ⊕ key[0, 1, 0, 3] = 1
 INFO RESULT key[0, 0, 3, 3] ⊕ key[0, 1, 3, 3] ⊕ key[0, 3, 3, 3] = 0
 INFO RESULT key[0, 1, 1, 3] ⊕ key[0, 3, 1, 3] = 0

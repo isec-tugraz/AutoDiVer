@@ -777,9 +777,9 @@ class SboxCipher(IndexSet):
 
         while True:
             affine_space = affine_hull(initial_samples)
-            log.info(f'gathered {kind}s span affine space of dimension {affine_space.dimension()}')
-
             A, b = affine_space.as_equation_system()
+
+            log.info(f'gathered {kind}s span affine space of dimension {affine_space.dimension()} ({len(A)} missing for full dim)')
 
             extra_vars = range(self.cnf.nvars + 1, self.cnf.nvars + len(A) + 1)
             extra_constraints = XorCNF()
@@ -801,7 +801,9 @@ class SboxCipher(IndexSet):
                 sample = raw_model[sampling_set_list]
                 initial_samples.append(GF2(sample))
             except UnsatException as e:
-                log.info(f'RESULT no counterexample found -> conditions on {kind} are necessary')
+                log.info(f'no counterexample found -> linear conditions on {kind} are necessary')
+                verb, pluralized_condition = ("is", "condition") if len(A) == 1 else ("are", "conditions")
+                log.info(f'RESULT there {verb} {len(A)} linear {pluralized_condition} on the {kind}')
                 break
         end_time = time.monotonic()
 
