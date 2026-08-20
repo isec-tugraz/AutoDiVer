@@ -139,7 +139,7 @@
     \draw[->] (Sprev) -- (Shere);
     \draw (here) +(0.5,0) coordinate(here);
   \fi
-  
+
   % AddRoundTweakey:
   \draw (here.east) ++(1.5,\stateScale) coordinate[xor] (Txor);
   \draw[->] (Shere.east|-Txor) -- (Txor);
@@ -253,7 +253,7 @@
     \draw[->,rounded corners=1pt] (S\r prev) -- (S\r-|here) -- (S\rn-|next) -- ++(.2,0);
   }
   \draw (here) +(.95,0) coordinate(here);
-  
+
   % AddRoundTweakey:
   \draw (S-|here) node[state] (Shere) {\State{#8}};
   \draw (Shere.east) coordinate (Sprev);
@@ -276,7 +276,7 @@
 \newcommand{\SkinnyNewLine}[2][]{
   % #1 = round number (optional)
   % #2 = state after mixcols (repeated at beginning of next line)
-  % draw and connect final state 
+  % draw and connect final state
   \foreach \S/\arg in {S/#2} {
     \draw (\S here.east) coordinate (\S prev);
     \draw (\S-|here) node[state] (\S here) {\State{\arg}};
@@ -352,7 +352,7 @@
     \draw[->] (Sprev) -- (Shere);
     \draw (here) +(0.5,0) coordinate(here);
   \fi
-  
+
   % AddRoundTweakey:
   \draw (here.east) ++(1.5,\stateScale) coordinate[xor] (Txor);
   \draw[->] (Shere.east|-Txor) -- (Txor);
@@ -464,7 +464,7 @@
     \draw[->,rounded corners=1pt] (S\r prev) -- (S\r-|here) -- (S\rn-|next) -- ++(.2,0);
   }
   \draw (here) +(.95,0) coordinate(here);
-  
+
   % adapt hook depth
   \draw (S) +(-.25,-1) coordinate (Shook); % for \SkinnyNewLine
 }

@@ -10,7 +10,7 @@ import subprocess as sp
 import sys
 from typing import Optional, Literal, TYPE_CHECKING
 import numpy as np
-from .util import create_latex, create_unique_path
+from .util import tikzify_and_compile, create_unique_path
 import click
 
 from autodiver import version
@@ -378,10 +378,11 @@ def run_search_characteristic(cipher_name: str, num_rounds: int, tikzify: bool, 
             directory = Path.cwd() / "found_trails" / str(cipher_name + ("_rel_tweak" if search_params.related_tweak else ""))
             directory.mkdir(parents=True, exist_ok=True)
             char_path = Path(Path.cwd() / "found_trails" / (cipher_name + ("_rel_tweak" if search_params.related_tweak else "")) /(cipher_name  + "_r" + str(num_rounds))).with_suffix('.npz')
-            characteristic.save_npz(create_unique_path(char_path), cipher_name, cipher.stat_sat_search, search_params.log_prob_boundary, cipher.rounding_mode.value)
+            char_file = create_unique_path(char_path)
+            characteristic.save_npz(char_file, cipher_name, cipher.stat_sat_search, search_params.log_prob_boundary, cipher.rounding_mode.value)
 
         if tikzify:
-            create_latex(characteristic)
+            tikzify_and_compile(characteristic, char_file.with_suffix(".pdf"))
 
         return -log_probability
 

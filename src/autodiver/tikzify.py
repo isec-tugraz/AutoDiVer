@@ -6,24 +6,10 @@ from __future__ import annotations
 
 import argparse
 import importlib
-import shutil
-import tempfile
 from pathlib import Path
-from shutil import which
-import sys
-import subprocess as sp
 
 from .cipher_model import DifferentialCharacteristic
-
-
-def latex_support_dir() -> Path:
-    """Locate the directory holding the cipher .sty files and tikz library."""
-    # the latex/ directory sits at the repository root, next to src/
-    candidate = Path(__file__).resolve().parents[2] / "latex"
-    if candidate.is_dir():
-        return candidate
-    # fall back to a latex/ directory in the current working directory
-    return Path.cwd() / "latex"
+from .util import tikzify_and_compile, get_latex_support_dir
 
 
 # cipher name -> (model module, cipher class, characteristic class, tikzify_supported).
@@ -70,50 +56,18 @@ def main():
     CharacteristicType: type[DifferentialCharacteristic] = getattr(module, characteristic_type_name)
 
     char = CharacteristicType.load(args.characteristic)
-    tex = char.tikzify()
 
     char_path = args.characteristic.resolve()
     tex_dest = char_path.with_suffix(".tex")
     pdf_dest = char_path.with_suffix(".pdf")
 
     if not args.compile:
-        tex_dest.write_text(tex)
+        tex_dest.write_text(char.tikzify())
         print(f"wrote {tex_dest}")
+        print(f"necessary files are in {get_latex_support_dir()}")
         return 0
 
-    latexmk = which("latexmk")
-    if latexmk is None:
-        tex_dest.write_text(tex)
-        print(f"latexmk not found, skipping compilation; wrote {tex_dest}", file=sys.stderr)
-        return 1
-
-    output = None if args.verbose else sp.DEVNULL
-
-    # compile in a throw-away directory containing the cipher .sty files so the
-    # working directory and the characteristic's directory stay clean
-    with tempfile.TemporaryDirectory(prefix="autodiver-tikzify-") as tmpdir:
-        tmp = Path(tmpdir)
-        support_dir = latex_support_dir()
-        for support_file in (*support_dir.glob("*.sty"), *support_dir.glob("*.code.tex")):
-            shutil.copy(support_file, tmp)
-
-        tex_file = tmp / tex_dest.name
-        tex_file.write_text(tex)
-
-        try:
-            sp.check_call([latexmk, "-pdf", "-interaction=nonstopmode", "-halt-on-error", tex_file.name],
-                          cwd=tmp, stdout=output, stderr=output)
-        except sp.CalledProcessError as e:
-            print(f"latexmk failed with exit code {e.returncode}", file=sys.stderr)
-            return e.returncode
-
-        shutil.copy(tex_file.with_suffix(".pdf"), pdf_dest)
-        print(f"wrote {pdf_dest}")
-        if args.keep_tikz:
-            shutil.copy(tex_file, tex_dest)
-            print(f"wrote {tex_dest}")
-
-    return 0
+    return tikzify_and_compile(char, pdf_dest, tex_dest=tex_dest if args.keep_tikz else None, verbose=args.verbose)
 
 
 if __name__ == "__main__":

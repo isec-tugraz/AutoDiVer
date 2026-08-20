@@ -192,19 +192,48 @@ def create_unique_path(path) -> Path:
             pass
         i += 1
 
-def create_latex(characteristic) -> None:
-    workdir = Path.cwd() / "latex"
-    tex_file = workdir / "char.tex"
-    tex_file.write_text(characteristic.tikzify())
+def get_latex_support_dir() -> Path:
+    return Path(__file__).resolve().parent / "latex"
+
+def tikzify_and_compile(characteristic, pdf_dest: Path, *, tex_dest: Path|None = None, verbose: bool = False) -> int:
+    """Render ``characteristic`` to TikZ/LaTeX and compile it to ``pdf_dest``.
+    Returns 0 on success, 1 if latexmk is missing, or latexmk's exit code.
+    """
+    import shutil
+    import tempfile
+
+    tex = characteristic.tikzify()
 
     latexmk = which("latexmk")
     if latexmk is None:
-        print("latexmk not found, skipping compilation", file=sys.stderr)
-        return
+        if tex_dest is not None:
+            tex_dest.write_text(tex)
+            print(f"latexmk not found, skipping compilation; wrote {tex_dest}", file=sys.stderr)
+        else:
+            print("latexmk not found, skipping compilation", file=sys.stderr)
+        return 1
 
-    output =  sp.DEVNULL
-    try:
-        sp.check_call([latexmk, "-pdf", tex_file], cwd=workdir, stdout=output, stderr=output)
-        sp.check_call([latexmk, "-c", tex_file], cwd=workdir, stdout=output, stderr=output)
-    except sp.CalledProcessError as e:
-        print(f"latexmk failed with exit code {e.returncode}", file=sys.stderr)
+    output = None if verbose else sp.DEVNULL
+    with tempfile.TemporaryDirectory(prefix="autodiver-tikzify-") as tmpdir:
+        tmp = Path(tmpdir)
+        support_dir = get_latex_support_dir()
+        for support_file in (*support_dir.glob("*.sty"), *support_dir.glob("*.code.tex")):
+            shutil.copy(support_file, tmp)
+
+        tex_file = tmp / pdf_dest.with_suffix(".tex").name
+        tex_file.write_text(tex)
+
+        if tex_dest is not None:
+            shutil.copy(tex_file, tex_dest)
+            print(f"wrote {tex_dest}")
+
+        try:
+            sp.check_call([latexmk, "-pdf", "-interaction=nonstopmode", "-halt-on-error", tex_file.name], cwd=tmp, stdout=output, stderr=output)
+        except sp.CalledProcessError as e:
+            print(f"latexmk failed with exit code {e.returncode}", file=sys.stderr)
+            return e.returncode
+
+        shutil.copy(tex_file.with_suffix(".pdf"), pdf_dest)
+        print(f"wrote {pdf_dest}")
+
+    return 0

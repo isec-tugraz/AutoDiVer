@@ -31,9 +31,10 @@ import pytest
 
 from autodiver.characteristic import DifferentialCharacteristic
 from autodiver.tikzify import CIPHERS
+from autodiver.util import get_latex_support_dir
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-LATEX_DIR = REPO_ROOT / "latex"
+LATEX_DIR = get_latex_support_dir()
 TRAILS = REPO_ROOT / "trails"
 
 # one characteristic per tikzify-capable cipher

@@ -40,7 +40,7 @@ classifiers = [
 ]
 
 [tool.setuptools.package-data]
-autodiver = ["**/log_config.json"]
+autodiver = ["**/log_config.json", "latex/*.sty", "latex/*.code.tex"]
 
 [tool.basedpyright]
 typeCheckingMode = "basic"
